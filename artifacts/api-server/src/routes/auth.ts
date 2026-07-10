@@ -128,6 +128,44 @@ router.patch("/auth/profile", async (req, res): Promise<void> => {
   res.json(UpdateProfileResponse.parse(serializeUser(user)));
 });
 
+router.post("/auth/change-password", async (req, res): Promise<void> => {
+  if (!req.session.userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const { currentPassword, newPassword } = req.body as {
+    currentPassword?: unknown;
+    newPassword?: unknown;
+  };
+  if (!currentPassword || typeof currentPassword !== "string") {
+    res.status(400).json({ error: "كلمة المرور الحالية مطلوبة" });
+    return;
+  }
+  if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+    res.status(400).json({ error: "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل" });
+    return;
+  }
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, req.session.userId));
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  const ok = await verifyPassword(currentPassword, user.passwordHash);
+  if (!ok) {
+    res.status(401).json({ error: "كلمة المرور الحالية غير صحيحة" });
+    return;
+  }
+  const passwordHash = await hashPassword(newPassword);
+  await db
+    .update(usersTable)
+    .set({ passwordHash })
+    .where(eq(usersTable.id, req.session.userId));
+  res.json({ message: "تم تغيير كلمة المرور بنجاح" });
+});
+
 router.post("/auth/forgot-password", async (req, res): Promise<void> => {
   const parsed = RequestPasswordResetBody.safeParse(req.body);
   if (!parsed.success) {

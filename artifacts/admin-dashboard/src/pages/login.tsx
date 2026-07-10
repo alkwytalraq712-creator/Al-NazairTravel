@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'wouter';
-import { useLogin, LoginInput } from '@workspace/api-client-react';
+import { setAuthTokenGetter } from '@workspace/api-client-react';
 import { Globe2, Loader2, Lock, Mail, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
+
+export const ADMIN_TOKEN_KEY = 'qema_admin_token';
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'البريد الإلكتروني أو رقم الهاتف مطلوب'),
@@ -18,7 +21,8 @@ const loginSchema = z.object({
 export function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const loginMutation = useLogin();
+  const queryClient = useQueryClient();
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -28,31 +32,50 @@ export function Login() {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof loginSchema>) => {
-    loginMutation.mutate({ data: values }, {
-      onSuccess: (user) => {
-        if (user.role !== 'admin') {
-          toast({
-            title: "تم رفض الوصول",
-            description: "يحق لمديري النظام فقط الوصول إلى لوحة التحكم هذه.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "مرحباً بك مجدداً",
-            description: "تم تسجيل الدخول بنجاح إلى إدارة قمة النظائر.",
-          });
-          setLocation('/');
-        }
-      },
-      onError: (error) => {
+  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(values),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'خطأ في الاتصال' })) as { error?: string };
         toast({
           title: "فشل تسجيل الدخول",
-          description: error.error || "بيانات الاعتماد غير صالحة. يرجى المحاولة مرة أخرى.",
+          description: err.error === 'Invalid credentials'
+            ? 'بيانات الاعتماد غير صالحة. يرجى المحاولة مرة أخرى.'
+            : (err.error ?? 'حدث خطأ غير متوقع'),
           variant: "destructive",
         });
+        return;
       }
-    });
+      const data = await res.json() as { role: string; token?: string; fullName: string };
+      if (data.role !== 'admin') {
+        toast({
+          title: "تم رفض الوصول",
+          description: "يحق لمديري النظام فقط الوصول إلى لوحة التحكم هذه.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (data.token) {
+        localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+        setAuthTokenGetter(() => data.token!);
+      }
+      await queryClient.invalidateQueries();
+      toast({
+        title: "مرحباً بك مجدداً",
+        description: `تم تسجيل الدخول بنجاح، ${data.fullName}`,
+      });
+      setLocation('/');
+    } catch {
+      toast({ title: "خطأ في الاتصال", description: "تعذر الوصول إلى الخادم.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -147,9 +170,9 @@ export function Login() {
               <Button 
                 type="submit" 
                 className="w-full h-12 text-base font-semibold mt-4 shadow-md hover:shadow-lg transition-all" 
-                disabled={loginMutation.isPending}
+                disabled={loading}
               >
-                {loginMutation.isPending ? (
+                {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <>

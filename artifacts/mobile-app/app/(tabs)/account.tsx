@@ -19,9 +19,9 @@ import { useAuth } from '@/context/AuthContext';
 const MENU_ITEMS = [
   { icon: 'document-text-outline', label: 'طلباتي وحجوزاتي', route: '/bookings' },
   { icon: 'notifications-outline', label: 'الإشعارات', route: '/notifications' },
-  { icon: 'person-outline', label: 'تعديل الملف الشخصي', route: null },
-  { icon: 'shield-checkmark-outline', label: 'الأمان والخصوصية', route: null },
-  { icon: 'help-circle-outline', label: 'المساعدة والدعم', route: null },
+  { icon: 'person-outline', label: 'تعديل الملف الشخصي', route: '/profile-edit' },
+  { icon: 'shield-checkmark-outline', label: 'الأمان والخصوصية', route: '/security' },
+  { icon: 'help-circle-outline', label: 'المساعدة والدعم', route: '/help' },
 ] as const;
 
 export default function AccountScreen() {

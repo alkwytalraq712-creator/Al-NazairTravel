@@ -3,6 +3,9 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
+import { useEffect } from 'react';
+import { setAuthTokenGetter } from '@workspace/api-client-react';
+import { ADMIN_TOKEN_KEY } from '@/pages/login';
 
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Login } from '@/pages/login';
@@ -46,10 +49,21 @@ function AppRouter() {
   );
 }
 
+function AuthInit() {
+  useEffect(() => {
+    const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+    if (token) {
+      setAuthTokenGetter(() => token);
+    }
+  }, []);
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <AuthInit />
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <AppRouter />
         </WouterRouter>
