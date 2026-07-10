@@ -259,9 +259,18 @@ export default function ApplyVisaScreen() {
         body: JSON.stringify({ imageBase64: asset.base64, mimeType: asset.mimeType }),
       });
       const data: any = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Server/service failure (e.g. AI provider outage or quota issue) —
+        // distinct from an actual photo rejection so the user isn't told
+        // their (possibly fine) photo was rejected.
+        setPhotoValid(null);
+        Alert.alert('تعذر التحقق من الصورة', data?.error || 'حدث خطأ في خدمة التحقق، يرجى المحاولة لاحقاً');
+        return;
+      }
       setPhotoValid({ valid: data?.valid === true, issues: Array.isArray(data?.issues) ? data.issues : [] });
     } catch {
-      setPhotoValid({ valid: false, issues: ['تعذر التحقق من الصورة'] });
+      setPhotoValid(null);
+      Alert.alert('تعذر التحقق من الصورة', 'تحقق من اتصالك بالإنترنت وحاول مجدداً');
     } finally { setValidating(false); }
   }
 
@@ -306,6 +315,10 @@ export default function ApplyVisaScreen() {
         }));
         setScanDone(true);
         setStep(1); // Auto-advance to passport data step
+      } else if (!res.ok) {
+        // Server/service failure (e.g. AI provider outage or quota issue) —
+        // distinct from an actual unreadable-passport rejection.
+        setScanError(data?.error || 'حدث خطأ في خدمة القراءة، يرجى المحاولة لاحقاً أو الإدخال اليدوي');
       } else {
         const issues: string[] = Array.isArray(data?.issues) ? data.issues : [];
         setScanError(issues.join(' — ') || 'تعذر قراءة الجواز، يرجى المحاولة أو الإدخال اليدوي');
