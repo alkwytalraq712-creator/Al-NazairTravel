@@ -1826,3 +1826,265 @@ export const GetAdminDashboardSummaryResponse = zod.object({
 })
 
 
+/**
+ * @summary List payments (admin)
+ */
+export const ListPaymentsResponseItem = zod.object({
+  "id": zod.number(),
+  "referenceNumber": zod.string(),
+  "bookingType": zod.string(),
+  "flightBookingId": zod.number().nullish(),
+  "packageBookingId": zod.number().nullish(),
+  "visaApplicationId": zod.number().nullish(),
+  "customerName": zod.string(),
+  "customerPhone": zod.string(),
+  "amount": zod.string(),
+  "currency": zod.string(),
+  "method": zod.enum(['cash', 'bank_transfer', 'card', 'other']),
+  "status": zod.enum(['pending', 'paid', 'refunded', 'failed']),
+  "transactionId": zod.string().nullish(),
+  "paidAt": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListPaymentsResponse = zod.array(ListPaymentsResponseItem)
+
+
+/**
+ * @summary Record a new payment (admin)
+ */
+
+export const createPaymentBodyCustomerPhoneMin = 3;
+
+
+
+export const CreatePaymentBody = zod.object({
+  "bookingType": zod.string(),
+  "flightBookingId": zod.number().nullish(),
+  "packageBookingId": zod.number().nullish(),
+  "visaApplicationId": zod.number().nullish(),
+  "customerName": zod.string().min(1),
+  "customerPhone": zod.string().min(createPaymentBodyCustomerPhoneMin),
+  "amount": zod.string(),
+  "currency": zod.string(),
+  "method": zod.enum(['cash', 'bank_transfer', 'card', 'other']).optional(),
+  "status": zod.enum(['pending', 'paid', 'refunded', 'failed']).optional(),
+  "transactionId": zod.string().nullish(),
+  "paidAt": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish()
+})
+
+export const CreatePaymentResponse = zod.object({
+  "id": zod.number(),
+  "referenceNumber": zod.string(),
+  "bookingType": zod.string(),
+  "flightBookingId": zod.number().nullish(),
+  "packageBookingId": zod.number().nullish(),
+  "visaApplicationId": zod.number().nullish(),
+  "customerName": zod.string(),
+  "customerPhone": zod.string(),
+  "amount": zod.string(),
+  "currency": zod.string(),
+  "method": zod.enum(['cash', 'bank_transfer', 'card', 'other']),
+  "status": zod.enum(['pending', 'paid', 'refunded', 'failed']),
+  "transactionId": zod.string().nullish(),
+  "paidAt": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a payment (admin)
+ */
+export const UpdatePaymentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const updatePaymentBodyCustomerPhoneMin = 3;
+
+
+
+export const UpdatePaymentBody = zod.object({
+  "customerName": zod.string().min(1).optional(),
+  "customerPhone": zod.string().min(updatePaymentBodyCustomerPhoneMin).optional(),
+  "amount": zod.string().optional(),
+  "currency": zod.string().optional(),
+  "method": zod.enum(['cash', 'bank_transfer', 'card', 'other']).optional(),
+  "status": zod.enum(['pending', 'paid', 'refunded', 'failed']).optional(),
+  "transactionId": zod.string().nullish(),
+  "paidAt": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish()
+})
+
+export const UpdatePaymentResponse = zod.object({
+  "id": zod.number(),
+  "referenceNumber": zod.string(),
+  "bookingType": zod.string(),
+  "flightBookingId": zod.number().nullish(),
+  "packageBookingId": zod.number().nullish(),
+  "visaApplicationId": zod.number().nullish(),
+  "customerName": zod.string(),
+  "customerPhone": zod.string(),
+  "amount": zod.string(),
+  "currency": zod.string(),
+  "method": zod.enum(['cash', 'bank_transfer', 'card', 'other']),
+  "status": zod.enum(['pending', 'paid', 'refunded', 'failed']),
+  "transactionId": zod.string().nullish(),
+  "paidAt": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a payment (admin)
+ */
+export const DeletePaymentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeletePaymentResponse = zod.void()
+
+
+/**
+ * @summary List invoices (admin)
+ */
+export const ListInvoicesResponseItem = zod.object({
+  "id": zod.number(),
+  "invoiceNumber": zod.string(),
+  "paymentId": zod.number().nullish(),
+  "customerName": zod.string(),
+  "customerPhone": zod.string(),
+  "customerEmail": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "description": zod.string(),
+  "amount": zod.number()
+})),
+  "subtotal": zod.string(),
+  "tax": zod.string(),
+  "total": zod.string(),
+  "currency": zod.string(),
+  "status": zod.enum(['draft', 'issued', 'paid', 'cancelled']),
+  "issuedAt": zod.coerce.date().nullish(),
+  "dueDate": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListInvoicesResponse = zod.array(ListInvoicesResponseItem)
+
+
+/**
+ * @summary Create an invoice (admin)
+ */
+
+export const createInvoiceBodyCustomerPhoneMin = 3;
+
+
+
+export const CreateInvoiceBody = zod.object({
+  "paymentId": zod.number().nullish(),
+  "customerName": zod.string().min(1),
+  "customerPhone": zod.string().min(createInvoiceBodyCustomerPhoneMin),
+  "customerEmail": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "description": zod.string(),
+  "amount": zod.number()
+})),
+  "subtotal": zod.string(),
+  "tax": zod.string().optional(),
+  "total": zod.string(),
+  "currency": zod.string(),
+  "status": zod.enum(['draft', 'issued', 'paid', 'cancelled']).optional(),
+  "issuedAt": zod.coerce.date().nullish(),
+  "dueDate": zod.string().nullish(),
+  "notes": zod.string().nullish()
+})
+
+export const CreateInvoiceResponse = zod.object({
+  "id": zod.number(),
+  "invoiceNumber": zod.string(),
+  "paymentId": zod.number().nullish(),
+  "customerName": zod.string(),
+  "customerPhone": zod.string(),
+  "customerEmail": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "description": zod.string(),
+  "amount": zod.number()
+})),
+  "subtotal": zod.string(),
+  "tax": zod.string(),
+  "total": zod.string(),
+  "currency": zod.string(),
+  "status": zod.enum(['draft', 'issued', 'paid', 'cancelled']),
+  "issuedAt": zod.coerce.date().nullish(),
+  "dueDate": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update an invoice (admin)
+ */
+export const UpdateInvoiceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const updateInvoiceBodyCustomerPhoneMin = 3;
+
+
+
+export const UpdateInvoiceBody = zod.object({
+  "customerName": zod.string().min(1).optional(),
+  "customerPhone": zod.string().min(updateInvoiceBodyCustomerPhoneMin).optional(),
+  "customerEmail": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "description": zod.string(),
+  "amount": zod.number()
+})).optional(),
+  "subtotal": zod.string().optional(),
+  "tax": zod.string().optional(),
+  "total": zod.string().optional(),
+  "currency": zod.string().optional(),
+  "status": zod.enum(['draft', 'issued', 'paid', 'cancelled']).optional(),
+  "issuedAt": zod.coerce.date().nullish(),
+  "dueDate": zod.string().nullish(),
+  "notes": zod.string().nullish()
+})
+
+export const UpdateInvoiceResponse = zod.object({
+  "id": zod.number(),
+  "invoiceNumber": zod.string(),
+  "paymentId": zod.number().nullish(),
+  "customerName": zod.string(),
+  "customerPhone": zod.string(),
+  "customerEmail": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "description": zod.string(),
+  "amount": zod.number()
+})),
+  "subtotal": zod.string(),
+  "tax": zod.string(),
+  "total": zod.string(),
+  "currency": zod.string(),
+  "status": zod.enum(['draft', 'issued', 'paid', 'cancelled']),
+  "issuedAt": zod.coerce.date().nullish(),
+  "dueDate": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete an invoice (admin)
+ */
+export const DeleteInvoiceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteInvoiceResponse = zod.void()
+
+

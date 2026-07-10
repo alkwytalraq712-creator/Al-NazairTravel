@@ -7,3 +7,5 @@ export * from "./flightBookings";
 export * from "./notifications";
 export * from "./banners";
 export * from "./testimonials";
+export * from "./payments";
+export * from "./invoices";

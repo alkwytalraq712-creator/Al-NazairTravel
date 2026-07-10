@@ -12,7 +12,9 @@ import {
   Image as ImageIcon,
   MessageSquare,
   LogOut,
-  UserCog
+  UserCog,
+  Wallet,
+  Receipt
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLogout } from '@workspace/api-client-react';
@@ -27,6 +29,8 @@ const NAV_ITEMS = [
   { icon: Briefcase, label: 'عروض التأشيرات', path: '/visas' },
   { icon: Map, label: 'حجوزات الباقات', path: '/package-bookings' },
   { icon: Ticket, label: 'الباقات السياحية', path: '/packages' },
+  { icon: Wallet, label: 'المدفوعات', path: '/payments' },
+  { icon: Receipt, label: 'الفواتير', path: '/invoices' },
   { icon: Bell, label: 'الإشعارات', path: '/notifications' },
   { icon: ImageIcon, label: 'اللافتات الترويجية', path: '/banners' },
   { icon: MessageSquare, label: 'الآراء والتقييمات', path: '/testimonials' },

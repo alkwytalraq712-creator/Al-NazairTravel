@@ -17,6 +17,24 @@ export const STATUS_ARABIC: Record<string, string> = {
   vouchers_issued: "تم إصدار القسائم",
   cancelled: "ملغاة",
   ticketed: "مُصدرة التذكرة",
+  refunded: "مُرجعة",
+  failed: "فشلت",
+  draft: "مسودة",
+  issued: "صادرة",
+};
+
+export const PAYMENT_METHOD_ARABIC: Record<string, string> = {
+  cash: "نقداً",
+  bank_transfer: "تحويل بنكي",
+  card: "بطاقة",
+  other: "أخرى",
+};
+
+export const BOOKING_TYPE_ARABIC: Record<string, string> = {
+  flight: "حجز طيران",
+  package: "حجز باقة",
+  visa: "طلب تأشيرة",
+  other: "أخرى",
 };
 
 export const VISA_TYPE_ARABIC: Record<string, string> = {

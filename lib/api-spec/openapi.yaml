@@ -1150,6 +1150,182 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminDashboardSummary"
 
+  /admin/payments:
+    get:
+      operationId: listPayments
+      tags: [admin]
+      summary: List payments (admin)
+      responses:
+        "200":
+          description: Payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Payment"
+    post:
+      operationId: createPayment
+      tags: [admin]
+      summary: Record a new payment (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/payments/{id}:
+    patch:
+      operationId: updatePayment
+      tags: [admin]
+      summary: Update a payment (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deletePayment
+      tags: [admin]
+      summary: Delete a payment (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/invoices:
+    get:
+      operationId: listInvoices
+      tags: [admin]
+      summary: List invoices (admin)
+      responses:
+        "200":
+          description: Invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invoice"
+    post:
+      operationId: createInvoice
+      tags: [admin]
+      summary: Create an invoice (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/invoices/{id}:
+    patch:
+      operationId: updateInvoice
+      tags: [admin]
+      summary: Update an invoice (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteInvoice
+      tags: [admin]
+      summary: Delete an invoice (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -1211,6 +1387,175 @@ components:
         phone: { type: string, minLength: 3 }
         email: { type: ["string", "null"] }
         password: { type: string, minLength: 6 }
+
+    PaymentMethod:
+      type: string
+      enum: [cash, bank_transfer, card, other]
+
+    PaymentStatus:
+      type: string
+      enum: [pending, paid, refunded, failed]
+
+    Payment:
+      type: object
+      required:
+        [
+          id,
+          referenceNumber,
+          bookingType,
+          customerName,
+          customerPhone,
+          amount,
+          currency,
+          method,
+          status,
+          createdAt,
+        ]
+      properties:
+        id: { type: integer }
+        referenceNumber: { type: string }
+        bookingType: { type: string }
+        flightBookingId: { type: ["integer", "null"] }
+        packageBookingId: { type: ["integer", "null"] }
+        visaApplicationId: { type: ["integer", "null"] }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        amount: { type: string }
+        currency: { type: string }
+        method:
+          $ref: "#/components/schemas/PaymentMethod"
+        status:
+          $ref: "#/components/schemas/PaymentStatus"
+        transactionId: { type: ["string", "null"] }
+        paidAt: { type: ["string", "null"], format: date-time }
+        notes: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+
+    PaymentInput:
+      type: object
+      required: [bookingType, customerName, customerPhone, amount, currency]
+      properties:
+        bookingType: { type: string }
+        flightBookingId: { type: ["integer", "null"] }
+        packageBookingId: { type: ["integer", "null"] }
+        visaApplicationId: { type: ["integer", "null"] }
+        customerName: { type: string, minLength: 1 }
+        customerPhone: { type: string, minLength: 3 }
+        amount: { type: string }
+        currency: { type: string }
+        method:
+          $ref: "#/components/schemas/PaymentMethod"
+        status:
+          $ref: "#/components/schemas/PaymentStatus"
+        transactionId: { type: ["string", "null"] }
+        paidAt: { type: ["string", "null"], format: date-time }
+        notes: { type: ["string", "null"] }
+
+    PaymentUpdate:
+      type: object
+      properties:
+        customerName: { type: string, minLength: 1 }
+        customerPhone: { type: string, minLength: 3 }
+        amount: { type: string }
+        currency: { type: string }
+        method:
+          $ref: "#/components/schemas/PaymentMethod"
+        status:
+          $ref: "#/components/schemas/PaymentStatus"
+        transactionId: { type: ["string", "null"] }
+        paidAt: { type: ["string", "null"], format: date-time }
+        notes: { type: ["string", "null"] }
+
+    InvoiceStatus:
+      type: string
+      enum: [draft, issued, paid, cancelled]
+
+    InvoiceItem:
+      type: object
+      required: [description, amount]
+      properties:
+        description: { type: string }
+        amount: { type: number }
+
+    Invoice:
+      type: object
+      required:
+        [
+          id,
+          invoiceNumber,
+          customerName,
+          customerPhone,
+          items,
+          subtotal,
+          tax,
+          total,
+          currency,
+          status,
+          createdAt,
+        ]
+      properties:
+        id: { type: integer }
+        invoiceNumber: { type: string }
+        paymentId: { type: ["integer", "null"] }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        customerEmail: { type: ["string", "null"] }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+        subtotal: { type: string }
+        tax: { type: string }
+        total: { type: string }
+        currency: { type: string }
+        status:
+          $ref: "#/components/schemas/InvoiceStatus"
+        issuedAt: { type: ["string", "null"], format: date-time }
+        dueDate: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+
+    InvoiceInput:
+      type: object
+      required: [customerName, customerPhone, items, subtotal, total, currency]
+      properties:
+        paymentId: { type: ["integer", "null"] }
+        customerName: { type: string, minLength: 1 }
+        customerPhone: { type: string, minLength: 3 }
+        customerEmail: { type: ["string", "null"] }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+        subtotal: { type: string }
+        tax: { type: string }
+        total: { type: string }
+        currency: { type: string }
+        status:
+          $ref: "#/components/schemas/InvoiceStatus"
+        issuedAt: { type: ["string", "null"], format: date-time }
+        dueDate: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+
+    InvoiceUpdate:
+      type: object
+      properties:
+        customerName: { type: string, minLength: 1 }
+        customerPhone: { type: string, minLength: 3 }
+        customerEmail: { type: ["string", "null"] }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+        subtotal: { type: string }
+        tax: { type: string }
+        total: { type: string }
+        currency: { type: string }
+        status:
+          $ref: "#/components/schemas/InvoiceStatus"
+        issuedAt: { type: ["string", "null"], format: date-time }
+        dueDate: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
 
     SignupInput:
       type: object

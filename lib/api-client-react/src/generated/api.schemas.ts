@@ -60,6 +60,175 @@ export interface EmployeeUpdate {
   password?: string;
 }
 
+export type PaymentMethod = typeof PaymentMethod[keyof typeof PaymentMethod];
+
+
+export const PaymentMethod = {
+  cash: 'cash',
+  bank_transfer: 'bank_transfer',
+  card: 'card',
+  other: 'other',
+} as const;
+
+export type PaymentStatus = typeof PaymentStatus[keyof typeof PaymentStatus];
+
+
+export const PaymentStatus = {
+  pending: 'pending',
+  paid: 'paid',
+  refunded: 'refunded',
+  failed: 'failed',
+} as const;
+
+export interface Payment {
+  id: number;
+  referenceNumber: string;
+  bookingType: string;
+  /** @nullable */
+  flightBookingId?: number | null;
+  /** @nullable */
+  packageBookingId?: number | null;
+  /** @nullable */
+  visaApplicationId?: number | null;
+  customerName: string;
+  customerPhone: string;
+  amount: string;
+  currency: string;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  /** @nullable */
+  transactionId?: string | null;
+  /** @nullable */
+  paidAt?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface PaymentInput {
+  bookingType: string;
+  /** @nullable */
+  flightBookingId?: number | null;
+  /** @nullable */
+  packageBookingId?: number | null;
+  /** @nullable */
+  visaApplicationId?: number | null;
+  /** @minLength 1 */
+  customerName: string;
+  /** @minLength 3 */
+  customerPhone: string;
+  amount: string;
+  currency: string;
+  method?: PaymentMethod;
+  status?: PaymentStatus;
+  /** @nullable */
+  transactionId?: string | null;
+  /** @nullable */
+  paidAt?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface PaymentUpdate {
+  /** @minLength 1 */
+  customerName?: string;
+  /** @minLength 3 */
+  customerPhone?: string;
+  amount?: string;
+  currency?: string;
+  method?: PaymentMethod;
+  status?: PaymentStatus;
+  /** @nullable */
+  transactionId?: string | null;
+  /** @nullable */
+  paidAt?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export type InvoiceStatus = typeof InvoiceStatus[keyof typeof InvoiceStatus];
+
+
+export const InvoiceStatus = {
+  draft: 'draft',
+  issued: 'issued',
+  paid: 'paid',
+  cancelled: 'cancelled',
+} as const;
+
+export interface InvoiceItem {
+  description: string;
+  amount: number;
+}
+
+export interface Invoice {
+  id: number;
+  invoiceNumber: string;
+  /** @nullable */
+  paymentId?: number | null;
+  customerName: string;
+  customerPhone: string;
+  /** @nullable */
+  customerEmail?: string | null;
+  items: InvoiceItem[];
+  subtotal: string;
+  tax: string;
+  total: string;
+  currency: string;
+  status: InvoiceStatus;
+  /** @nullable */
+  issuedAt?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface InvoiceInput {
+  /** @nullable */
+  paymentId?: number | null;
+  /** @minLength 1 */
+  customerName: string;
+  /** @minLength 3 */
+  customerPhone: string;
+  /** @nullable */
+  customerEmail?: string | null;
+  items: InvoiceItem[];
+  subtotal: string;
+  tax?: string;
+  total: string;
+  currency: string;
+  status?: InvoiceStatus;
+  /** @nullable */
+  issuedAt?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface InvoiceUpdate {
+  /** @minLength 1 */
+  customerName?: string;
+  /** @minLength 3 */
+  customerPhone?: string;
+  /** @nullable */
+  customerEmail?: string | null;
+  items?: InvoiceItem[];
+  subtotal?: string;
+  tax?: string;
+  total?: string;
+  currency?: string;
+  status?: InvoiceStatus;
+  /** @nullable */
+  issuedAt?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
 export interface SignupInput {
   /** @minLength 1 */
   fullName: string;

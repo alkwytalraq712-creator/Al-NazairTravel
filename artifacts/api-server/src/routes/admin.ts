@@ -6,6 +6,8 @@ import {
   visaApplicationsTable,
   packageBookingsTable,
   flightBookingsTable,
+  paymentsTable,
+  invoicesTable,
 } from "@workspace/db";
 import {
   ListCustomersResponse,
@@ -19,6 +21,20 @@ import {
   UpdateEmployeeBody,
   UpdateEmployeeResponse,
   DeleteEmployeeParams,
+  ListPaymentsResponse,
+  CreatePaymentBody,
+  CreatePaymentResponse,
+  UpdatePaymentParams,
+  UpdatePaymentBody,
+  UpdatePaymentResponse,
+  DeletePaymentParams,
+  ListInvoicesResponse,
+  CreateInvoiceBody,
+  CreateInvoiceResponse,
+  UpdateInvoiceParams,
+  UpdateInvoiceBody,
+  UpdateInvoiceResponse,
+  DeleteInvoiceParams,
 } from "@workspace/api-zod";
 import { requireAdmin, hashPassword } from "../lib/auth";
 import { serializeUser } from "../lib/auth";
@@ -272,6 +288,194 @@ router.delete(
     }
 
     await db.delete(usersTable).where(eq(usersTable.id, params.data.id));
+    res.status(204).send();
+  },
+);
+
+function generateReferenceNumber(prefix: string): string {
+  const stamp = Date.now().toString(36).toUpperCase();
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `${prefix}-${stamp}${rand}`;
+}
+
+router.get("/admin/payments", requireAdmin, async (_req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(paymentsTable)
+    .orderBy(desc(paymentsTable.createdAt));
+
+  res.json(ListPaymentsResponse.parse(rows));
+});
+
+router.post("/admin/payments", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = CreatePaymentBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { paidAt, ...rest } = parsed.data;
+  const [payment] = await db
+    .insert(paymentsTable)
+    .values({
+      ...rest,
+      paidAt: paidAt ? new Date(paidAt) : undefined,
+      referenceNumber: generateReferenceNumber("PAY"),
+    })
+    .returning();
+
+  res.status(201).json(CreatePaymentResponse.parse(payment));
+});
+
+router.patch(
+  "/admin/payments/:id",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const params = UpdatePaymentParams.safeParse(req.params);
+    const parsed = UpdatePaymentBody.safeParse(req.body);
+    if (!params.success || !parsed.success) {
+      res
+        .status(400)
+        .json({ error: (params.error ?? parsed.error)!.message });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(paymentsTable)
+      .where(eq(paymentsTable.id, params.data.id));
+    if (!existing) {
+      res.status(404).json({ error: "Payment not found" });
+      return;
+    }
+
+    const { paidAt, ...rest } = parsed.data;
+    const updates: Partial<typeof paymentsTable.$inferInsert> = { ...rest };
+    if (paidAt !== undefined) {
+      updates.paidAt = paidAt ? new Date(paidAt) : null;
+    }
+
+    const [payment] = await db
+      .update(paymentsTable)
+      .set(updates)
+      .where(eq(paymentsTable.id, params.data.id))
+      .returning();
+
+    res.json(UpdatePaymentResponse.parse(payment));
+  },
+);
+
+router.delete(
+  "/admin/payments/:id",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const params = DeletePaymentParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(paymentsTable)
+      .where(eq(paymentsTable.id, params.data.id));
+    if (!existing) {
+      res.status(404).json({ error: "Payment not found" });
+      return;
+    }
+
+    await db.delete(paymentsTable).where(eq(paymentsTable.id, params.data.id));
+    res.status(204).send();
+  },
+);
+
+router.get("/admin/invoices", requireAdmin, async (_req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(invoicesTable)
+    .orderBy(desc(invoicesTable.createdAt));
+
+  res.json(ListInvoicesResponse.parse(rows));
+});
+
+router.post("/admin/invoices", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = CreateInvoiceBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { issuedAt, ...rest } = parsed.data;
+  const [invoice] = await db
+    .insert(invoicesTable)
+    .values({
+      ...rest,
+      issuedAt: issuedAt ? new Date(issuedAt) : undefined,
+      invoiceNumber: generateReferenceNumber("INV"),
+    })
+    .returning();
+
+  res.status(201).json(CreateInvoiceResponse.parse(invoice));
+});
+
+router.patch(
+  "/admin/invoices/:id",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const params = UpdateInvoiceParams.safeParse(req.params);
+    const parsed = UpdateInvoiceBody.safeParse(req.body);
+    if (!params.success || !parsed.success) {
+      res
+        .status(400)
+        .json({ error: (params.error ?? parsed.error)!.message });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(invoicesTable)
+      .where(eq(invoicesTable.id, params.data.id));
+    if (!existing) {
+      res.status(404).json({ error: "Invoice not found" });
+      return;
+    }
+
+    const { issuedAt, ...rest } = parsed.data;
+    const updates: Partial<typeof invoicesTable.$inferInsert> = { ...rest };
+    if (issuedAt !== undefined) {
+      updates.issuedAt = issuedAt ? new Date(issuedAt) : null;
+    }
+
+    const [invoice] = await db
+      .update(invoicesTable)
+      .set(updates)
+      .where(eq(invoicesTable.id, params.data.id))
+      .returning();
+
+    res.json(UpdateInvoiceResponse.parse(invoice));
+  },
+);
+
+router.delete(
+  "/admin/invoices/:id",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const params = DeleteInvoiceParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(invoicesTable)
+      .where(eq(invoicesTable.id, params.data.id));
+    if (!existing) {
+      res.status(404).json({ error: "Invoice not found" });
+      return;
+    }
+
+    await db.delete(invoicesTable).where(eq(invoicesTable.id, params.data.id));
     res.status(204).send();
   },
 );

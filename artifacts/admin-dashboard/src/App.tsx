@@ -17,6 +17,8 @@ import { VisaApplications } from '@/pages/visa-applications';
 import { Packages } from '@/pages/packages';
 import { PackageBookings } from '@/pages/package-bookings';
 import { FlightBookings } from '@/pages/flight-bookings';
+import { Payments } from '@/pages/payments';
+import { Invoices } from '@/pages/invoices';
 import { Notifications } from '@/pages/notifications';
 import { Banners } from '@/pages/banners';
 import { Testimonials } from '@/pages/testimonials';
@@ -39,6 +41,8 @@ function AppRouter() {
             <Route path="/packages" component={Packages} />
             <Route path="/package-bookings" component={PackageBookings} />
             <Route path="/flight-bookings" component={FlightBookings} />
+            <Route path="/payments" component={Payments} />
+            <Route path="/invoices" component={Invoices} />
             <Route path="/notifications" component={Notifications} />
             <Route path="/banners" component={Banners} />
             <Route path="/testimonials" component={Testimonials} />
