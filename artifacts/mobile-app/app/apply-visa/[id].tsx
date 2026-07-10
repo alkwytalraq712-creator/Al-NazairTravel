@@ -55,12 +55,12 @@ async function pickImage(source: 'camera' | 'gallery'): Promise<PhotoAsset | nul
 
 // ─── Step Bar ─────────────────────────────────────────────────────────────────
 
-function StepBar({ step, colors }: { step: number; colors: any }) {
+function StepBar({ step, colors, photosVerified }: { step: number; colors: any; photosVerified?: boolean }) {
   const steps = ['الصور', 'بيانات الجواز', 'تواصل وإرسال'];
   return (
     <View style={SB.row}>
       {steps.map((label, i) => {
-        const done = i < step, active = i === step;
+        const done = i < step || (i === 0 && step === 0 && !!photosVerified), active = i === step && !done;
         return (
           <React.Fragment key={i}>
             <View style={SB.item}>
@@ -95,17 +95,35 @@ const SB = StyleSheet.create({
 
 // ─── Photo Card ───────────────────────────────────────────────────────────────
 
-function PhotoCard({ photo, label, ratio = 1, colors, onCamera, onGallery }: {
+type PhotoStatus = 'idle' | 'checking' | 'valid' | 'invalid';
+
+function PhotoCard({ photo, label, ratio = 1, colors, onCamera, onGallery, status = 'idle' }: {
   photo: PhotoAsset | null; label: string; ratio?: number;
-  colors: any; onCamera: () => void; onGallery: () => void;
+  colors: any; onCamera: () => void; onGallery: () => void; status?: PhotoStatus;
 }) {
+  const statusColor = status === 'valid' ? '#4caf50' : status === 'invalid' ? '#ef5350' : colors.border;
   return (
     <View style={{ gap: 10 }}>
       <Text style={[PC.label, { color: colors.foreground }]}>{label}</Text>
-      <View style={[PC.slot, { height: ratio === 1 ? 170 : 130, backgroundColor: colors.muted, borderColor: colors.border }]}>
+      <View style={[
+        PC.slot,
+        { height: ratio === 1 ? 170 : 130, backgroundColor: colors.muted, borderColor: statusColor },
+        status !== 'idle' && { borderStyle: 'solid', borderWidth: 2 },
+      ]}>
         {photo
           ? <Image source={{ uri: photo.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
           : <View style={PC.empty}><Ionicons name={ratio === 1 ? 'person-outline' : 'card-outline'} size={38} color={colors.mutedForeground} /></View>}
+
+        {status === 'checking' && (
+          <View style={PC.overlay}>
+            <ActivityIndicator size="small" color="#fff" />
+          </View>
+        )}
+        {(status === 'valid' || status === 'invalid') && (
+          <View style={[PC.badge, { backgroundColor: statusColor }]}>
+            <Ionicons name={status === 'valid' ? 'checkmark' : 'close'} size={16} color="#fff" />
+          </View>
+        )}
       </View>
       <View style={PC.btns}>
         <TouchableOpacity style={[PC.btn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={onCamera} activeOpacity={0.75}>
@@ -124,6 +142,8 @@ const PC = StyleSheet.create({
   label: { fontSize: 14, fontFamily: 'Tajawal_700Bold', textAlign: 'right' },
   slot: { borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   empty: { alignItems: 'center', justifyContent: 'center', flex: 1 },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: 8, left: 8, width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   btns: { flexDirection: 'row-reverse', gap: 10 },
   btn: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 10, borderWidth: 1 },
   btnText: { fontFamily: 'Tajawal_700Bold', fontSize: 13 },
@@ -403,7 +423,7 @@ export default function ApplyVisaScreen() {
       )}
 
       {/* Step bar */}
-      <StepBar step={step} colors={colors} />
+      <StepBar step={step} colors={colors} photosVerified={photoValid?.valid === true} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -422,6 +442,7 @@ export default function ApplyVisaScreen() {
                 خلفية بيضاء — وجه واضح — بدون نظارات شمسية
               </Text>
               <PhotoCard photo={personalPhoto} label="" ratio={1} colors={colors}
+                status={validating ? 'checking' : photoValid ? (photoValid.valid ? 'valid' : 'invalid') : 'idle'}
                 onCamera={() => handlePersonalPhoto('camera')}
                 onGallery={() => handlePersonalPhoto('gallery')} />
 
@@ -452,6 +473,7 @@ export default function ApplyVisaScreen() {
                 صوّر صفحة البيانات كاملة — بدون انعكاس ضوء
               </Text>
               <PhotoCard photo={passportPhoto} label="" ratio={1.5} colors={colors}
+                status={scanning ? 'checking' : scanDone ? 'valid' : scanError ? 'invalid' : 'idle'}
                 onCamera={() => handlePassportPhoto('camera')}
                 onGallery={() => handlePassportPhoto('gallery')} />
 
