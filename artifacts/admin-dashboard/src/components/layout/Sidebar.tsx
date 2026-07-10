@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLogout } from '@workspace/api-client-react';
-import logo from '@/assets/logo.jpeg';
+import logo from '@/assets/logo_final.png';
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'لوحة القيادة', path: '/' },
@@ -44,8 +44,8 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 bg-sidebar text-sidebar-foreground border-e border-sidebar-border hidden md:flex flex-col flex-shrink-0">
-      <div className="h-16 flex items-center px-6 border-b border-sidebar-border gap-3">
-        <img src={logo} alt="QEMA AL NATHAIR" className="w-9 h-9 rounded-full object-cover bg-white flex-shrink-0" />
+      <div className="h-16 flex items-center px-4 border-b border-sidebar-border gap-2">
+        <img src={logo} alt="QEMA AL NATHAIR" className="w-14 h-14 object-contain flex-shrink-0" />
         <span className="font-bold text-lg tracking-tight">قمة النظائر</span>
       </div>
       
