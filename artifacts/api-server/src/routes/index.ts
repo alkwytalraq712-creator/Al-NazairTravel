@@ -11,6 +11,7 @@ import notificationsRouter from "./notifications";
 import bannersRouter from "./banners";
 import testimonialsRouter from "./testimonials";
 import adminRouter from "./admin";
+import visasScanRouter from "./visas-scan";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(notificationsRouter);
 router.use(bannersRouter);
 router.use(testimonialsRouter);
 router.use(adminRouter);
+router.use(visasScanRouter);
 
 export default router;
