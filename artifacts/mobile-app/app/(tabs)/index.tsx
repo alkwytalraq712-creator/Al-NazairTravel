@@ -18,12 +18,13 @@ import { useColors } from '@/hooks/useColors';
 import { BannerSlider } from '@/components/BannerSlider';
 import { VisaCard } from '@/components/VisaCard';
 import { PackageCard } from '@/components/PackageCard';
+import { OfferCard } from '@/components/OfferCard';
 
 const SERVICES = [
-  { icon: 'document-text', label: 'التأشيرات', route: '/(tabs)/visas', color: '#3B82F6' },
-  { icon: 'airplane', label: 'الطيران', route: '/(tabs)/flights', color: '#10B981' },
-  { icon: 'map', label: 'الباقات', route: '/(tabs)/packages', color: '#F59E0B' },
-  { icon: 'call', label: 'تواصل معنا', route: null, color: '#8B5CF6' },
+  { icon: 'document-text', label: 'التأشيرات', route: '/(tabs)/visas', color: '#3B82F6', bg: '#E7F0FE' },
+  { icon: 'airplane', label: 'الطيران', route: '/(tabs)/flights', color: '#10B981', bg: '#E4F8F0' },
+  { icon: 'map', label: 'الباقات', route: '/(tabs)/packages', color: '#F59E0B', bg: '#FDF1E3' },
+  { icon: 'call', label: 'تواصل معنا', route: null, color: '#8B5CF6', bg: '#F0EBFC' },
 ] as const;
 
 export default function HomeScreen() {
@@ -39,32 +40,57 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 34 : 120 }}
     >
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
-        <TouchableOpacity onPress={() => router.push('/notifications')}>
-          <Ionicons name="notifications-outline" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Image
-          source={require('@/assets/images/logo_transparent.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <TouchableOpacity onPress={() => router.push('/(tabs)/visas')}>
-          <Ionicons name="search-outline" size={24} color="#fff" />
-        </TouchableOpacity>
+      {/* Header + Hero */}
+      <View style={[styles.heroWrap, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
+        <View style={styles.header}>
+          <View>
+            <TouchableOpacity onPress={() => router.push('/notifications')}>
+              <Ionicons name="notifications-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.notifDot} />
+          </View>
+          <Image
+            source={require('@/assets/images/logo_transparent.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <TouchableOpacity onPress={() => router.push('/(tabs)/visas')}>
+            <Ionicons name="search-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Banner Slider */}
+        {isLoading ? (
+          <View style={[styles.bannerSkeleton, { backgroundColor: colors.muted }]}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : (
+          <View style={styles.bannerWrap}>
+            <BannerSlider
+              banners={home?.banners ?? []}
+              renderOverlay={(banner) => (
+                <View style={styles.bannerOverlay} pointerEvents="box-none">
+                  {!!banner.title && (
+                    <Text style={styles.bannerTitle}>{banner.title}</Text>
+                  )}
+                  <Text style={styles.bannerSubtitle}>اكتشف وجهات رائعة واحجز بسهولة وأمان</Text>
+                  <TouchableOpacity
+                    style={[styles.bannerCta, { backgroundColor: colors.primary }]}
+                    activeOpacity={0.85}
+                    onPress={() => router.push('/(tabs)/packages')}
+                  >
+                    <Ionicons name="arrow-back" size={16} color="#fff" />
+                    <Text style={styles.bannerCtaText}>احجز الآن</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            />
+          </View>
+        )}
       </View>
 
-      {/* Banner Slider */}
-      {isLoading ? (
-        <View style={[styles.bannerSkeleton, { backgroundColor: colors.muted }]}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      ) : (
-        <BannerSlider banners={home?.banners ?? []} />
-      )}
-
       {/* Services */}
-      <View style={[styles.section, { backgroundColor: colors.card, marginHorizontal: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border }]}>
+      <View style={[styles.section, { backgroundColor: colors.card, marginHorizontal: 16, borderRadius: 18 }]}>
         <View style={styles.servicesGrid}>
           {SERVICES.map((svc) => (
             <TouchableOpacity
@@ -73,14 +99,40 @@ export default function HomeScreen() {
               activeOpacity={0.7}
               onPress={() => svc.route && router.push(svc.route as any)}
             >
-              <View style={[styles.serviceIcon, { backgroundColor: svc.color + '20' }]}>
-                <Ionicons name={svc.icon as any} size={26} color={svc.color} />
+              <View style={[styles.serviceIcon, { backgroundColor: svc.bg }]}>
+                <Ionicons name={svc.icon as any} size={24} color={svc.color} />
               </View>
               <Text style={[styles.serviceLabel, { color: colors.foreground }]}>{svc.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
+
+      {/* Featured Offers */}
+      {((home?.offers?.length ?? 0) > 0) && (
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/packages')} style={styles.seeAllRow}>
+              <Ionicons name="chevron-back" size={14} color={colors.primary} />
+              <Text style={[styles.seeAll, { color: colors.primary }]}>عرض الكل</Text>
+            </TouchableOpacity>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>العروض المميزة</Text>
+          </View>
+          <FlatList
+            data={home!.offers}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, flexDirection: 'row-reverse', gap: 14 }}
+            keyExtractor={(p) => String(p.id)}
+            renderItem={({ item }) => (
+              <OfferCard
+                pkg={item}
+                onPress={() => router.push(`/package/${item.id}` as any)}
+              />
+            )}
+          />
+        </View>
+      )}
 
       {/* Featured Visas */}
       {((home?.featuredVisas?.length ?? 0) > 0) && (
@@ -160,6 +212,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  heroWrap: { paddingBottom: 40 },
   header: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -167,12 +220,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
+  notifDot: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F08015',
+  },
   logo: { width: 120, height: 50 },
-  bannerSkeleton: { height: 200, margin: 16, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  section: { padding: 16, marginTop: 16 },
+  bannerWrap: { marginHorizontal: 16, borderRadius: 16, overflow: 'hidden' },
+  bannerSkeleton: { height: 200, margin: 16, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  bannerOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: 0,
+    justifyContent: 'flex-end',
+    padding: 18,
+  },
+  bannerTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontFamily: 'Tajawal_800ExtraBold',
+    textAlign: 'right',
+    marginBottom: 6,
+  },
+  bannerSubtitle: {
+    color: '#ffffffdd',
+    fontSize: 13,
+    fontFamily: 'Tajawal_400Regular',
+    textAlign: 'right',
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  bannerCta: {
+    flexDirection: 'row-reverse',
+    alignSelf: 'flex-start',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 24,
+  },
+  bannerCtaText: { color: '#fff', fontSize: 13, fontFamily: 'Tajawal_700Bold' },
+  section: {
+    padding: 18,
+    marginTop: -32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
   servicesGrid: { flexDirection: 'row-reverse', justifyContent: 'space-around' },
   serviceItem: { alignItems: 'center', gap: 8, minWidth: 72 },
-  serviceIcon: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  serviceIcon: { width: 52, height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   serviceLabel: { fontSize: 12, fontFamily: 'Tajawal_500Medium', textAlign: 'center' },
   sectionContainer: { marginTop: 24 },
   sectionHeader: {
@@ -183,6 +288,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sectionTitle: { fontSize: 18, fontFamily: 'Tajawal_800ExtraBold' },
+  seeAllRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 2 },
   seeAll: { fontSize: 13, fontFamily: 'Tajawal_500Medium' },
   testimonialCard: {
     width: 240,

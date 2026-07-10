@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,14 +17,22 @@ import { useListPackages } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { PackageCard } from '@/components/PackageCard';
 
+const REGIONS = [
+  { key: '', label: 'الكل' },
+  { key: 'تركيا', label: 'تركيا' },
+  { key: 'الإمارات', label: 'الخليج' },
+  { key: 'ماليزيا', label: 'آسيا' },
+  { key: 'اليونان', label: 'أوروبا' },
+];
+
 export default function PackagesScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const [search, setSearch] = useState('');
-  const [country, setCountry] = useState('');
+  const [region, setRegion] = useState('');
 
   const { data: packages, isLoading, refetch } = useListPackages(
-    country ? { country } : undefined,
+    region ? { country: region } : undefined,
   );
 
   const filtered = (packages ?? []).filter(p =>
@@ -36,10 +45,12 @@ export default function PackagesScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      {/* Header */}
       <View style={[styles.header, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
         <Text style={styles.headerTitle}>الباقات السياحية</Text>
       </View>
 
+      {/* Search */}
       <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Ionicons name="search-outline" size={18} color={colors.mutedForeground} />
         <TextInput
@@ -57,6 +68,36 @@ export default function PackagesScreen() {
         )}
       </View>
 
+      {/* Region filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, flexDirection: 'row-reverse', gap: 8, paddingVertical: 10 }}
+      >
+        {REGIONS.map(r => {
+          const active = region === r.key;
+          return (
+            <TouchableOpacity
+              key={r.key}
+              onPress={() => setRegion(r.key)}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: active ? colors.primary : colors.card,
+                  borderColor: active ? colors.primary : colors.border,
+                },
+              ]}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.chipLabel, { color: active ? '#fff' : colors.foreground }]}>
+                {r.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* List */}
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -65,15 +106,18 @@ export default function PackagesScreen() {
         <View style={styles.center}>
           <Ionicons name="map-outline" size={48} color={colors.mutedForeground} />
           <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>لا توجد باقات متاحة</Text>
-          <TouchableOpacity onPress={() => refetch()} style={[styles.retryBtn, { borderColor: colors.primary }]}>
-            <Text style={[styles.retryText, { color: colors.primary }]}>إعادة المحاولة</Text>
+          <TouchableOpacity
+            onPress={() => { setRegion(''); refetch(); }}
+            style={[styles.retryBtn, { borderColor: colors.primary }]}
+          >
+            <Text style={[styles.retryText, { color: colors.primary }]}>عرض الكل</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={filtered}
           keyExtractor={(p) => String(p.id)}
-          contentContainerStyle={{ padding: 16 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 34 : 120 }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <PackageCard
@@ -103,6 +147,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchInput: { flex: 1, fontFamily: 'Tajawal_400Regular', fontSize: 14 },
+  chip: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  chipLabel: { fontSize: 13, fontFamily: 'Tajawal_500Medium' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   emptyText: { fontSize: 15, fontFamily: 'Tajawal_400Regular' },
   retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, borderWidth: 1.5, marginTop: 8 },

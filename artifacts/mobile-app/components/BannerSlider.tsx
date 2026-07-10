@@ -1,30 +1,33 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Dimensions, FlatList, StyleSheet, View, TouchableOpacity } from 'react-native';
+import { FlatList, LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import type { Banner } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 
-const { width: SCREEN_W } = Dimensions.get('window');
 const BANNER_H = 200;
 
 interface Props {
   banners: Banner[];
+  renderOverlay?: (banner: Banner, index: number) => React.ReactNode;
 }
 
-export function BannerSlider({ banners }: Props) {
+export function BannerSlider({ banners, renderOverlay }: Props) {
   const colors = useColors();
   const [idx, setIdx] = useState(0);
+  const [width, setWidth] = useState(0);
   const listRef = useRef<FlatList<Banner>>(null);
 
   useEffect(() => {
-    if (!banners.length) return;
+    if (!banners.length || !width) return;
     const timer = setInterval(() => {
       const next = (idx + 1) % banners.length;
       setIdx(next);
-      listRef.current?.scrollToOffset({ offset: next * SCREEN_W, animated: true });
+      listRef.current?.scrollToOffset({ offset: next * width, animated: true });
     }, 3500);
     return () => clearInterval(timer);
-  }, [idx, banners.length]);
+  }, [idx, banners.length, width]);
+
+  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
   if (!banners.length) {
     return (
@@ -33,28 +36,33 @@ export function BannerSlider({ banners }: Props) {
   }
 
   return (
-    <View>
-      <FlatList
-        ref={listRef}
-        data={banners}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        scrollEnabled={banners.length > 1}
-        keyExtractor={(b) => String(b.id)}
-        onMomentumScrollEnd={(e) => {
-          const newIdx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
-          setIdx(newIdx);
-        }}
-        renderItem={({ item }) => (
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={styles.image}
-            contentFit="cover"
-            placeholder={{ uri: 'data:image/png;base64,iVBORw0KGgo=' }}
-          />
-        )}
-      />
+    <View onLayout={onLayout}>
+      {width > 0 && (
+        <FlatList
+          ref={listRef}
+          data={banners}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          scrollEnabled={banners.length > 1}
+          keyExtractor={(b) => String(b.id)}
+          onMomentumScrollEnd={(e) => {
+            const newIdx = Math.round(e.nativeEvent.contentOffset.x / width);
+            setIdx(newIdx);
+          }}
+          renderItem={({ item, index }) => (
+            <View style={{ width }}>
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={[styles.image, { width }]}
+                contentFit="cover"
+                placeholder={{ uri: 'data:image/png;base64,iVBORw0KGgo=' }}
+              />
+              {renderOverlay?.(item, index)}
+            </View>
+          )}
+        />
+      )}
       {banners.length > 1 && (
         <View style={styles.dots}>
           {banners.map((_, i) => (
@@ -75,7 +83,7 @@ export function BannerSlider({ banners }: Props) {
 
 const styles = StyleSheet.create({
   placeholder: { height: BANNER_H, borderRadius: 12, margin: 16 },
-  image: { width: SCREEN_W, height: BANNER_H },
+  image: { height: BANNER_H },
   dots: {
     position: 'absolute',
     bottom: 10,
