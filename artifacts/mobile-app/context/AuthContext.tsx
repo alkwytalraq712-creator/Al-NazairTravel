@@ -36,7 +36,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 // ─── Token helpers ─────────────────────────────────────────────────────────
 
-let _cachedToken: string | null = null;
+let _cachedToken: string | null | undefined = undefined;
 
 async function loadToken(): Promise<string | null> {
   if (_cachedToken !== undefined) return _cachedToken;
@@ -52,6 +52,14 @@ async function saveToken(token: string): Promise<void> {
 async function clearToken(): Promise<void> {
   _cachedToken = null;
   await AsyncStorage.removeItem(TOKEN_KEY);
+}
+
+/**
+ * Read the current auth token for manual fetch() calls that bypass the
+ * shared api-client-react instance (e.g. multipart/base64 uploads).
+ */
+export async function getAuthToken(): Promise<string | null> {
+  return loadToken();
 }
 
 function getApiBase(): string {

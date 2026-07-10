@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useCreateVisaApplication, useGetVisa } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, getAuthToken } from '@/context/AuthContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -248,8 +248,14 @@ export default function ApplyVisaScreen() {
     setPhotoValid(null);
     setValidating(true);
     try {
+      const token = await getAuthToken();
       const res = await fetch(`${getApiBase()}/api/visas/validate-photo`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({ imageBase64: asset.base64, mimeType: asset.mimeType }),
       });
       const data: any = await res.json().catch(() => ({}));
@@ -272,8 +278,14 @@ export default function ApplyVisaScreen() {
     setScanning(true);
     setScanError('');
     try {
+      const token = await getAuthToken();
       const res = await fetch(`${getApiBase()}/api/visas/scan-passport`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({ imageBase64: passportPhoto.base64, mimeType: passportPhoto.mimeType }),
       });
       const data: any = await res.json().catch(() => ({}));

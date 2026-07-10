@@ -10,6 +10,12 @@ import { pool } from "@workspace/db";
 
 const app: Express = express();
 
+// Replit's proxy terminates TLS and forwards requests over plain HTTP
+// internally. Without this, Express doesn't consider the connection secure,
+// so the session cookie's `secure: true` flag silently drops Set-Cookie —
+// breaking cookie-based auth (e.g. the admin dashboard) entirely.
+app.set("trust proxy", 1);
+
 const PgSession = connectPgSimple(session);
 
 if (!process.env.SESSION_SECRET) {
