@@ -11,6 +11,8 @@ export * from './banner';
 export * from './bannerInput';
 export * from './bannerUpdate';
 export * from './cabinClass';
+export * from './employeeInput';
+export * from './employeeUpdate';
 export * from './errorResponse';
 export * from './flightBooking';
 export * from './flightBookingInput';

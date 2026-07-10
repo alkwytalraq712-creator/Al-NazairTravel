@@ -1,0 +1,684 @@
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { base44 } from "@/api/base44Client";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  ArrowRight, Camera, Loader2, CheckCircle, User, ScanLine,
+  FileCheck, ClipboardList, AlertCircle, Edit3, Upload, Zap, Shield
+} from "lucide-react";
+
+const STEPS = [
+  { num: 1, label: "الصورة الشخصية", icon: Camera },
+  { num: 2, label: "جواز السفر", icon: ScanLine },
+  { num: 3, label: "قراءة البيانات", icon: Zap },
+  { num: 4, label: "البيانات الإضافية", icon: Edit3 },
+  { num: 5, label: "مراجعة وإرسال", icon: ClipboardList },
+];
+
+const PHOTO_TIPS = [
+  "خلفية بيضاء أو فاتحة",
+  "الوجه واضح ومضاء جيداً",
+  "بدون نظارات أو قبعة",
+  "نظرة مباشرة للكاميرا",
+];
+
+export default function VisaApply() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [visa, setVisa] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrDone, setOcrDone] = useState(false);
+  const [ocrError, setOcrError] = useState(false);
+  const progressRef = useRef(null);
+
+  const [form, setForm] = useState({
+    full_name: "", nationality: "", date_of_birth: "", gender: "ذكر",
+    profession: "", phone: "", email: "", city: "",
+    passport_number: "", passport_expiry: "", passport_issue_date: "",
+    passport_country: "", document_number: "",
+    mrz_line1: "", mrz_line2: "",
+  });
+
+  const [personalPhoto, setPersonalPhoto] = useState(null);
+  const [passportImage, setPassportImage] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [passportPreview, setPassportPreview] = useState(null);
+  const [passportFileUrl, setPassportFileUrl] = useState(null);
+  const passportFileRef = useRef(null); // avoid closure stale state
+
+  useEffect(() => {
+    base44.entities.Visa.get(id).then(setVisa).catch(() => {}).finally(() => setLoading(false));
+  }, [id]);
+
+  const handleFileSelect = (file, setFile, setPreview) => {
+    if (!file) return;
+    setFile(file);
+    setPreview(URL.createObjectURL(file));
+  };
+
+  // Upload passport image — store in ref immediately to avoid stale closure
+  const handlePassportUpload = (file) => {
+    if (!file) return;
+    passportFileRef.current = file;
+    setPassportImage(file);
+    setPassportPreview(URL.createObjectURL(file));
+  };
+
+  const runOCR = async (fileOverride) => {
+    const file = fileOverride || passportFileRef.current || passportImage;
+    if (!file) {
+      toast({ title: "يرجى رفع صورة الجواز أولاً", variant: "destructive" });
+      return;
+    }
+    setOcrLoading(true);
+    setOcrProgress(10);
+    setOcrError(false);
+
+    // Animate progress bar
+    progressRef.current = setInterval(() => {
+      setOcrProgress(p => p < 85 ? p + 5 : p);
+    }, 500);
+
+    try {
+      // Upload the passport image
+      setOcrProgress(20);
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setPassportFileUrl(file_url);
+      setOcrProgress(45);
+
+      // Run AI OCR with detailed MRZ extraction prompt
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are a professional passport OCR system. Analyze this passport image carefully and extract ALL visible data.
+
+IMPORTANT: Extract the ACTUAL data from this specific passport image. Do NOT use example data or placeholder values.
+
+Extract:
+1. Full name as printed on the passport (surname + given names)
+2. Passport number (exactly as shown)
+3. Nationality (country name in Arabic or as shown)
+4. Date of birth (format YYYY-MM-DD)
+5. Date of issue (format YYYY-MM-DD)
+6. Date of expiry (format YYYY-MM-DD)
+7. Gender (M or F)
+8. Country of issue
+9. Document number if different from passport number
+10. MRZ line 1 (the first machine readable zone line at bottom of passport)
+11. MRZ line 2 (the second machine readable zone line)
+
+Return ONLY the actual data from the image. If a field is not visible or unreadable, return an empty string.`,
+        file_urls: [file_url],
+        model: "claude_sonnet_4_6",
+        response_json_schema: {
+          type: "object",
+          properties: {
+            full_name: { type: "string", description: "Full name as on passport" },
+            passport_number: { type: "string", description: "Passport number" },
+            nationality: { type: "string", description: "Nationality" },
+            gender: { type: "string", description: "M or F" },
+            date_of_birth: { type: "string", description: "YYYY-MM-DD" },
+            passport_issue_date: { type: "string", description: "YYYY-MM-DD" },
+            passport_expiry: { type: "string", description: "YYYY-MM-DD" },
+            passport_country: { type: "string", description: "Country of issue" },
+            document_number: { type: "string", description: "Document number" },
+            mrz_line1: { type: "string", description: "MRZ line 1" },
+            mrz_line2: { type: "string", description: "MRZ line 2" },
+          }
+        }
+      });
+
+      clearInterval(progressRef.current);
+      setOcrProgress(100);
+
+      // Map gender
+      const genderMapped = result.gender === "M" ? "ذكر" : result.gender === "F" ? "أنثى" : form.gender;
+
+      // Only update fields that have actual data
+      const updates = {};
+      if (result.full_name) updates.full_name = result.full_name;
+      if (result.passport_number) updates.passport_number = result.passport_number;
+      if (result.nationality) updates.nationality = result.nationality;
+      if (result.date_of_birth) updates.date_of_birth = result.date_of_birth;
+      if (result.passport_issue_date) updates.passport_issue_date = result.passport_issue_date;
+      if (result.passport_expiry) updates.passport_expiry = result.passport_expiry;
+      if (result.passport_country) updates.passport_country = result.passport_country;
+      if (result.document_number) updates.document_number = result.document_number;
+      if (result.mrz_line1) updates.mrz_line1 = result.mrz_line1;
+      if (result.mrz_line2) updates.mrz_line2 = result.mrz_line2;
+      updates.gender = genderMapped;
+
+      setForm(prev => ({ ...prev, ...updates }));
+      setOcrDone(true);
+
+      setTimeout(() => {
+        setOcrLoading(false);
+        setStep(4);
+      }, 800);
+
+    } catch (err) {
+      clearInterval(progressRef.current);
+      setOcrProgress(0);
+      setOcrError(true);
+      setOcrLoading(false);
+      toast({ title: "تعذّر قراءة الجواز تلقائياً", description: "يمكنك إدخال البيانات يدوياً", variant: "destructive" });
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!form.full_name || !form.phone || !form.passport_number) {
+      toast({ title: "يرجى تعبئة الاسم ورقم الهاتف ورقم الجواز على الأقل", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      let personalPhotoUrl = "";
+      let passportImageUrl = passportFileUrl || "";
+      if (personalPhoto) {
+        const r = await base44.integrations.Core.UploadFile({ file: personalPhoto });
+        personalPhotoUrl = r.file_url;
+      }
+      if (passportImage && !passportFileUrl) {
+        const r = await base44.integrations.Core.UploadFile({ file: passportImage });
+        passportImageUrl = r.file_url;
+      }
+      const refNum = "QEMA-" + new Date().getFullYear() + "-" + Math.floor(10000 + Math.random() * 90000);
+      await base44.entities.VisaApplication.create({
+        ...form,
+        visa_id: id,
+        visa_country: visa.country,
+        visa_type: visa.visa_type,
+        reference_number: refNum,
+        personal_photo: personalPhotoUrl,
+        passport_image: passportImageUrl,
+        price: visa.price,
+        status: "تم استلام الطلب",
+      });
+      toast({ title: "✅ تم إرسال طلبك بنجاح!", description: `رقم المرجع: ${refNum}` });
+      navigate("/my-orders");
+    } catch {
+      toast({ title: "حدث خطأ، يرجى المحاولة مجدداً", variant: "destructive" });
+    }
+    setSubmitting(false);
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-[60vh]">
+      <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="sticky top-0 z-20 bg-card/95 backdrop-blur-sm border-b border-border/40 px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-3 max-w-lg mx-auto">
+          <Link to={`/visas/${id}`}
+            className="w-10 h-10 bg-secondary rounded-2xl flex items-center justify-center hover:bg-secondary/80 transition-colors">
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+          <div className="text-right flex-1">
+            <h2 className="text-sm font-black">تقديم طلب تأشيرة</h2>
+            <p className="text-[10px] text-primary font-semibold">{visa?.country} — {visa?.visa_type}</p>
+          </div>
+          <div className="text-left">
+            <p className="text-primary font-black text-lg">${visa?.price}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Steps Bar */}
+      <div className="bg-card border-b border-border/40 px-4 py-4 shadow-sm">
+        <div className="flex items-center justify-between max-w-lg mx-auto">
+          {STEPS.map((s, i) => {
+            const done = step > s.num;
+            const active = step === s.num;
+            const Icon = s.icon;
+            return (
+              <React.Fragment key={s.num}>
+                <div className="flex flex-col items-center gap-1 min-w-0">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300
+                    ${done ? "bg-green-500 text-white shadow-lg shadow-green-500/30"
+                    : active ? "bg-primary text-white shadow-lg shadow-primary/40 ring-4 ring-primary/20"
+                    : "bg-secondary text-muted-foreground"}`}>
+                    {done ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                  </div>
+                  <span className={`text-[8px] text-center leading-tight max-w-[46px] ${active ? "text-primary font-bold" : done ? "text-green-400" : "text-muted-foreground"}`}>
+                    {s.label}
+                  </span>
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div className={`flex-1 h-0.5 mx-1 transition-all duration-500 ${step > s.num ? "bg-green-500" : "bg-border"}`} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 py-5 max-w-lg mx-auto">
+
+        {/* ── STEP 1: Personal Photo ── */}
+        {step === 1 && (
+          <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="text-right">
+              <h3 className="text-lg font-black">الصورة الشخصية</h3>
+              <p className="text-xs text-muted-foreground mt-1">صورة شخصية حديثة ووفق معايير التأشيرة</p>
+            </div>
+
+            {/* Photo upload area */}
+            <label className="block cursor-pointer group">
+              <div className={`relative rounded-3xl overflow-hidden border-2 border-dashed transition-all duration-300
+                ${photoPreview ? "border-primary/50" : "border-border hover:border-primary/40"}`}>
+                {photoPreview ? (
+                  <div className="relative">
+                    <img src={photoPreview} alt="" className="w-full h-72 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    <div className="absolute bottom-4 right-4 bg-green-500 rounded-full p-2 shadow-lg">
+                      <CheckCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="absolute bottom-4 left-4 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full">
+                      انقر للتغيير
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-4 py-14 bg-secondary/30">
+                    <div className="w-24 h-24 rounded-full bg-secondary border-4 border-border flex items-center justify-center group-hover:border-primary/40 transition-colors">
+                      <User className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-sm">ارفع الصورة الشخصية</p>
+                      <p className="text-xs text-muted-foreground mt-1">JPG, PNG — حتى 10MB</p>
+                    </div>
+                    <div className="bg-primary/10 border border-primary/20 rounded-2xl px-4 py-2 text-primary text-sm font-bold flex items-center gap-2">
+                      <Upload className="w-4 h-4" />
+                      اختر صورة
+                    </div>
+                  </div>
+                )}
+              </div>
+              <input type="file" accept="image/*" capture="user" className="hidden"
+                onChange={e => handleFileSelect(e.target.files[0], setPersonalPhoto, setPhotoPreview)} />
+            </label>
+
+            {/* Tips */}
+            <div className="bg-primary/5 border border-primary/15 rounded-2xl p-4">
+              <p className="text-xs font-bold text-primary mb-3 flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                شروط صورة التأشيرة
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {PHOTO_TIPS.map(t => (
+                  <div key={t} className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground">{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setStep(2)} disabled={!photoPreview}
+                className="flex-1 bg-primary text-white rounded-2xl py-4 font-black text-sm shadow-lg shadow-primary/30 disabled:opacity-40 hover:bg-primary/90 transition-all">
+                تأكيد الصورة ←
+              </button>
+              <button onClick={() => setStep(2)}
+                className="px-5 py-4 rounded-2xl bg-secondary text-sm font-bold hover:bg-secondary/80 transition-all">
+                تخطي
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 2: Passport Image ── */}
+        {step === 2 && (
+          <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="text-right">
+              <h3 className="text-lg font-black">صورة جواز السفر</h3>
+              <p className="text-xs text-muted-foreground mt-1">التقط صورة واضحة للصفحة الرئيسية — سيتم استخراج البيانات تلقائياً</p>
+            </div>
+
+            <label className="block cursor-pointer group">
+              <div className={`relative rounded-3xl overflow-hidden border-2 border-dashed transition-all duration-300
+                ${passportPreview ? "border-primary/50" : "border-border hover:border-primary/40"}`}>
+                {passportPreview ? (
+                  <div className="relative">
+                    <img src={passportPreview} alt="passport" className="w-full h-56 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    <div className="absolute bottom-4 right-4 bg-green-500 rounded-full p-2 shadow-lg">
+                      <CheckCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="absolute bottom-4 left-4 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full">
+                      انقر للتغيير
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-4 py-12 bg-secondary/30">
+                    <div className="relative">
+                      <div className="w-32 h-24 rounded-xl bg-secondary border-2 border-border flex items-center justify-center group-hover:border-primary/40 transition-colors">
+                        <ScanLine className="w-12 h-10 text-muted-foreground" />
+                      </div>
+                      <div className="absolute -bottom-2 -right-2 w-7 h-7 bg-primary rounded-full flex items-center justify-center">
+                        <Zap className="w-3.5 h-3.5 text-white" />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-sm">ارفع صورة الجواز</p>
+                      <p className="text-xs text-muted-foreground mt-1">سيتم قراءة البيانات تلقائياً بالذكاء الاصطناعي</p>
+                    </div>
+                    <div className="bg-primary/10 border border-primary/20 rounded-2xl px-4 py-2 text-primary text-sm font-bold flex items-center gap-2">
+                      <Camera className="w-4 h-4" />
+                      التقط صورة
+                    </div>
+                  </div>
+                )}
+              </div>
+              <input type="file" accept="image/*" className="hidden"
+                onChange={e => handlePassportUpload(e.target.files[0])} />
+            </label>
+
+            {/* Tips */}
+            <div className="bg-secondary/50 rounded-2xl p-4 space-y-2">
+              <p className="text-xs font-bold mb-2">📋 نصائح للحصول على قراءة دقيقة</p>
+              {["تأكد من وضوح منطقة MRZ السفلية (الأرقام والحروف)", "أضاءة جيدة بدون وميض", "الجواز مسطح بدون انعكاسات", "حواف الجواز ظاهرة بالكامل"].map(t => (
+                <div key={t} className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary/60 flex-shrink-0" />
+                  <span className="text-xs text-muted-foreground">{t}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setStep(1)} className="px-5 py-4 rounded-2xl bg-secondary text-sm font-bold">السابق</button>
+              <button onClick={() => { const f = passportFileRef.current; if (f) { setStep(3); runOCR(f); } }}
+                disabled={!passportImage}
+                className="flex-1 bg-primary text-white rounded-2xl py-4 font-black text-sm shadow-lg shadow-primary/30 disabled:opacity-40 flex items-center justify-center gap-2 hover:bg-primary/90 transition-all">
+                <Zap className="w-4 h-4" />
+                مسح الجواز بالذكاء الاصطناعي
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 3: OCR Scanning ── */}
+        {step === 3 && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="text-right">
+              <h3 className="text-lg font-black">قراءة بيانات الجواز</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                {ocrDone ? "تم استخراج البيانات بنجاح" : ocrError ? "تعذّر القراءة التلقائية" : "جاري تحليل الجواز..."}
+              </p>
+            </div>
+
+            {/* Passport preview with scan overlay */}
+            {passportPreview && (
+              <div className="relative rounded-2xl overflow-hidden border border-primary/30">
+                <img src={passportPreview} alt="passport" className="w-full h-48 object-cover" />
+                {ocrLoading && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60">
+                    {/* Scan line animation */}
+                    <div className="w-full px-4 mb-4">
+                      <div className="relative h-0.5 bg-white/20 rounded-full overflow-hidden">
+                        <div className="absolute inset-y-0 left-0 bg-primary rounded-full animate-[scanline_1.5s_ease-in-out_infinite]"
+                          style={{ width: "60%", animation: "scanline 1.5s ease-in-out infinite" }} />
+                      </div>
+                    </div>
+                    <div className="bg-black/50 rounded-2xl px-6 py-3 text-center">
+                      <p className="text-white text-sm font-bold">جاري قراءة بيانات الجواز...</p>
+                      <p className="text-white/60 text-xs mt-1">الذكاء الاصطناعي يحلل منطقة MRZ</p>
+                    </div>
+                  </div>
+                )}
+                {ocrDone && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <div className="bg-green-500/90 rounded-3xl p-5 text-center">
+                      <CheckCircle className="w-10 h-10 text-white mx-auto mb-2" />
+                      <p className="text-white font-black">تمت القراءة!</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Progress bar */}
+            {ocrLoading && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">{ocrProgress}%</span>
+                  <span className="text-muted-foreground font-medium">جاري التحليل...</span>
+                </div>
+                <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-primary to-amber-400 rounded-full transition-all duration-500"
+                    style={{ width: `${ocrProgress}%` }} />
+                </div>
+                <div className="flex flex-col gap-1.5 mt-4">
+                  {[
+                    { label: "رفع الصورة", done: ocrProgress > 25 },
+                    { label: "تحليل منطقة MRZ", done: ocrProgress > 50 },
+                    { label: "استخراج البيانات", done: ocrProgress > 75 },
+                    { label: "التحقق من النتائج", done: ocrProgress >= 100 },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center gap-3 text-xs">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${item.done ? "bg-green-500" : "bg-secondary border border-border"}`}>
+                        {item.done && <CheckCircle className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className={item.done ? "text-foreground font-medium" : "text-muted-foreground"}>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {ocrError && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-5 text-right">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-destructive/20 rounded-full flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">تعذّرت القراءة التلقائية</p>
+                    <p className="text-xs text-muted-foreground">يمكنك إدخال البيانات يدوياً</p>
+                  </div>
+                </div>
+                <button onClick={() => setStep(4)}
+                  className="w-full bg-primary text-white rounded-xl py-3 font-bold text-sm">
+                  إدخال البيانات يدوياً ←
+                </button>
+              </div>
+            )}
+
+            {ocrDone && (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4 text-center">
+                <p className="text-green-400 font-black text-sm">تم استخراج البيانات بنجاح!</p>
+                <p className="text-xs text-muted-foreground mt-1">يرجى مراجعة البيانات وتعديل ما يلزم</p>
+                <button onClick={() => setStep(4)} className="mt-3 w-full bg-green-500 text-white rounded-xl py-3 font-bold text-sm">
+                  مراجعة البيانات ←
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── STEP 4: Additional Info + Edit ── */}
+        {step === 4 && (
+          <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="flex items-center justify-between">
+              <div className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full ${ocrDone ? "bg-green-500/15 text-green-400" : "bg-primary/10 text-primary"}`}>
+                {ocrDone ? <><CheckCircle className="w-3.5 h-3.5" /> تم المسح تلقائياً</> : <><Edit3 className="w-3.5 h-3.5" /> إدخال يدوي</>}
+              </div>
+              <h3 className="text-base font-black text-right">البيانات المستخرجة</h3>
+            </div>
+
+            {/* Passport data fields */}
+            <div className="bg-card rounded-2xl border border-border/40 p-4 space-y-4">
+              <p className="text-xs font-bold text-primary border-b border-border/40 pb-2">بيانات الجواز</p>
+              {[
+                { key: "full_name", label: "الاسم الكامل *", placeholder: "محمد أحمد محمد" },
+                { key: "passport_number", label: "رقم الجواز *", placeholder: "A12345678" },
+                { key: "document_number", label: "رقم الوثيقة", placeholder: "" },
+                { key: "nationality", label: "الجنسية *", placeholder: "عراقي" },
+                { key: "passport_country", label: "دولة الإصدار", placeholder: "العراق" },
+                { key: "date_of_birth", label: "تاريخ الميلاد", type: "date" },
+                { key: "passport_issue_date", label: "تاريخ الإصدار", type: "date" },
+                { key: "passport_expiry", label: "تاريخ الانتهاء", type: "date" },
+              ].map(f => (
+                <div key={f.key}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded ${ocrDone && form[f.key] ? "bg-green-500/15 text-green-400" : "bg-secondary text-muted-foreground"}`}>
+                      {ocrDone && form[f.key] ? "✓ مسح تلقائي" : "يدوي"}
+                    </span>
+                    <label className="text-xs text-muted-foreground">{f.label}</label>
+                  </div>
+                  <input
+                    type={f.type || "text"}
+                    value={form[f.key] || ""}
+                    onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+                    placeholder={f.placeholder}
+                    className="w-full bg-secondary rounded-xl py-3 px-4 text-sm border border-border/50 focus:border-primary focus:outline-none text-right placeholder:text-muted-foreground/50 transition-colors"
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block text-right">الجنس</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {["ذكر", "أنثى"].map(g => (
+                    <button key={g} onClick={() => setForm({ ...form, gender: g })}
+                      className={`py-3 rounded-xl text-sm font-bold transition-all ${form.gender === g ? "bg-primary text-white shadow-lg shadow-primary/30" : "bg-secondary text-muted-foreground hover:bg-secondary/80"}`}>
+                      {g === "ذكر" ? "♂ ذكر" : "♀ أنثى"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* MRZ data */}
+            {(form.mrz_line1 || form.mrz_line2) && (
+              <div className="bg-secondary/50 rounded-2xl p-4">
+                <p className="text-xs font-bold mb-2 text-right">منطقة القراءة الآلية MRZ</p>
+                {form.mrz_line1 && <p className="font-mono text-[10px] text-muted-foreground bg-card rounded px-2 py-1.5 mb-1 text-left">{form.mrz_line1}</p>}
+                {form.mrz_line2 && <p className="font-mono text-[10px] text-muted-foreground bg-card rounded px-2 py-1.5 text-left">{form.mrz_line2}</p>}
+              </div>
+            )}
+
+            {/* Contact & personal */}
+            <div className="bg-card rounded-2xl border border-border/40 p-4 space-y-4">
+              <p className="text-xs font-bold text-primary border-b border-border/40 pb-2">بيانات التواصل</p>
+              {[
+                { key: "phone", label: "رقم الهاتف *", type: "tel", placeholder: "+964 7XX XXX XXXX" },
+                { key: "email", label: "البريد الإلكتروني", type: "email", placeholder: "email@example.com" },
+                { key: "profession", label: "المهنة", placeholder: "مهندس" },
+                { key: "city", label: "المدينة", placeholder: "بغداد" },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className="text-xs text-muted-foreground mb-1.5 block text-right">{f.label}</label>
+                  <input
+                    type={f.type || "text"}
+                    value={form[f.key] || ""}
+                    onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+                    placeholder={f.placeholder}
+                    className="w-full bg-secondary rounded-xl py-3 px-4 text-sm border border-border/50 focus:border-primary focus:outline-none text-right placeholder:text-muted-foreground/50 transition-colors"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setStep(3)} className="px-5 py-4 rounded-2xl bg-secondary text-sm font-bold">السابق</button>
+              <button onClick={() => setStep(5)}
+                className="flex-1 bg-primary text-white rounded-2xl py-4 font-black text-sm shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all">
+                مراجعة الطلب ←
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 5: Review & Submit ── */}
+        {step === 5 && (
+          <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="text-right">
+              <h3 className="text-lg font-black">مراجعة الطلب</h3>
+              <p className="text-xs text-muted-foreground mt-1">تحقق من البيانات قبل الإرسال</p>
+            </div>
+
+            {/* Summary card */}
+            <div className="bg-card rounded-2xl border border-border/40 overflow-hidden shadow-sm">
+              {/* Profile row */}
+              <div className="flex items-center gap-4 p-4 border-b border-border/30 bg-gradient-to-l from-primary/5 to-transparent">
+                {photoPreview ? (
+                  <img src={photoPreview} alt="" className="w-16 h-16 rounded-xl object-cover border-2 border-primary/30 flex-shrink-0" />
+                ) : (
+                  <div className="w-16 h-16 rounded-xl bg-secondary border border-border flex items-center justify-center flex-shrink-0">
+                    <User className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="text-right flex-1 min-w-0">
+                  <p className="font-black text-base truncate">{form.full_name || "—"}</p>
+                  <p className="text-xs text-muted-foreground">رقم الجواز: {form.passport_number || "—"}</p>
+                  <p className="text-xs text-primary font-semibold">{form.nationality || "—"} {form.gender === "ذكر" ? "♂" : "♀"}</p>
+                </div>
+                {passportPreview && (
+                  <img src={passportPreview} alt="" className="w-20 h-14 rounded-lg object-cover border border-border/50 flex-shrink-0" />
+                )}
+              </div>
+
+              {/* Data grid */}
+              <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-3">
+                {[
+                  ["الجواز", form.passport_number],
+                  ["الجنسية", form.nationality],
+                  ["تاريخ الميلاد", form.date_of_birth],
+                  ["تاريخ الانتهاء", form.passport_expiry],
+                  ["تاريخ الإصدار", form.passport_issue_date],
+                  ["الجنس", form.gender],
+                  ["الهاتف", form.phone],
+                  ["البريد", form.email],
+                  ["المهنة", form.profession],
+                  ["المدينة", form.city],
+                ].map(([label, value]) => (
+                  <div key={label} className="text-right">
+                    <p className="text-[9px] text-muted-foreground">{label}</p>
+                    <p className="text-xs font-bold mt-0.5 truncate">{value || "—"}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Price summary */}
+            <div className="bg-gradient-to-l from-primary/10 to-amber-500/10 border border-primary/20 rounded-2xl p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-left">
+                  <p className="text-xs text-muted-foreground">رسوم الخدمة</p>
+                  <p className="text-primary font-black text-2xl">${visa?.price}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold">{visa?.country}</p>
+                  <p className="text-xs text-muted-foreground">{visa?.visa_type}</p>
+                  <p className="text-xs text-muted-foreground">مدة المعالجة: {visa?.processing_time}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Terms note */}
+            <div className="bg-secondary/50 rounded-xl p-3 flex items-start gap-2.5 text-right">
+              <Shield className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground">بإرسال الطلب توافق على شروط الخدمة. سيتم التواصل معك عبر رقم الهاتف المسجل.</p>
+            </div>
+
+            <div className="flex gap-3 pb-4">
+              <button onClick={() => setStep(4)} className="px-5 py-4 rounded-2xl bg-secondary text-sm font-bold">السابق</button>
+              <button onClick={handleSubmit} disabled={submitting}
+                className="flex-1 bg-primary text-white rounded-2xl py-4 font-black text-sm shadow-xl shadow-primary/40 flex items-center justify-center gap-2 hover:bg-primary/90 transition-all disabled:opacity-60">
+                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                {submitting ? "جاري الإرسال..." : "تأكيد وإرسال الطلب"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

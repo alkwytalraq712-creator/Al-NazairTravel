@@ -12,7 +12,8 @@ import {
   Image as ImageIcon,
   MessageSquare,
   LogOut,
-  Globe2
+  Globe2,
+  UserCog
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLogout } from '@workspace/api-client-react';
@@ -20,6 +21,7 @@ import { useLogout } from '@workspace/api-client-react';
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'لوحة القيادة', path: '/' },
   { icon: Users, label: 'العملاء', path: '/customers' },
+  { icon: UserCog, label: 'الموظفين', path: '/employees' },
   { icon: Plane, label: 'حجوزات الطيران', path: '/flight-bookings' },
   { icon: FileText, label: 'طلبات التأشيرات', path: '/visa-applications' },
   { icon: Briefcase, label: 'عروض التأشيرات', path: '/visas' },

@@ -11,6 +11,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Login } from '@/pages/login';
 import { Dashboard } from '@/pages/dashboard';
 import { Customers } from '@/pages/customers';
+import { Employees } from '@/pages/employees';
 import { Visas } from '@/pages/visas';
 import { VisaApplications } from '@/pages/visa-applications';
 import { Packages } from '@/pages/packages';
@@ -32,6 +33,7 @@ function AppRouter() {
             <Route path="/" component={Dashboard} />
             <Route path="/dashboard" component={Dashboard} />
             <Route path="/customers" component={Customers} />
+            <Route path="/employees" component={Employees} />
             <Route path="/visas" component={Visas} />
             <Route path="/visa-applications" component={VisaApplications} />
             <Route path="/packages" component={Packages} />

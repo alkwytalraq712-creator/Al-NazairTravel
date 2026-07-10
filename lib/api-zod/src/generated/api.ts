@@ -1717,6 +1717,97 @@ export const GetCustomerResponse = zod.object({
 
 
 /**
+ * @summary List staff/employee accounts (admin)
+ */
+export const ListEmployeesResponseItem = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "phone": zod.string(),
+  "email": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "role": zod.enum(['customer', 'admin']),
+  "language": zod.string(),
+  "currency": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
+
+
+/**
+ * @summary Create a staff/employee account (admin)
+ */
+
+export const createEmployeeBodyPhoneMin = 3;
+
+export const createEmployeeBodyPasswordMin = 6;
+
+
+
+export const CreateEmployeeBody = zod.object({
+  "fullName": zod.string().min(1),
+  "phone": zod.string().min(createEmployeeBodyPhoneMin),
+  "email": zod.string().optional(),
+  "password": zod.string().min(createEmployeeBodyPasswordMin)
+})
+
+export const CreateEmployeeResponse = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "phone": zod.string(),
+  "email": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "role": zod.enum(['customer', 'admin']),
+  "language": zod.string(),
+  "currency": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a staff/employee account (admin)
+ */
+export const UpdateEmployeeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const updateEmployeeBodyPhoneMin = 3;
+
+export const updateEmployeeBodyPasswordMin = 6;
+
+
+
+export const UpdateEmployeeBody = zod.object({
+  "fullName": zod.string().min(1).optional(),
+  "phone": zod.string().min(updateEmployeeBodyPhoneMin).optional(),
+  "email": zod.string().nullish(),
+  "password": zod.string().min(updateEmployeeBodyPasswordMin).optional()
+})
+
+export const UpdateEmployeeResponse = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "phone": zod.string(),
+  "email": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "role": zod.enum(['customer', 'admin']),
+  "language": zod.string(),
+  "currency": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a staff/employee account (admin)
+ */
+export const DeleteEmployeeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteEmployeeResponse = zod.void()
+
+
+/**
  * @summary Get admin dashboard summary
  */
 export const GetAdminDashboardSummaryResponse = zod.object({

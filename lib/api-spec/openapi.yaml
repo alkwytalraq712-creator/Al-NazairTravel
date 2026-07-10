@@ -1048,6 +1048,95 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ---------- Admin: employees ----------
+  /admin/employees:
+    get:
+      operationId: listEmployees
+      tags: [admin]
+      summary: List staff/employee accounts (admin)
+      responses:
+        "200":
+          description: Employees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createEmployee
+      tags: [admin]
+      summary: Create a staff/employee account (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/employees/{id}:
+    patch:
+      operationId: updateEmployee
+      tags: [admin]
+      summary: Update a staff/employee account (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteEmployee
+      tags: [admin]
+      summary: Delete a staff/employee account (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          description: Cannot delete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /admin/dashboard:
     get:
       operationId: getAdminDashboardSummary
@@ -1105,6 +1194,23 @@ components:
         language: { type: string }
         currency: { type: string }
         createdAt: { type: string, format: date-time }
+
+    EmployeeInput:
+      type: object
+      required: [fullName, phone, password]
+      properties:
+        fullName: { type: string, minLength: 1 }
+        phone: { type: string, minLength: 3 }
+        email: { type: string }
+        password: { type: string, minLength: 6 }
+
+    EmployeeUpdate:
+      type: object
+      properties:
+        fullName: { type: string, minLength: 1 }
+        phone: { type: string, minLength: 3 }
+        email: { type: ["string", "null"] }
+        password: { type: string, minLength: 6 }
 
     SignupInput:
       type: object

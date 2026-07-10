@@ -39,6 +39,27 @@ export interface User {
   createdAt: string;
 }
 
+export interface EmployeeInput {
+  /** @minLength 1 */
+  fullName: string;
+  /** @minLength 3 */
+  phone: string;
+  email?: string;
+  /** @minLength 6 */
+  password: string;
+}
+
+export interface EmployeeUpdate {
+  /** @minLength 1 */
+  fullName?: string;
+  /** @minLength 3 */
+  phone?: string;
+  /** @nullable */
+  email?: string | null;
+  /** @minLength 6 */
+  password?: string;
+}
+
 export interface SignupInput {
   /** @minLength 1 */
   fullName: string;

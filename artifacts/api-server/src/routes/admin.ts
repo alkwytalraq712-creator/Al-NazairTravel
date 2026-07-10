@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import {
   db,
   usersTable,
@@ -12,8 +12,15 @@ import {
   GetCustomerParams,
   GetCustomerResponse,
   GetAdminDashboardSummaryResponse,
+  ListEmployeesResponse,
+  CreateEmployeeBody,
+  CreateEmployeeResponse,
+  UpdateEmployeeParams,
+  UpdateEmployeeBody,
+  UpdateEmployeeResponse,
+  DeleteEmployeeParams,
 } from "@workspace/api-zod";
-import { requireAdmin } from "../lib/auth";
+import { requireAdmin, hashPassword } from "../lib/auth";
 import { serializeUser } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -133,6 +140,139 @@ router.get(
         recentActivity,
       }),
     );
+  },
+);
+
+router.get("/admin/employees", requireAdmin, async (_req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.role, "admin"))
+    .orderBy(desc(usersTable.createdAt));
+
+  res.json(ListEmployeesResponse.parse(rows.map(serializeUser)));
+});
+
+router.post("/admin/employees", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = CreateEmployeeBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [existing] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.phone, parsed.data.phone));
+  if (existing) {
+    res.status(400).json({ error: "رقم الهاتف مسجل مسبقاً" });
+    return;
+  }
+
+  const passwordHash = await hashPassword(parsed.data.password);
+  const [employee] = await db
+    .insert(usersTable)
+    .values({
+      fullName: parsed.data.fullName,
+      phone: parsed.data.phone,
+      email: parsed.data.email,
+      passwordHash,
+      role: "admin",
+    })
+    .returning();
+
+  res.status(201).json(CreateEmployeeResponse.parse(serializeUser(employee)));
+});
+
+router.patch(
+  "/admin/employees/:id",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const params = UpdateEmployeeParams.safeParse(req.params);
+    const parsed = UpdateEmployeeBody.safeParse(req.body);
+    if (!params.success || !parsed.success) {
+      res
+        .status(400)
+        .json({ error: (params.error ?? parsed.error)!.message });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(usersTable)
+      .where(and(eq(usersTable.id, params.data.id), eq(usersTable.role, "admin")));
+    if (!existing) {
+      res.status(404).json({ error: "Employee not found" });
+      return;
+    }
+
+    const { password, ...rest } = parsed.data;
+    if (Object.keys(rest).length === 0 && !password) {
+      res.status(400).json({ error: "لا توجد بيانات لتحديثها" });
+      return;
+    }
+
+    if (rest.phone) {
+      const [phoneOwner] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.phone, rest.phone));
+      if (phoneOwner && phoneOwner.id !== params.data.id) {
+        res.status(400).json({ error: "رقم الهاتف مسجل مسبقاً" });
+        return;
+      }
+    }
+
+    const updates: Partial<typeof usersTable.$inferInsert> = { ...rest };
+    if (password) {
+      updates.passwordHash = await hashPassword(password);
+    }
+
+    const [employee] = await db
+      .update(usersTable)
+      .set(updates)
+      .where(eq(usersTable.id, params.data.id))
+      .returning();
+
+    res.json(UpdateEmployeeResponse.parse(serializeUser(employee)));
+  },
+);
+
+router.delete(
+  "/admin/employees/:id",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const params = DeleteEmployeeParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    if (params.data.id === res.locals.currentUser?.id) {
+      res.status(400).json({ error: "لا يمكنك حذف حسابك الخاص" });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(usersTable)
+      .where(and(eq(usersTable.id, params.data.id), eq(usersTable.role, "admin")));
+    if (!existing) {
+      res.status(404).json({ error: "Employee not found" });
+      return;
+    }
+
+    const [{ count: adminCount }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(usersTable)
+      .where(eq(usersTable.role, "admin"));
+    if (adminCount <= 1) {
+      res.status(400).json({ error: "لا يمكن حذف آخر حساب موظف" });
+      return;
+    }
+
+    await db.delete(usersTable).where(eq(usersTable.id, params.data.id));
+    res.status(204).send();
   },
 );
 
