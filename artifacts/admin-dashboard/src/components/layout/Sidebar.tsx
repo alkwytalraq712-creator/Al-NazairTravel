@@ -12,11 +12,11 @@ import {
   Image as ImageIcon,
   MessageSquare,
   LogOut,
-  Globe2,
   UserCog
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLogout } from '@workspace/api-client-react';
+import logo from '@/assets/logo.jpeg';
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'لوحة القيادة', path: '/' },
@@ -44,8 +44,8 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 bg-sidebar text-sidebar-foreground border-e border-sidebar-border hidden md:flex flex-col flex-shrink-0">
-      <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
-        <Globe2 className="w-6 h-6 text-primary me-3" />
+      <div className="h-16 flex items-center px-6 border-b border-sidebar-border gap-3">
+        <img src={logo} alt="QEMA AL NATHAIR" className="w-9 h-9 rounded-full object-cover bg-white flex-shrink-0" />
         <span className="font-bold text-lg tracking-tight">قمة النظائر</span>
       </div>
       

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { setAuthTokenGetter } from '@workspace/api-client-react';
-import { Globe2, Loader2, Lock, Mail, ArrowLeft } from 'lucide-react';
+import { Loader2, Lock, Mail, ArrowLeft } from 'lucide-react';
+import logo from '@/assets/logo.jpeg';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -89,8 +90,8 @@ export function Login() {
         </div>
         
         <div className="relative z-10 max-w-lg">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-primary/20">
-            <Globe2 className="w-8 h-8 text-primary-foreground" />
+          <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-primary/20 p-2">
+            <img src={logo} alt="QEMA AL NATHAIR" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight mb-4 text-white">
             قمة النظائر
@@ -106,8 +107,8 @@ export function Login() {
       {/* Right Login Panel */}
       <div className="flex-1 flex flex-col justify-center px-6 md:px-16 lg:px-24 xl:px-32 relative bg-card">
         <div className="md:hidden flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-            <Globe2 className="w-6 h-6 text-primary-foreground" />
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1 border border-border">
+            <img src={logo} alt="QEMA AL NATHAIR" className="w-full h-full object-contain" />
           </div>
           <span className="font-bold text-xl">إدارة قمة النظائر</span>
         </div>
