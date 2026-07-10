@@ -47,8 +47,11 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      // Replit dev domains (expo.pike.replit.dev vs pike.replit.dev) are
+      // treated as cross-site by the browser, so we need SameSite=None +
+      // Secure to allow the session cookie across both origins.
+      secure: true,
+      sameSite: "none",
       maxAge: 30 * 24 * 60 * 60 * 1000,
     },
   }),

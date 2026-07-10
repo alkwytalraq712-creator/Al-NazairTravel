@@ -14,7 +14,7 @@ import {
   ResetPasswordBody,
   ResetPasswordResponse,
 } from "@workspace/api-zod";
-import { hashPassword, verifyPassword, serializeUser } from "../lib/auth";
+import { hashPassword, verifyPassword, serializeUser, generateToken } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -46,8 +46,24 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
     .returning();
 
   req.session.userId = user.id;
-  res.status(201).json(SignupResponse.parse(serializeUser(user)));
+  const token = generateToken(user.id);
+  res.status(201).json({ ...SignupResponse.parse(serializeUser(user)), token });
 });
+
+/** Normalize phone to canonical +964XXXXXXXXXX form for flexible matching */
+function normalizePhone(raw: string): string[] {
+  const digits = raw.replace(/\D/g, "");
+  const variants = new Set<string>([raw]);
+  // If starts with 964, try with + prefix
+  if (digits.startsWith("964")) variants.add("+" + digits);
+  // If starts with 0, try with +964 replacing the leading 0
+  if (digits.startsWith("0") && digits.length > 1) variants.add("+964" + digits.slice(1));
+  // If doesn't start with +, try adding it
+  if (!raw.startsWith("+")) variants.add("+" + digits);
+  // bare digits without country code
+  if (digits.length === 10 && digits.startsWith("7")) variants.add("+964" + digits);
+  return Array.from(variants);
+}
 
 router.post("/auth/login", async (req, res): Promise<void> => {
   const parsed = LoginBody.safeParse(req.body);
@@ -56,13 +72,17 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
+  const identifier = parsed.data.identifier;
+  const phoneVariants = normalizePhone(identifier);
+
+  // Try each phone variant + email match
   const [user] = await db
     .select()
     .from(usersTable)
     .where(
       or(
-        eq(usersTable.phone, parsed.data.identifier),
-        eq(usersTable.email, parsed.data.identifier),
+        ...phoneVariants.map((v) => eq(usersTable.phone, v)),
+        eq(usersTable.email, identifier),
       ),
     );
 
@@ -72,7 +92,8 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   }
 
   req.session.userId = user.id;
-  res.json(LoginResponse.parse(serializeUser(user)));
+  const token = generateToken(user.id);
+  res.json({ ...LoginResponse.parse(serializeUser(user)), token });
 });
 
 router.post("/auth/logout", async (req, res): Promise<void> => {

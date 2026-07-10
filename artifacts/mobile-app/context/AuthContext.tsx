@@ -1,13 +1,27 @@
-import React, { createContext, useCallback, useContext } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetCurrentUserQueryKey,
   useGetCurrentUser,
-  useLogin,
   useLogout,
-  useSignup,
+  setAuthTokenGetter,
 } from '@workspace/api-client-react';
-import type { LoginInput, SignupInput, User } from '@workspace/api-client-react';
+import type { User } from '@workspace/api-client-react';
+
+const TOKEN_KEY = '@qema_auth_token';
+
+interface LoginInput {
+  identifier: string;
+  password: string;
+}
+
+interface SignupInput {
+  fullName: string;
+  phone: string;
+  email?: string;
+  password: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -20,37 +34,116 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// ─── Token helpers ─────────────────────────────────────────────────────────
+
+let _cachedToken: string | null = null;
+
+async function loadToken(): Promise<string | null> {
+  if (_cachedToken !== undefined) return _cachedToken;
+  _cachedToken = await AsyncStorage.getItem(TOKEN_KEY);
+  return _cachedToken;
+}
+
+async function saveToken(token: string): Promise<void> {
+  _cachedToken = token;
+  await AsyncStorage.setItem(TOKEN_KEY, token);
+}
+
+async function clearToken(): Promise<void> {
+  _cachedToken = null;
+  await AsyncStorage.removeItem(TOKEN_KEY);
+}
+
+function getApiBase(): string {
+  if (process.env.EXPO_PUBLIC_DOMAIN) {
+    return `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+  }
+  return '';
+}
+
+// ─── Raw API calls that return the token ───────────────────────────────────
+
+async function apiLogin(data: LoginInput): Promise<{ token: string }> {
+  const res = await fetch(`${getApiBase()}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'خطأ في الاتصال' })) as { error?: string };
+    throw new Error(err.error ?? 'بيانات خاطئة');
+  }
+  return res.json() as Promise<{ token: string }>;
+}
+
+async function apiSignup(data: SignupInput): Promise<{ token: string }> {
+  const res = await fetch(`${getApiBase()}/api/auth/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'خطأ في الاتصال' })) as { error?: string };
+    throw new Error(err.error ?? 'خطأ في التسجيل');
+  }
+  return res.json() as Promise<{ token: string }>;
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const tokenReadyRef = useRef(false);
+
+  // Restore token from storage on first mount
+  useEffect(() => {
+    (async () => {
+      const token = await loadToken();
+      setAuthTokenGetter(token ? () => token : null);
+      tokenReadyRef.current = true;
+      // Re-fetch current user now that the token is ready
+      queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: user, isLoading } = useGetCurrentUser({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     query: { queryKey: getGetCurrentUserQueryKey(), retry: false, staleTime: 60_000 } as any,
   });
 
-  const loginMutation = useLogin();
   const logoutMutation = useLogout();
-  const signupMutation = useSignup();
 
   const login = useCallback(
     async (data: LoginInput) => {
-      await loginMutation.mutateAsync({ data });
+      const result = await apiLogin(data);
+      if (result.token) {
+        await saveToken(result.token);
+        setAuthTokenGetter(() => result.token);
+      }
       await queryClient.invalidateQueries();
     },
-    [loginMutation, queryClient],
+    [queryClient],
   );
 
   const logout = useCallback(async () => {
-    await logoutMutation.mutateAsync();
+    await logoutMutation.mutateAsync().catch(() => {});
+    await clearToken();
+    setAuthTokenGetter(null);
     queryClient.clear();
   }, [logoutMutation, queryClient]);
 
   const register = useCallback(
     async (data: SignupInput) => {
-      await signupMutation.mutateAsync({ data });
+      const result = await apiSignup(data);
+      if (result.token) {
+        await saveToken(result.token);
+        setAuthTokenGetter(() => result.token);
+      }
       await queryClient.invalidateQueries();
     },
-    [signupMutation, queryClient],
+    [queryClient],
   );
 
   return (
