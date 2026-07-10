@@ -27,7 +27,7 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      <Route path="/">
+      <Route path="/" nest>
         <MainLayout>
           <Switch>
             <Route path="/" component={Dashboard} />

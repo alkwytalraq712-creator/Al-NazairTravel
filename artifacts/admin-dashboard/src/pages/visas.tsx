@@ -121,10 +121,10 @@ export function Visas() {
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
                         <div>
-                          <p className="font-semibold text-foreground flex items-center gap-2">
+                          <div className="font-semibold text-foreground flex items-center gap-2">
                             {visa.countryName}
                             {visa.isFeatured && <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">مميزة</Badge>}
-                          </p>
+                          </div>
                           <p className="text-xs text-muted-foreground">{visa.entriesAllowed}</p>
                         </div>
                       </div>
