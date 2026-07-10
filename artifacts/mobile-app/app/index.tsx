@@ -118,13 +118,14 @@ export default function WelcomeScreen() {
       {/* ── Dark gradient overlay ───────────────────────────────── */}
       <LinearGradient
         colors={[
-          'rgba(0,0,0,0.08)',
-          'rgba(4,7,16,0.30)',
-          'rgba(4,7,16,0.62)',
-          'rgba(4,7,16,0.88)',
-          'rgba(4,7,16,0.97)',
+          'rgba(4,7,20,0.72)',
+          'rgba(4,7,20,0.55)',
+          'rgba(4,7,20,0.30)',
+          'rgba(4,7,20,0.72)',
+          'rgba(4,7,20,0.93)',
+          'rgba(4,7,20,0.98)',
         ]}
-        locations={[0, 0.28, 0.50, 0.70, 1]}
+        locations={[0, 0.18, 0.38, 0.58, 0.78, 1]}
         style={StyleSheet.absoluteFill}
       />
 
@@ -148,8 +149,6 @@ export default function WelcomeScreen() {
 
         {/* ── Logo ───────────────────────────────────────────────── */}
         <View style={styles.logoWrap}>
-          {/* Soft glow ring behind logo */}
-          <View style={styles.logoGlow} />
           <Image
             source={require('@/assets/images/logo_transparent.png')}
             style={styles.logo}
@@ -240,16 +239,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoGlow: {
-    position: 'absolute',
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: 'rgba(240,128,21,0.08)',
-  },
   logo: {
-    width: 310,
-    height: 155,
+    width: 370,
+    height: 190,
   },
 
   // ── Text ────────────────────────────────────────────────────────
