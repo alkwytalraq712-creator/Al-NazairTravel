@@ -93,6 +93,12 @@ router.get(
       return;
     }
 
+    // Ownership check: only the booking owner can view it
+    if (row.booking.userId !== req.session.userId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
     res.json(GetPackageBookingResponse.parse(withPackage(row.booking, row.pkg)));
   },
 );

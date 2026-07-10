@@ -94,6 +94,12 @@ router.get(
       return;
     }
 
+    // Ownership check: only the application owner can view it
+    if (row.application.userId !== req.session.userId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
     res.json(
       GetVisaApplicationResponse.parse(withVisa(row.application, row.visa)),
     );

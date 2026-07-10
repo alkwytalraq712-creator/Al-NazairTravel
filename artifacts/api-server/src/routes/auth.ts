@@ -11,8 +11,6 @@ import {
   UpdateProfileResponse,
   RequestPasswordResetBody,
   RequestPasswordResetResponse,
-  ResetPasswordBody,
-  ResetPasswordResponse,
 } from "@workspace/api-zod";
 import { hashPassword, verifyPassword, serializeUser, generateToken } from "../lib/auth";
 
@@ -144,35 +142,12 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/auth/reset-password", async (req, res): Promise<void> => {
-  const parsed = ResetPasswordBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const [user] = await db
-    .select()
-    .from(usersTable)
-    .where(
-      or(
-        eq(usersTable.phone, parsed.data.identifier),
-        eq(usersTable.email, parsed.data.identifier),
-      ),
-    );
-
-  if (!user) {
-    res.status(400).json({ error: "No account found" });
-    return;
-  }
-
-  const passwordHash = await hashPassword(parsed.data.newPassword);
-  await db
-    .update(usersTable)
-    .set({ passwordHash })
-    .where(eq(usersTable.id, user.id));
-
-  res.json(ResetPasswordResponse.parse({ message: "Password reset" }));
+// Password reset via unauthenticated identifier is disabled until OTP/token
+// verification is implemented. Use PATCH /auth/profile while authenticated instead.
+router.post("/auth/reset-password", async (_req, res): Promise<void> => {
+  res.status(501).json({
+    error: "Password reset via identifier is not available. Please contact support.",
+  });
 });
 
 export default router;

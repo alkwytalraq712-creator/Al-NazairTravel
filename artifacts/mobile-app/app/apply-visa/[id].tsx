@@ -22,7 +22,28 @@ import { useAuth, getAuthToken } from '@/context/AuthContext';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PhotoAsset { uri: string; base64: string; mimeType: string }
-interface PhotoValidation { valid: boolean; issues: string[] }
+interface PhotoValidation {
+  valid: boolean;
+  issues: string[];
+  checks?: Record<string, boolean>;
+  checkedAt?: number;
+}
+const CHECK_LABELS: Record<string, string> = {
+  faceVisible: 'الوجه واضح',
+  faceFacingForward: 'الوجه ينظر للأمام',
+  whiteOrLightBackground: 'الخلفية مناسبة',
+  noSunglasses: 'بدون نظارات شمسية',
+  highQuality: 'الدقة جيدة',
+  fullFaceVisible: 'الوجه كامل بالصورة',
+  noCovering: 'بدون تغطية للوجه',
+};
+function formatArabicTime(ts: number): string {
+  try {
+    return new Date(ts).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
 interface PassportData {
   firstName: string; middleName: string; lastName: string; fullName: string;
   passportNumber: string; nationality: string; nationalityAr: string; gender: string;
@@ -223,6 +244,12 @@ export default function ApplyVisaScreen() {
   // Photo validation
   const [validating, setValidating] = useState(false);
   const [photoValid, setPhotoValid] = useState<PhotoValidation | null>(null);
+  const [validateStage, setValidateStage] = useState(0); // 0..2 progressive checklist while validating
+
+  // Passport scan result details
+  const [passportData, setPassportData] = useState<PassportData | null>(null);
+  const [passportCheckedAt, setPassportCheckedAt] = useState<number | null>(null);
+  const [needsReview, setNeedsReview] = useState(false);
 
   // Form
   const [form, setForm] = useState({
@@ -267,6 +294,13 @@ export default function ApplyVisaScreen() {
     setPersonalPhoto(asset);
     setPhotoValid(null);
     setValidating(true);
+    setValidateStage(0);
+    // Cosmetic progressive checklist: "quality" → "face" → "requirements".
+    // The API call is a single request, so this just paces the perceived
+    // steps while we wait — it's capped and cleared as soon as we have a result.
+    const stageTimer = setInterval(() => {
+      setValidateStage(s => (s < 2 ? s + 1 : s));
+    }, 550);
     try {
       const token = await getAuthToken();
       const res = await fetch(`${getApiBase()}/api/visas/validate-photo`, {
@@ -287,11 +321,32 @@ export default function ApplyVisaScreen() {
         Alert.alert('تعذر التحقق من الصورة', data?.error || 'حدث خطأ في خدمة التحقق، يرجى المحاولة لاحقاً');
         return;
       }
-      setPhotoValid({ valid: data?.valid === true, issues: Array.isArray(data?.issues) ? data.issues : [] });
+      setValidateStage(2);
+      setPhotoValid({
+        valid: data?.valid === true,
+        issues: Array.isArray(data?.issues) ? data.issues : [],
+        checks: data?.checks && typeof data.checks === 'object' ? data.checks : undefined,
+        checkedAt: Date.now(),
+      });
     } catch {
       setPhotoValid(null);
       Alert.alert('تعذر التحقق من الصورة', 'تحقق من اتصالك بالإنترنت وحاول مجدداً');
-    } finally { setValidating(false); }
+    } finally {
+      clearInterval(stageTimer);
+      setValidating(false);
+    }
+  }
+
+  function showPhotoDetails() {
+    if (!photoValid) return;
+    const checks = photoValid.checks ?? {};
+    const lines = Object.entries(checks)
+      .map(([key, ok]) => `${ok ? '✔' : '✘'} ${CHECK_LABELS[key] ?? key}`)
+      .join('\n');
+    Alert.alert(
+      photoValid.valid ? 'الصورة مقبولة' : 'الصورة غير مقبولة',
+      `آخر تحقق: ${photoValid.checkedAt ? formatArabicTime(photoValid.checkedAt) : '—'}\n\n${lines || 'لا توجد تفاصيل إضافية'}`,
+    );
   }
 
   async function handlePassportPhoto(source: 'camera' | 'gallery') {
@@ -300,6 +355,8 @@ export default function ApplyVisaScreen() {
     setPassportPhoto(asset);
     setScanDone(false);
     setScanError('');
+    setPassportData(null);
+    setNeedsReview(false);
   }
 
   async function handleScan() {
@@ -320,21 +377,39 @@ export default function ApplyVisaScreen() {
       const data: any = await res.json().catch(() => ({}));
       if (data?.valid && data?.data) {
         const d: PassportData = data.data;
+        const merged = {
+          fullName: d.fullName || `${d.firstName} ${d.middleName} ${d.lastName}`.replace(/\s+/g, ' ').trim(),
+          passportNumber: d.passportNumber,
+          nationality: d.nationalityAr || d.nationality,
+          gender: d.gender === 'M' ? 'ذكر' : d.gender === 'F' ? 'أنثى' : '',
+          dob: d.dateOfBirth,
+          placeOfBirth: d.placeOfBirth,
+          issuingCountry: d.issuingCountry,
+          issueDate: d.issueDate,
+          expiryDate: d.expiryDate,
+          nationalId: d.nationalId,
+        };
         setForm(prev => ({
           ...prev,
-          fullName: d.fullName || `${d.firstName} ${d.middleName} ${d.lastName}`.replace(/\s+/g, ' ').trim() || prev.fullName,
-          passportNumber: d.passportNumber || prev.passportNumber,
-          nationality: d.nationalityAr || d.nationality || prev.nationality,
-          gender: d.gender === 'M' ? 'ذكر' : d.gender === 'F' ? 'أنثى' : prev.gender,
-          dob: d.dateOfBirth || prev.dob,
-          placeOfBirth: d.placeOfBirth || prev.placeOfBirth,
-          issuingCountry: d.issuingCountry || prev.issuingCountry,
-          issueDate: d.issueDate || prev.issueDate,
-          expiryDate: d.expiryDate || prev.expiryDate,
-          nationalId: d.nationalId || prev.nationalId,
+          fullName: merged.fullName || prev.fullName,
+          passportNumber: merged.passportNumber || prev.passportNumber,
+          nationality: merged.nationality || prev.nationality,
+          gender: merged.gender || prev.gender,
+          dob: merged.dob || prev.dob,
+          placeOfBirth: merged.placeOfBirth || prev.placeOfBirth,
+          issuingCountry: merged.issuingCountry || prev.issuingCountry,
+          issueDate: merged.issueDate || prev.issueDate,
+          expiryDate: merged.expiryDate || prev.expiryDate,
+          nationalId: merged.nationalId || prev.nationalId,
         }));
+        setPassportData(d);
+        setPassportCheckedAt(Date.now());
+        // Flag for manual review when critical fields came back empty —
+        // OCR quality issues shouldn't silently pass the user through.
+        setNeedsReview(!merged.fullName || !merged.passportNumber || !merged.expiryDate);
         setScanDone(true);
-        setStep(1); // Auto-advance to passport data step
+        // No auto-advance: show the success/review card and let the user
+        // confirm by pressing "التالي" so they can see what was extracted.
       } else if (!res.ok) {
         // Server/service failure (e.g. AI provider outage or quota issue) —
         // distinct from an actual unreadable-passport rejection.

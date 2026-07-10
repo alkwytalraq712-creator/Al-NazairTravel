@@ -42,6 +42,23 @@ router.patch(
       return;
     }
 
+    // Fetch first to verify ownership
+    const [existing] = await db
+      .select()
+      .from(notificationsTable)
+      .where(eq(notificationsTable.id, params.data.id));
+
+    if (!existing) {
+      res.status(404).json({ error: "Notification not found" });
+      return;
+    }
+
+    // Allow marking read only if it belongs to this user or is a broadcast (userId = null)
+    if (existing.userId !== null && existing.userId !== req.session.userId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
     const [notification] = await db
       .update(notificationsTable)
       .set({ isRead: true })

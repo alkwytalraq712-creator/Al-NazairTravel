@@ -135,6 +135,12 @@ router.get(
       return;
     }
 
+    // Ownership check: only the booking owner can view it
+    if (booking.userId !== req.session.userId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
     res.json(GetFlightBookingResponse.parse(booking));
   },
 );
