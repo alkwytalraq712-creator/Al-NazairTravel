@@ -14,6 +14,7 @@ import {
   DeleteVisaParams,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../lib/auth";
+import { coerceVisa } from "../lib/coerce";
 
 const router: IRouter = Router();
 
@@ -38,7 +39,7 @@ router.get("/visas", async (req, res): Promise<void> => {
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(visasTable.createdAt);
 
-  res.json(ListVisasResponse.parse(rows));
+  res.json(ListVisasResponse.parse(rows.map(coerceVisa)));
 });
 
 router.post("/visas", requireAdmin, async (req, res): Promise<void> => {
@@ -53,7 +54,7 @@ router.post("/visas", requireAdmin, async (req, res): Promise<void> => {
     .values({ ...parsed.data, price: String(parsed.data.price) })
     .returning();
 
-  res.status(201).json(CreateVisaResponse.parse(visa));
+  res.status(201).json(CreateVisaResponse.parse(coerceVisa(visa)));
 });
 
 router.get("/visas/:id", async (req, res): Promise<void> => {
@@ -73,7 +74,7 @@ router.get("/visas/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetVisaResponse.parse(visa));
+  res.json(GetVisaResponse.parse(coerceVisa(visa)));
 });
 
 router.patch("/visas/:id", requireAdmin, async (req, res): Promise<void> => {
@@ -104,7 +105,7 @@ router.patch("/visas/:id", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(UpdateVisaResponse.parse(visa));
+  res.json(UpdateVisaResponse.parse(coerceVisa(visa)));
 });
 
 router.delete("/visas/:id", requireAdmin, async (req, res): Promise<void> => {

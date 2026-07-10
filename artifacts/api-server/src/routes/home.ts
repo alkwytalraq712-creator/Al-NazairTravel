@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { desc, eq } from "drizzle-orm";
 import { db, visasTable, packagesTable, bannersTable, testimonialsTable } from "@workspace/db";
 import { GetHomeSummaryResponse } from "@workspace/api-zod";
+import { coerceVisa, coercePkg } from "../lib/coerce";
 
 const router: IRouter = Router();
 
@@ -40,11 +41,11 @@ router.get("/home", async (_req, res): Promise<void> => {
 
   res.json(
     GetHomeSummaryResponse.parse({
-      featuredVisas,
-      popularPackages,
+      featuredVisas: featuredVisas.map(coerceVisa),
+      popularPackages: popularPackages.map(coercePkg),
       banners,
       testimonials,
-      offers,
+      offers: offers.map(coercePkg),
     }),
   );
 });

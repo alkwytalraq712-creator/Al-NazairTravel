@@ -14,6 +14,7 @@ import {
   DeletePackageParams,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../lib/auth";
+import { coercePkg } from "../lib/coerce";
 
 const router: IRouter = Router();
 
@@ -41,7 +42,7 @@ router.get("/packages", async (req, res): Promise<void> => {
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(packagesTable.createdAt);
 
-  res.json(ListPackagesResponse.parse(rows));
+  res.json(ListPackagesResponse.parse(rows.map(coercePkg)));
 });
 
 router.post("/packages", requireAdmin, async (req, res): Promise<void> => {
@@ -61,7 +62,7 @@ router.post("/packages", requireAdmin, async (req, res): Promise<void> => {
     })
     .returning();
 
-  res.status(201).json(CreatePackageResponse.parse(pkg));
+  res.status(201).json(CreatePackageResponse.parse(coercePkg(pkg)));
 });
 
 router.get("/packages/:id", async (req, res): Promise<void> => {
@@ -81,7 +82,7 @@ router.get("/packages/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetPackageResponse.parse(pkg));
+  res.json(GetPackageResponse.parse(coercePkg(pkg)));
 });
 
 router.patch("/packages/:id", requireAdmin, async (req, res): Promise<void> => {
@@ -116,7 +117,7 @@ router.patch("/packages/:id", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(UpdatePackageResponse.parse(pkg));
+  res.json(UpdatePackageResponse.parse(coercePkg(pkg)));
 });
 
 router.delete(
