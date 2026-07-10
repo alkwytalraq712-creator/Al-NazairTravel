@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "قمة النظائر للسفريات",
+    "slug": "mobile-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo.jpeg",
+    "scheme": "mobile-app",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/logo.jpeg",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1526"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.qema.alnathair"
+    },
+    "android": {
+      "package": "com.qema.alnathair"
+    },
+    "web": {
+      "favicon": "./assets/images/logo.jpeg"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
