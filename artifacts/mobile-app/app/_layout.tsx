@@ -40,6 +40,7 @@ function RootLayoutNav() {
       <Stack.Screen name="apply-visa/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="apply-visa/terms/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="visa-application/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="visa-success" options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="package/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="book-package/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="flight-results" options={{ headerShown: false }} />

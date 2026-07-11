@@ -65,10 +65,14 @@ app.use(
 );
 app.use(loadCurrentUser);
 
-// Mount storage router ALSO at /storage (without /api prefix) so that
-// image URLs constructed by the finalize endpoint (e.g. /storage/objects/…)
-// resolve correctly when loaded directly in a browser or <img> tag.
-app.use("/storage", storageRouter);
+// Redirect /storage/* → /api/storage/* so that image URLs constructed by
+// the finalize endpoint (e.g. /storage/objects/…) resolve correctly when
+// loaded in a browser <img> tag or React Native Image without the /api prefix.
+// storageRouter's own paths all start with /storage/…, so a direct mount at
+// /storage would double the prefix; a 307 redirect avoids that.
+app.use('/storage', (req, res) => {
+  res.redirect(307, `/api/storage${req.url}`);
+});
 
 app.use("/api", router);
 

@@ -385,8 +385,10 @@ export default function VisaTermsScreen() {
       {
         onSuccess: (app) => {
           const appId = (app as any).id;
+          const refNum = encodeURIComponent((app as any).referenceNumber ?? '—');
+          const dest = encodeURIComponent((visa as any)?.destination ?? '');
           queryClient.invalidateQueries({ queryKey: getListMyVisaApplicationsQueryKey() });
-          router.replace(`/visa-application/${appId}` as any);
+          router.replace(`/visa-success?appId=${appId}&ref=${refNum}&dest=${dest}` as any);
         },
         onError: (e: any) => {
           const code = e?.data?.code ?? '';
