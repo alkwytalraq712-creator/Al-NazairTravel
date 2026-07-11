@@ -2490,6 +2490,83 @@ export const useDeleteBranch = <TError = ErrorType<unknown>,
       return useMutation(getDeleteBranchMutationOptions(options));
     }
 
+export const getGetMyLatestVisaApplicationUrl = () => {
+
+
+
+
+  return `/api/visa-applications/my-latest`
+}
+
+/**
+ * @summary Get the most recent visa application for the current user
+ */
+export const getMyLatestVisaApplication = async ( options?: RequestInit): Promise<VisaApplication> => {
+
+  return customFetch<VisaApplication>(getGetMyLatestVisaApplicationUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyLatestVisaApplicationQueryKey = () => {
+    return [
+    `/api/visa-applications/my-latest`
+    ] as const;
+    }
+
+
+export const getGetMyLatestVisaApplicationQueryOptions = <TData = Awaited<ReturnType<typeof getMyLatestVisaApplication>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyLatestVisaApplication>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyLatestVisaApplicationQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyLatestVisaApplication>>> = ({ signal }) => getMyLatestVisaApplication({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyLatestVisaApplication>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyLatestVisaApplicationQueryResult = NonNullable<Awaited<ReturnType<typeof getMyLatestVisaApplication>>>
+export type GetMyLatestVisaApplicationQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get the most recent visa application for the current user
+ */
+
+export function useGetMyLatestVisaApplication<TData = Awaited<ReturnType<typeof getMyLatestVisaApplication>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyLatestVisaApplication>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyLatestVisaApplicationQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getListMyVisaApplicationsUrl = () => {
 
 

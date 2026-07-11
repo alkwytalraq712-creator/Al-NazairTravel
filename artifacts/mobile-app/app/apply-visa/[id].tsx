@@ -248,10 +248,17 @@ export default function ApplyVisaScreen() {
               {
                 onSuccess: (app) => {
                   queryClient.invalidateQueries({ queryKey: getListMyVisaApplicationsQueryKey() });
+                  const appId = (app as any).id;
                   Alert.alert(
                     '✅ تم تقديم الطلب',
                     `رقم الطلب: ${(app as any).referenceNumber ?? '—'}\nسيتم التواصل معك قريباً.`,
-                    [{ text: 'حسناً', onPress: () => router.replace('/(tabs)/bookings') }],
+                    [
+                      { text: 'حسناً', onPress: () => router.replace('/(tabs)/bookings') },
+                      {
+                        text: 'متابعة طلبك الآن',
+                        onPress: () => router.replace(`/visa-application/${appId}` as any),
+                      },
+                    ],
                   );
                 },
                 onError: (e: any) => {

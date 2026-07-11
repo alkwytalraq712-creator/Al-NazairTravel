@@ -1177,6 +1177,74 @@ export const DeleteBranchResponse = zod.void()
 
 
 /**
+ * @summary Get the most recent visa application for the current user
+ */
+export const GetMyLatestVisaApplicationResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "visaId": zod.number(),
+  "visa": zod.union([zod.object({
+  "id": zod.number(),
+  "countryName": zod.string(),
+  "countryCode": zod.string().nullish(),
+  "countryFlagUrl": zod.string(),
+  "countryImageUrl": zod.string(),
+  "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']),
+  "processingTime": zod.string(),
+  "stayDuration": zod.string(),
+  "price": zod.number(),
+  "currency": zod.string(),
+  "description": zod.string(),
+  "requiredDocuments": zod.array(zod.string()),
+  "entriesAllowed": zod.string(),
+  "validity": zod.string(),
+  "isFeatured": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresPersonalPhoto": zod.boolean(),
+  "requiresPassportImage": zod.boolean(),
+  "requiresBankStatement": zod.boolean(),
+  "requiresFlightBooking": zod.boolean(),
+  "requiresHotelBooking": zod.boolean(),
+  "requiresTravelInsurance": zod.boolean(),
+  "requiresAdditionalDocs": zod.boolean(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
+}),zod.null()]).optional(),
+  "referenceNumber": zod.string(),
+  "fullName": zod.string(),
+  "phone": zod.string(),
+  "email": zod.string(),
+  "nationality": zod.string(),
+  "passportNumber": zod.string(),
+  "passportExpiry": zod.coerce.date(),
+  "dob": zod.coerce.date(),
+  "gender": zod.string(),
+  "occupation": zod.string(),
+  "city": zod.string(),
+  "passportImageUrl": zod.string().nullish(),
+  "personalPhotoUrl": zod.string().nullish(),
+  "passportType": zod.string().nullish(),
+  "issuingCountry": zod.string().nullish(),
+  "passportIssueDate": zod.coerce.date().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "mrz": zod.string().nullish(),
+  "ocrConfidence": zod.number().nullish(),
+  "ocrVerified": zod.boolean().optional(),
+  "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
+  "statusHistory": zod.array(zod.object({
+  "status": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "note": zod.string().nullish()
+})).optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List current user's visa applications
  */
 export const ListMyVisaApplicationsResponseItem = zod.object({
@@ -1235,6 +1303,11 @@ export const ListMyVisaApplicationsResponseItem = zod.object({
   "ocrConfidence": zod.number().nullish(),
   "ocrVerified": zod.boolean().optional(),
   "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
+  "statusHistory": zod.array(zod.object({
+  "status": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "note": zod.string().nullish()
+})).optional(),
   "createdAt": zod.coerce.date()
 })
 export const ListMyVisaApplicationsResponse = zod.array(ListMyVisaApplicationsResponseItem)
@@ -1303,6 +1376,11 @@ export const CreateVisaApplicationResponse = zod.object({
   "ocrConfidence": zod.number().nullish(),
   "ocrVerified": zod.boolean().optional(),
   "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
+  "statusHistory": zod.array(zod.object({
+  "status": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "note": zod.string().nullish()
+})).optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1370,6 +1448,11 @@ export const GetVisaApplicationResponse = zod.object({
   "ocrConfidence": zod.number().nullish(),
   "ocrVerified": zod.boolean().optional(),
   "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
+  "statusHistory": zod.array(zod.object({
+  "status": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "note": zod.string().nullish()
+})).optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1437,6 +1520,11 @@ export const ListAllVisaApplicationsResponseItem = zod.object({
   "ocrConfidence": zod.number().nullish(),
   "ocrVerified": zod.boolean().optional(),
   "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
+  "statusHistory": zod.array(zod.object({
+  "status": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "note": zod.string().nullish()
+})).optional(),
   "createdAt": zod.coerce.date()
 })
 export const ListAllVisaApplicationsResponse = zod.array(ListAllVisaApplicationsResponseItem)
@@ -1509,6 +1597,11 @@ export const UpdateVisaApplicationStatusResponse = zod.object({
   "ocrConfidence": zod.number().nullish(),
   "ocrVerified": zod.boolean().optional(),
   "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
+  "statusHistory": zod.array(zod.object({
+  "status": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "note": zod.string().nullish()
+})).optional(),
   "createdAt": zod.coerce.date()
 })
 

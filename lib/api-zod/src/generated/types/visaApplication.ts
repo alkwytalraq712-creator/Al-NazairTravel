@@ -7,6 +7,7 @@
  */
 import type { Visa } from './visa';
 import type { VisaApplicationStatus } from './visaApplicationStatus';
+import type { VisaApplicationStatusHistoryItem } from './visaApplicationStatusHistoryItem';
 
 export interface VisaApplication {
   id: number;
@@ -42,5 +43,6 @@ export interface VisaApplication {
   ocrConfidence?: number | null;
   ocrVerified?: boolean;
   status: VisaApplicationStatus;
+  statusHistory?: VisaApplicationStatusHistoryItem[];
   createdAt: Date;
 }

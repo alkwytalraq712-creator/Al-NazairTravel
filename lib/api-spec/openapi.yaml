@@ -769,6 +769,25 @@ paths:
         "204":
           description: Deleted
 
+  /visa-applications/my-latest:
+    get:
+      operationId: getMyLatestVisaApplication
+      tags: [visas]
+      summary: Get the most recent visa application for the current user
+      responses:
+        "200":
+          description: Latest application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisaApplication"
+        "404":
+          description: No applications found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /visa-applications:
     get:
       operationId: listMyVisaApplications
@@ -2631,6 +2650,15 @@ components:
         ocrVerified: { type: boolean }
         status:
           $ref: "#/components/schemas/VisaApplicationStatus"
+        statusHistory:
+          type: array
+          items:
+            type: object
+            required: [status, timestamp]
+            properties:
+              status: { type: string }
+              timestamp: { type: string, format: date-time }
+              note: { type: ["string", "null"] }
         createdAt: { type: string, format: date-time }
 
     PassportData:

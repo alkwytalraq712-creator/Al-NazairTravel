@@ -22,6 +22,28 @@ function withVisa<T extends { visaId: number }>(row: T, visa: unknown) {
   return { ...row, visa: visa ?? null };
 }
 
+// GET /visa-applications/my-latest — must be declared BEFORE /:id to avoid route conflicts
+router.get(
+  "/visa-applications/my-latest",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const [row] = await db
+      .select({ application: visaApplicationsTable, visa: visasTable })
+      .from(visaApplicationsTable)
+      .leftJoin(visasTable, eq(visaApplicationsTable.visaId, visasTable.id))
+      .where(eq(visaApplicationsTable.userId, req.session.userId as number))
+      .orderBy(desc(visaApplicationsTable.createdAt))
+      .limit(1);
+
+    if (!row) {
+      res.status(404).json({ error: "لا توجد طلبات تأشيرة" });
+      return;
+    }
+
+    res.json(GetVisaApplicationResponse.parse(withVisa(row.application, row.visa)));
+  },
+);
+
 router.get(
   "/visa-applications",
   requireAuth,
@@ -84,6 +106,7 @@ router.post(
     }
 
     // Auto-fill all fields from user profile
+    const now = new Date().toISOString();
     const [application] = await db
       .insert(visaApplicationsTable)
       .values({
@@ -108,6 +131,8 @@ router.post(
         issuingCountry: user.passportIssuingCountry,
         passportIssueDate: user.passportIssueDate,
         placeOfBirth: user.placeOfBirth,
+        // Initial status history
+        statusHistory: [{ status: "received", timestamp: now }],
       })
       .returning();
 
@@ -181,9 +206,25 @@ router.patch(
       return;
     }
 
+    // Load existing application to append to history
+    const [existing] = await db
+      .select()
+      .from(visaApplicationsTable)
+      .where(eq(visaApplicationsTable.id, params.data.id));
+
+    if (!existing) {
+      res.status(404).json({ error: "Visa application not found" });
+      return;
+    }
+
+    const updatedHistory = [
+      ...(existing.statusHistory ?? []),
+      { status: parsed.data.status, timestamp: new Date().toISOString() },
+    ];
+
     const [application] = await db
       .update(visaApplicationsTable)
-      .set({ status: parsed.data.status })
+      .set({ status: parsed.data.status, statusHistory: updatedHistory })
       .where(eq(visaApplicationsTable.id, params.data.id))
       .returning();
 

@@ -2,6 +2,7 @@ import {
   boolean,
   date,
   integer,
+  jsonb,
   pgTable,
   serial,
   text,
@@ -42,6 +43,10 @@ export const visaApplicationsTable = pgTable("visa_applications", {
   mrz: text("mrz"),
   ocrConfidence: integer("ocr_confidence"),
   ocrVerified: boolean("ocr_verified").notNull().default(false),
+  statusHistory: jsonb("status_history")
+    .notNull()
+    .default([])
+    .$type<Array<{ status: string; timestamp: string; note?: string }>>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

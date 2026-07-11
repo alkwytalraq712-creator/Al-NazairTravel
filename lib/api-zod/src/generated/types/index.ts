@@ -83,6 +83,7 @@ export * from './visa';
 export * from './visaApplication';
 export * from './visaApplicationInput';
 export * from './visaApplicationStatus';
+export * from './visaApplicationStatusHistoryItem';
 export * from './visaApplicationStatusUpdate';
 export * from './visaEligibilityBlocker';
 export * from './visaEligibilityResult';

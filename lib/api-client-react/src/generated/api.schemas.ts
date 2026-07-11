@@ -722,6 +722,13 @@ export const VisaApplicationStatus = {
   rejected: 'rejected',
 } as const;
 
+export type VisaApplicationStatusHistoryItem = {
+  status: string;
+  timestamp: string;
+  /** @nullable */
+  note?: string | null;
+};
+
 export interface VisaApplication {
   id: number;
   userId: number;
@@ -756,6 +763,7 @@ export interface VisaApplication {
   ocrConfidence?: number | null;
   ocrVerified?: boolean;
   status: VisaApplicationStatus;
+  statusHistory?: VisaApplicationStatusHistoryItem[];
   createdAt: string;
 }
 

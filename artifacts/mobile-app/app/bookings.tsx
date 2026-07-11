@@ -115,7 +115,11 @@ export default function BookingsScreen() {
           contentContainerStyle={{ padding: 16 }}
           ListEmptyComponent={<View style={styles.emptyBox}><Ionicons name="document-outline" size={40} color={colors.mutedForeground} /><Text style={[styles.emptyText, { color: colors.mutedForeground }]}>لا توجد طلبات تأشيرة</Text></View>}
           renderItem={({ item }) => (
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <TouchableOpacity
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => router.push(`/visa-application/${item.id}` as any)}
+              activeOpacity={0.8}
+            >
               <View style={styles.cardHeader}>
                 <StatusBadge status={item.status} map={VISA_STATUS} />
                 <Text style={[styles.refNum, { color: colors.mutedForeground }]}>{item.referenceNumber}</Text>
@@ -123,7 +127,11 @@ export default function BookingsScreen() {
               <Text style={[styles.cardTitle, { color: colors.foreground }]}>{item.fullName}</Text>
               <Text style={[styles.cardSub, { color: colors.mutedForeground }]}>جواز: {item.passportNumber}</Text>
               <Text style={[styles.cardSub, { color: colors.mutedForeground }]}>{new Date(item.createdAt).toLocaleDateString('ar')}</Text>
-            </View>
+              <View style={styles.cardFooter}>
+                <Ionicons name="chevron-back" size={14} color={colors.primary} />
+                <Text style={[styles.cardTrack, { color: colors.primary }]}>متابعة الطلب</Text>
+              </View>
+            </TouchableOpacity>
           )}
         />
       ) : tab === 'package' ? (
@@ -183,6 +191,8 @@ const styles = StyleSheet.create({
   refNum: { fontSize: 11, fontFamily: 'Tajawal_400Regular' },
   cardTitle: { fontSize: 15, fontFamily: 'Tajawal_700Bold', textAlign: 'right', marginBottom: 4 },
   cardSub: { fontSize: 12, fontFamily: 'Tajawal_400Regular', textAlign: 'right' },
+  cardFooter: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 10 },
+  cardTrack: { fontSize: 12, fontFamily: 'Tajawal_700Bold' },
   emptyBox: { alignItems: 'center', gap: 12, paddingTop: 60 },
   emptyText: { fontFamily: 'Tajawal_400Regular', fontSize: 14, textAlign: 'center' },
 });
