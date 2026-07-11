@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -92,7 +92,15 @@ export default function AccountScreen() {
         {/* Profile Card */}
         <View style={[styles.profileCard, { backgroundColor: '#0D1526' }]}>
           <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-            <Text style={styles.avatarText}>{user!.fullName.charAt(0)}</Text>
+            {user!.avatarUrl ? (
+              <Image
+                source={{ uri: user!.avatarUrl }}
+                style={{ width: 60, height: 60, borderRadius: 30 }}
+                contentFit="cover"
+              />
+            ) : (
+              <Text style={styles.avatarText}>{user!.fullName.charAt(0)}</Text>
+            )}
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{user!.fullName}</Text>
