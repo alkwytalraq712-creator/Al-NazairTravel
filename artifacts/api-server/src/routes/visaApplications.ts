@@ -15,11 +15,13 @@ import {
 } from "@workspace/api-zod";
 import { requireAdmin, requireAuth, getProfileCompletion } from "../lib/auth";
 import { generateReferenceNumber } from "../lib/reference";
+import { coerceVisa } from "../lib/coerce";
 
 const router: IRouter = Router();
 
 function withVisa<T extends { visaId: number }>(row: T, visa: unknown) {
-  return { ...row, visa: visa ?? null };
+  const coerced = visa != null ? coerceVisa(visa as { price: unknown; rating?: unknown }) : null;
+  return { ...row, visa: coerced };
 }
 
 // GET /visa-applications/my-latest — must be declared BEFORE /:id to avoid route conflicts

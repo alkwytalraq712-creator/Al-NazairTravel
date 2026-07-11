@@ -59,7 +59,7 @@ export default function VisaApplicationTrackScreen() {
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   const appId = Number(id);
-  const { data: app, isLoading, isError } = useGetVisaApplication({ id: appId });
+  const { data: app, isLoading, isError } = useGetVisaApplication(appId);
 
   if (isLoading) {
     return (
