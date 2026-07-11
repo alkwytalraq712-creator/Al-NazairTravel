@@ -37,21 +37,74 @@ describe('Provider availability', () => {
   });
 
   it('selectOcrProvider falls back to Tesseract when no cloud credentials', () => {
-    const origGoogle = process.env.GOOGLE_VISION_API_KEY;
-    const origAzureE = process.env.AZURE_DOC_INTELLIGENCE_ENDPOINT;
-    const origAzureK = process.env.AZURE_DOC_INTELLIGENCE_KEY;
-    const origOpenAI = process.env.OPENAI_API_KEY;
-    delete process.env.GOOGLE_VISION_API_KEY;
-    delete process.env.AZURE_DOC_INTELLIGENCE_ENDPOINT;
-    delete process.env.AZURE_DOC_INTELLIGENCE_KEY;
+    // Must also clear the Replit AI integration pair, or OpenAIVisionProvider
+    // stays available and selectOcrProvider never reaches Tesseract.
+    const keys = [
+      'GOOGLE_VISION_API_KEY',
+      'AZURE_DOC_INTELLIGENCE_ENDPOINT',
+      'AZURE_DOC_INTELLIGENCE_KEY',
+      'OPENAI_API_KEY',
+      'AI_INTEGRATIONS_OPENAI_BASE_URL',
+      'AI_INTEGRATIONS_OPENAI_API_KEY',
+    ];
+    const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+    for (const k of keys) delete process.env[k];
+
+    try {
+      expect(selectOcrProvider().name).toBe('tesseract');
+    } finally {
+      for (const k of keys) {
+        if (saved[k] !== undefined) process.env[k] = saved[k];
+      }
+    }
+  });
+
+  it('OpenAIVisionProvider is available via the Replit AI integration pair (no personal key)', () => {
+    const keys = ['OPENAI_API_KEY', 'AI_INTEGRATIONS_OPENAI_BASE_URL', 'AI_INTEGRATIONS_OPENAI_API_KEY'];
+    const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
     delete process.env.OPENAI_API_KEY;
+    process.env.AI_INTEGRATIONS_OPENAI_BASE_URL = 'https://proxy.example/v1';
+    process.env.AI_INTEGRATIONS_OPENAI_API_KEY = 'dummy-signature';
 
-    const p = selectOcrProvider();
-    expect(p.name).toBe('tesseract');
+    try {
+      expect(new OpenAIVisionProvider().isAvailable()).toBe(true);
+    } finally {
+      for (const k of keys) {
+        if (saved[k] !== undefined) process.env[k] = saved[k];
+        else delete process.env[k];
+      }
+    }
+  });
 
-    if (origGoogle !== undefined) process.env.GOOGLE_VISION_API_KEY = origGoogle;
-    if (origAzureE !== undefined) process.env.AZURE_DOC_INTELLIGENCE_ENDPOINT = origAzureE;
-    if (origAzureK !== undefined) process.env.AZURE_DOC_INTELLIGENCE_KEY = origAzureK;
-    if (origOpenAI !== undefined) process.env.OPENAI_API_KEY = origOpenAI;
+  it('OpenAIVisionProvider is available via a personal OPENAI_API_KEY alone', () => {
+    const keys = ['OPENAI_API_KEY', 'AI_INTEGRATIONS_OPENAI_BASE_URL', 'AI_INTEGRATIONS_OPENAI_API_KEY'];
+    const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+    delete process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+    delete process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = 'sk-personal-test';
+
+    try {
+      expect(new OpenAIVisionProvider().isAvailable()).toBe(true);
+    } finally {
+      for (const k of keys) {
+        if (saved[k] !== undefined) process.env[k] = saved[k];
+        else delete process.env[k];
+      }
+    }
+  });
+
+  it('OpenAIVisionProvider is unavailable with neither integration nor personal key', () => {
+    const keys = ['OPENAI_API_KEY', 'AI_INTEGRATIONS_OPENAI_BASE_URL', 'AI_INTEGRATIONS_OPENAI_API_KEY'];
+    const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+    for (const k of keys) delete process.env[k];
+
+    try {
+      expect(new OpenAIVisionProvider().isAvailable()).toBe(false);
+    } finally {
+      for (const k of keys) {
+        if (saved[k] !== undefined) process.env[k] = saved[k];
+        else delete process.env[k];
+      }
+    }
   });
 });

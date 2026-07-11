@@ -12,3 +12,5 @@
 - [apply-visa hook call signatures](apply-visa-hook-signatures.md) — useGetVisa and useGetVisaEligibility take id:number as FIRST arg, not an object; wrong calls cause [object Object] in URLs.
 - [EligibilityBlockWall undefined blockers crash](eligibility-block-wall-crash.md) — blockers from stale HTTP 304 cache can be undefined; guard every array prop with Array.isArray() ?? [] at both call site and component level.
 - [Storage URL /api prefix gap](storage-url-prefix.md) — storageRouter is under /api in Express; publicUrl was built without /api → images 404. Fix: mount storageRouter ALSO at /storage in app.ts.
+- [Passport OCR with vision LLMs](passport-ocr-vision-llm.md) — don't require a strict 44-char MRZ regex; use semantic structured JSON. extractStructured: null=confident-not-passport (hard-fail), throw=recoverable (fall back).
+- [OpenAI 429 integration vs personal key](openai-integration-429.md) — 429 "exceeded your quota" = billing, not code; means it fell back to a $0 personal key. Re-run setupReplitAIIntegrations + restart workflow.

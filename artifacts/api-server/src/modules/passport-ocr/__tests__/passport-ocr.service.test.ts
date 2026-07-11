@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { PassportOcrService } from '../passport-ocr.service.js';
-import type { OcrProvider, OcrResult } from '../types.js';
+import type { OcrProvider, OcrResult, StructuredPassport } from '../types.js';
 import sharp from 'sharp';
 
 // Build a minimal real JPEG buffer using sharp for image preprocessing
@@ -22,6 +22,44 @@ function makeMockProvider(rawText: string, confidence = 85): OcrProvider {
       provider: 'mock',
       durationMs: 10,
     })),
+  };
+}
+
+const SAMPLE_STRUCTURED: StructuredPassport = {
+  passportType: 'P',
+  passportNumber: 'X1234567',
+  surname: 'ALBALAWI',
+  givenNames: 'SABAH FARHOOD',
+  nationality: 'IRAQ',
+  issuingCountry: 'IRAQ',
+  gender: 'M',
+  dateOfBirth: '1990-01-14',
+  passportIssueDate: '2020-01-14',
+  passportExpiry: '2030-01-14',
+  placeOfBirth: 'BAGHDAD',
+};
+
+// Provider that implements extractStructured (like the OpenAI vision provider).
+// `structured: null` simulates a confident "not a passport"; `structuredError`
+// simulates a recoverable read failure that should fall back to extractText.
+function makeStructuredProvider(opts: {
+  structured?: StructuredPassport | null;
+  structuredError?: Error;
+  textFallback?: string;
+}): OcrProvider {
+  return {
+    name: 'mock-structured',
+    isAvailable: () => true,
+    extractText: vi.fn(async (): Promise<OcrResult> => ({
+      rawText: opts.textFallback ?? '',
+      confidence: 80,
+      provider: 'mock-structured',
+      durationMs: 5,
+    })),
+    extractStructured: vi.fn(async (): Promise<StructuredPassport | null> => {
+      if (opts.structuredError) throw opts.structuredError;
+      return opts.structured ?? null;
+    }),
   };
 }
 
@@ -101,5 +139,48 @@ describe('PassportOcrService', () => {
     const result = await svc.process(jpeg);
     expect(result.passport.confidence).toBeGreaterThanOrEqual(0);
     expect(result.passport.confidence).toBeLessThanOrEqual(100);
+  });
+
+  it('uses structured extraction and does not fall back to text when it succeeds', async () => {
+    const provider = makeStructuredProvider({ structured: SAMPLE_STRUCTURED });
+    const svc = new PassportOcrService(provider);
+    const result = await svc.process(await makeTestJpeg());
+
+    expect(result.success).toBe(true);
+    expect(result.passport.passportNumber).toBe('X1234567');
+    expect(result.passport.surname).toBe('ALBALAWI');
+    expect(result.passport.fullName).toBe('SABAH FARHOOD ALBALAWI');
+    expect(result.provider).toBe('mock-structured');
+    expect(provider.extractStructured).toHaveBeenCalledTimes(1);
+    expect(provider.extractText).not.toHaveBeenCalled();
+  });
+
+  it('accepts a structured result with partial fields (trusted source, user can edit)', async () => {
+    const partial: StructuredPassport = { ...SAMPLE_STRUCTURED, passportExpiry: '', passportIssueDate: '' };
+    const svc = new PassportOcrService(makeStructuredProvider({ structured: partial }));
+    const result = await svc.process(await makeTestJpeg());
+
+    // Missing expiry would fail validation, but a trusted source must not hard-fail.
+    expect(result.success).toBe(true);
+    expect(result.passport.passportNumber).toBe('X1234567');
+  });
+
+  it('throws PASSPORT_INVALID when structured extraction reports "not a passport" (null)', async () => {
+    const svc = new PassportOcrService(makeStructuredProvider({ structured: null }));
+    await expect(svc.process(await makeTestJpeg())).rejects.toMatchObject({ code: 'PASSPORT_INVALID' });
+  });
+
+  it('falls back to the text/MRZ path when structured extraction throws a recoverable error', async () => {
+    const provider = makeStructuredProvider({
+      structuredError: new Error('structured extraction: unparseable JSON'),
+      textFallback: FULL_OCR_WITH_MRZ,
+    });
+    const svc = new PassportOcrService(provider);
+    const result = await svc.process(await makeTestJpeg());
+
+    expect(result.success).toBe(true);
+    expect(result.passport.passportNumber).toBe('A1234567'); // recovered from MRZ text
+    expect(provider.extractStructured).toHaveBeenCalledTimes(1);
+    expect(provider.extractText).toHaveBeenCalledTimes(1);
   });
 });

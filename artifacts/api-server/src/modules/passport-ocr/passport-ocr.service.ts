@@ -4,7 +4,7 @@
  * Depends only on the OcrProvider interface; the concrete provider is injected.
  */
 
-import type { OcrProvider, PassportData, PassportOcrResult } from './types.js';
+import type { OcrProvider, PassportData, PassportOcrResult, StructuredPassport } from './types.js';
 import { preprocessPassportImage } from './image.service.js';
 import { parseMrz } from './mrz.service.js';
 import { validatePassportData } from './validators.js';
@@ -187,26 +187,43 @@ export class PassportOcrService {
 
     // 2a. Preferred: vision-LLM structured extraction. Reads the printed fields
     //     and MRZ semantically — reliable, unlike transcribing a perfect MRZ.
+    //     See OcrProvider.extractStructured contract: a StructuredPassport on
+    //     success, null ONLY for a confident "not a passport", and a throw for
+    //     recoverable read failures (so we fall back rather than reject).
     if (this.provider.extractStructured) {
-      const s = await this.provider.extractStructured(processed.buffer);
-      if (!s) {
+      let structured: StructuredPassport | null | undefined;
+      try {
+        structured = await this.provider.extractStructured(processed.buffer);
+      } catch {
+        // Recoverable failure (model/JSON drift, unreadable) — do NOT hard-fail;
+        // fall through to the text/MRZ path below, which may still succeed.
+        structured = undefined;
+      }
+
+      if (structured === null) {
+        // Confident "not a passport" — a true semantic negative. No point trying
+        // other providers on the same image, so fail fast with a clear message.
         throw Object.assign(
           new Error('Passport validation failed: no readable passport detected'),
           { code: 'PASSPORT_INVALID', details: ['لم يتم التعرف على جواز سفر واضح في الصورة'] },
         );
       }
-      const fullName = [s.givenNames, s.surname].filter(Boolean).join(' ').trim();
-      return this.buildResult(
-        { ...s, fullName, mrzRaw: '' },
-        {
-          provider: this.provider.name,
-          ocrConfidence: 92,
-          mrzFound: false,
-          mrzChecksumValid: false,
-          trustSource: true, // LLM read the fields directly; gaps are user-editable
-          totalStart,
-        },
-      );
+
+      if (structured) {
+        const fullName = [structured.givenNames, structured.surname].filter(Boolean).join(' ').trim();
+        return this.buildResult(
+          { ...structured, fullName, mrzRaw: '' },
+          {
+            provider: this.provider.name,
+            ocrConfidence: 92,
+            mrzFound: false,
+            mrzChecksumValid: false,
+            trustSource: true, // LLM read the fields directly; gaps are user-editable
+            totalStart,
+          },
+        );
+      }
+      // structured === undefined → recoverable failure; continue to text/MRZ path.
     }
 
     // 2b. Fallback: raw-text OCR (Google/Azure/Tesseract) + MRZ/freetext parsing.

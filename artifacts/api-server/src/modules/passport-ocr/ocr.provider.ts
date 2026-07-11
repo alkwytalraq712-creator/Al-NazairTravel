@@ -197,7 +197,15 @@ Output plain text only — no JSON, no markdown, no commentary.`,
    * Structured extraction — the reliable path for vision LLMs. Instead of
    * transcribing a character-perfect MRZ (which GPT-4o cannot do consistently),
    * we ask it to read the printed passport fields and MRZ semantically and
-   * return normalized JSON. Returns null when it's not a readable passport.
+   * return normalized JSON.
+   *
+   * Contract:
+   * - returns a StructuredPassport when a passport was read;
+   * - returns null ONLY when the model is confident the image is NOT a passport
+   *   (explicit {"isPassport":false}) — a true semantic negative;
+   * - THROWS on a recoverable read failure (missing/invalid JSON, empty result)
+   *   so the service can fall back to the text/MRZ path instead of hard-failing
+   *   a possibly-valid passport on benign model/format drift.
    */
   async extractStructured(image: Buffer): Promise<StructuredPassport | null> {
     const { default: OpenAI } = await import('openai');
@@ -240,15 +248,20 @@ Rules:
 
     const text = response.choices[0]?.message?.content?.trim() ?? '';
     const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
+    // No JSON at all → recoverable (let the caller fall back), not a verdict.
+    if (!match) throw new Error('structured extraction: no JSON object in model output');
 
     let data: Record<string, unknown>;
     try {
       data = JSON.parse(match[0]);
     } catch {
-      return null;
+      throw new Error('structured extraction: unparseable JSON');
     }
-    if (!data || data.isPassport === false) return null;
+    if (!data || typeof data !== 'object') {
+      throw new Error('structured extraction: JSON was not an object');
+    }
+    // Explicit, confident "not a passport" — the ONLY true semantic negative.
+    if (data.isPassport === false) return null;
 
     const sex = String(data.sex ?? '').trim().toUpperCase();
     const structured: StructuredPassport = {
@@ -265,9 +278,10 @@ Rules:
       placeOfBirth: String(data.placeOfBirth ?? '').trim(),
     };
 
-    // Reject empty shells (model said "passport" but read nothing useful).
+    // Empty shell (model claimed a passport but read nothing usable) → recoverable:
+    // throw so the caller can try the text/MRZ path rather than reject outright.
     if (!structured.passportNumber && !structured.surname && !structured.givenNames) {
-      return null;
+      throw new Error('structured extraction: no usable fields read');
     }
     return structured;
   }
