@@ -118,6 +118,7 @@ router.get("/auth/profile/completion", requireAuth, async (req, res): Promise<vo
     return;
   }
 
+  res.setHeader('Cache-Control', 'no-store');
   res.json(getProfileCompletion(user));
 });
 

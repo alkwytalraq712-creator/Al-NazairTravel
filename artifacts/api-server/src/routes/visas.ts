@@ -334,7 +334,8 @@ router.get("/visas/:id/eligibility", requireAuth, async (req, res): Promise<void
     return;
   }
 
-  const result = checkEligibility(user, visa);
+  const result = await checkEligibility(user, visa);
+  res.setHeader('Cache-Control', 'no-store');
   res.json(result);
 });
 

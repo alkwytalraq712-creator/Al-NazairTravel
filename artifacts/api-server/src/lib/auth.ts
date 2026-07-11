@@ -106,6 +106,7 @@ export function getProfileCompletion(user: User) {
   const required: Array<[string, string]> = [
     ["avatarUrl",         "الصورة الشخصية"],
     ["fullName",          "الاسم الكامل"],
+    ["nationality",       "الجنسية"],
     ["dob",               "تاريخ الميلاد"],
     ["passportNumber",    "رقم جواز السفر"],
     ["passportIssueDate", "تاريخ إصدار الجواز"],

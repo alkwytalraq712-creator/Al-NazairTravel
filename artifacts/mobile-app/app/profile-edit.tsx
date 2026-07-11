@@ -481,9 +481,12 @@ export default function ProfileEditScreen() {
 
   const u = user as any;
 
+  const [successVisible, setSuccessVisible] = useState(false);
+
   const [form, setForm] = useState({
     avatarUrl: u?.avatarUrl ?? '',
     fullName: u?.fullName ?? '',
+    nationality: u?.nationality ?? '',
     dob: u?.dob ?? '',
     passportNumber: u?.passportNumber ?? '',
     passportIssueDate: u?.passportIssueDate ?? '',
@@ -512,6 +515,7 @@ export default function ProfileEditScreen() {
       return {
         avatarUrl: f.avatarUrl || undefined,
         fullName: f.fullName.trim() || undefined,
+        nationality: f.nationality.trim() || undefined,
         dob: f.dob || undefined,
         passportNumber: f.passportNumber.trim() || undefined,
         passportIssueDate: f.passportIssueDate || undefined,
@@ -533,6 +537,7 @@ export default function ProfileEditScreen() {
   function validateStep(): string | null {
     if (step === 0) {
       if (!form.fullName.trim()) return 'يرجى إدخال الاسم الكامل';
+      if (!form.nationality.trim()) return 'يرجى إدخال جنسيتك';
       if (!form.dob) return 'يرجى اختيار تاريخ الميلاد';
       if (!form.passportNumber.trim()) return 'يرجى إدخال رقم جواز السفر';
       if (!form.passportIssueDate) return 'يرجى اختيار تاريخ الإصدار';
@@ -562,9 +567,11 @@ export default function ProfileEditScreen() {
           queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetProfileCompletionQueryKey() });
           if (isFinal) {
-            Alert.alert('✅ تم الحفظ', 'تم تحديث ملفك الشخصي بنجاح', [
-              { text: 'حسناً', onPress: () => router.back() },
-            ]);
+            setSuccessVisible(true);
+            setTimeout(() => {
+              setSuccessVisible(false);
+              router.back();
+            }, 2000);
           } else {
             setStep(s => s + 1);
             scrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -630,6 +637,13 @@ export default function ProfileEditScreen() {
               onChangeText={set('fullName')}
               required
               placeholder="الاسم الرباعي"
+            />
+            <Field
+              label="الجنسية (دولة الجواز)"
+              value={form.nationality}
+              onChangeText={set('nationality')}
+              required
+              placeholder="مثال: سعودي، يمني، مصري"
             />
             <DatePickerButton
               label="تاريخ الميلاد"
@@ -746,6 +760,15 @@ export default function ProfileEditScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background, paddingTop }}>
+      {/* Success banner */}
+      {successVisible && (
+        <View style={{ position: 'absolute', top: paddingTop + 60, left: 16, right: 16, zIndex: 999, backgroundColor: '#22c55e', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row-reverse', alignItems: 'center', gap: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 8 }}>
+          <Ionicons name="checkmark-circle" size={24} color="#fff" />
+          <Text style={{ color: '#fff', fontFamily: 'Tajawal_700Bold', fontSize: 16, flex: 1, textAlign: 'right' }}>
+            ✅ تم تحديث الملف الشخصي بنجاح
+          </Text>
+        </View>
+      )}
       {/* Header */}
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.card }}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 8 }}>
