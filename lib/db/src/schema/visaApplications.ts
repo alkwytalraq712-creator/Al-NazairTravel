@@ -1,4 +1,5 @@
 import {
+  boolean,
   date,
   integer,
   pgTable,
@@ -33,6 +34,14 @@ export const visaApplicationsTable = pgTable("visa_applications", {
   passportImageUrl: text("passport_image_url"),
   personalPhotoUrl: text("personal_photo_url"),
   status: text("status").notNull().default("received"),
+  // OCR-enriched passport fields
+  passportType: text("passport_type"),
+  issuingCountry: text("issuing_country"),
+  passportIssueDate: date("passport_issue_date", { mode: "string" }),
+  placeOfBirth: text("place_of_birth"),
+  mrz: text("mrz"),
+  ocrConfidence: integer("ocr_confidence"),
+  ocrVerified: boolean("ocr_verified").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

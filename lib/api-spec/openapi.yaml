@@ -99,6 +99,118 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /ocr/passport:
+    post:
+      tags: [visas]
+      operationId: scanPassportOcr
+      summary: OCR a passport image and extract structured data
+      description: |
+        Accepts multipart/form-data with a passport image (JPEG/PNG ≤ 10 MB).
+        Preprocesses the image, runs OCR (Google Vision → Azure → OpenAI → Tesseract),
+        parses the MRZ zone, extracts and validates all passport fields,
+        stores the image in object storage, and returns structured JSON.
+        Rate-limited to 10 requests per minute per user.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [passportImage]
+              properties:
+                passportImage:
+                  type: string
+                  format: binary
+                  description: JPEG or PNG passport image, max 10 MB.
+      responses:
+        '200':
+          description: Passport OCR successful.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassportOcrResponse'
+        '400':
+          description: Missing or invalid image.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: File too large.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '415':
+          description: Unsupported image type.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Passport not detected or data invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: OCR processing failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /storage/uploads/finalize:
+    post:
+      tags: [Storage]
+      operationId: finalizeUpload
+      summary: Finalize an uploaded object and set its ACL policy
+      description: |
+        Call after the file has been PUT to the presigned upload URL. Marks the
+        authenticated caller as the object's owner (private visibility) so it
+        can later be retrieved via GET /storage/objects/{objectPath}.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinalizeUploadRequest'
+      responses:
+        '200':
+          description: Object finalized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinalizeUploadResponse'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Object not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to finalize object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /storage/objects/{objectPath}:
     get:
       tags: [Storage]
@@ -1461,6 +1573,19 @@ components:
           description: Normalized object path (e.g. `/objects/uploads/uuid`). Store this in your database.
         metadata:
           $ref: '#/components/schemas/UploadUrlRequest'
+    FinalizeUploadRequest:
+      type: object
+      required: [objectPath]
+      properties:
+        objectPath:
+          type: string
+          description: Normalized object path returned from requestUploadUrl (e.g. `/objects/uploads/uuid`).
+    FinalizeUploadResponse:
+      type: object
+      required: [objectPath]
+      properties:
+        objectPath:
+          type: string
     HealthStatus:
       type: object
       properties:
@@ -1890,9 +2015,53 @@ components:
         city: { type: string }
         passportImageUrl: { type: ["string", "null"] }
         personalPhotoUrl: { type: ["string", "null"] }
+        passportType: { type: ["string", "null"] }
+        issuingCountry: { type: ["string", "null"] }
+        passportIssueDate: { type: ["string", "null"], format: date }
+        placeOfBirth: { type: ["string", "null"] }
+        mrz: { type: ["string", "null"] }
+        ocrConfidence: { type: ["integer", "null"] }
+        ocrVerified: { type: boolean }
         status:
           $ref: "#/components/schemas/VisaApplicationStatus"
         createdAt: { type: string, format: date-time }
+
+    PassportData:
+      type: object
+      required:
+        [passportType, passportNumber, surname, givenNames, fullName,
+         nationality, issuingCountry, gender, dateOfBirth, passportIssueDate,
+         passportExpiry, placeOfBirth, mrz, confidence]
+      properties:
+        passportType: { type: string }
+        passportNumber: { type: string }
+        surname: { type: string }
+        givenNames: { type: string }
+        fullName: { type: string }
+        nationality: { type: string }
+        issuingCountry: { type: string }
+        gender: { type: string }
+        dateOfBirth: { type: string, format: date }
+        passportIssueDate: { type: string, format: date }
+        passportExpiry: { type: string, format: date }
+        placeOfBirth: { type: string }
+        mrz: { type: string }
+        confidence: { type: integer, minimum: 0, maximum: 100 }
+
+    PassportOcrResponse:
+      type: object
+      required: [success, passport, meta]
+      properties:
+        success: { type: boolean }
+        passport:
+          $ref: '#/components/schemas/PassportData'
+        meta:
+          type: object
+          required: [provider, durationMs]
+          properties:
+            provider: { type: string }
+            durationMs: { type: integer }
+            passportImagePath: { type: ["string", "null"] }
 
     VisaApplicationInput:
       type: object

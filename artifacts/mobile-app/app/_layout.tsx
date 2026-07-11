@@ -46,7 +46,6 @@ function RootLayoutNav() {
       <Stack.Screen name="flight-travelers" options={{ headerShown: false }} />
       <Stack.Screen name="flight-review" options={{ headerShown: false }} />
       <Stack.Screen name="flight-success" options={{ headerShown: false }} />
-      <Stack.Screen name="book-flight" options={{ headerShown: false }} />
       <Stack.Screen name="bookings" options={{ headerShown: false }} />
       <Stack.Screen name="notifications" options={{ headerShown: false }} />
       <Stack.Screen name="auth/login" options={{ headerShown: false }} />

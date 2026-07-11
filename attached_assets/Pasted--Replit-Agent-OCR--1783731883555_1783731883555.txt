@@ -1,0 +1,434 @@
+انسخ وأرسل هذا إلى Replit Agent. هذا ليس مجرد "اكتب OCR"، بل مواصفات تنفيذ كاملة ليبني النظام داخل مشروعك الحالي.
+
+---
+
+# Build a Complete Production-Ready Passport OCR Module
+
+Implement a complete Passport OCR system inside the existing Node.js + TypeScript + Drizzle + PostgreSQL project.
+
+## IMPORTANT
+
+Do **not** generate demo code.
+
+Do **not** generate placeholders.
+
+Do **not** use mock data.
+
+The implementation must be production-ready.
+
+---
+
+# Backend
+
+Create a complete OCR module.
+
+```
+src/modules/passport-ocr/
+```
+
+Include:
+
+```
+passport-ocr.controller.ts
+
+passport-ocr.service.ts
+
+mrz.service.ts
+
+image.service.ts
+
+ocr.provider.ts
+
+types.ts
+
+validators.ts
+```
+
+---
+
+# New API
+
+```
+POST /api/ocr/passport
+```
+
+Accept
+
+```
+multipart/form-data
+
+passportImage
+```
+
+Maximum image size
+
+```
+10 MB
+```
+
+Allowed types
+
+```
+jpg
+jpeg
+png
+```
+
+Reject any other files.
+
+---
+
+# Image Processing
+
+Before OCR automatically perform:
+
+* Auto rotation
+
+* Deskew
+
+* Crop borders
+
+* Remove background noise
+
+* Improve contrast
+
+* Sharpen
+
+* Normalize brightness
+
+using Sharp.
+
+---
+
+# OCR
+
+Use a real OCR engine.
+
+Preferred order
+
+1.
+
+Google Cloud Vision
+
+or
+
+2.
+
+Azure Document Intelligence
+
+If neither credentials are configured,
+
+fallback automatically to
+
+```
+tesseract.js
+```
+
+without changing any application code.
+
+Implement a provider abstraction.
+
+```
+interface OcrProvider {
+
+extractText(image:Buffer):Promise<string>
+
+}
+```
+
+Implement
+
+```
+GoogleVisionProvider
+
+AzureProvider
+
+TesseractProvider
+```
+
+PassportOcrService must depend only on the interface.
+
+---
+
+# MRZ
+
+Detect the MRZ automatically.
+
+Parse
+
+```
+P<
+
+I<
+
+A<
+```
+
+passport formats.
+
+Validate
+
+MRZ checksum.
+
+If MRZ exists
+
+prefer MRZ values over OCR text.
+
+---
+
+# Extract
+
+Extract
+
+```
+passportType
+
+passportNumber
+
+surname
+
+givenNames
+
+fullName
+
+nationality
+
+issuingCountry
+
+gender
+
+dateOfBirth
+
+passportIssueDate
+
+passportExpiry
+
+placeOfBirth
+
+mrz
+```
+
+Normalize dates
+
+```
+YYYY-MM-DD
+```
+
+Convert ISO country codes.
+
+---
+
+# Confidence
+
+Return confidence
+
+0-100
+
+based on OCR quality.
+
+---
+
+# Database
+
+Extend
+
+visaApplicationsTable
+
+Add
+
+```
+passportType
+
+issuingCountry
+
+passportIssueDate
+
+placeOfBirth
+
+mrz
+
+ocrConfidence
+
+ocrVerified
+```
+
+Generate migration.
+
+Update Zod schemas.
+
+Update OpenAPI.
+
+Regenerate API client.
+
+---
+
+# Response
+
+Return
+
+```json
+{
+ "success":true,
+ "passport":{
+   "passportType":"P",
+   "passportNumber":"A1234567",
+   "surname":"ALBALAWI",
+   "givenNames":"SABAH FARHOOD",
+   "fullName":"SABAH FARHOOD ALBALAWI",
+   "nationality":"IRQ",
+   "issuingCountry":"IRAQ",
+   "gender":"M",
+   "dateOfBirth":"1957-12-01",
+   "passportIssueDate":"2024-01-14",
+   "passportExpiry":"2034-01-14",
+   "placeOfBirth":"BAGHDAD",
+   "mrz":"P<IRQ...",
+   "confidence":98
+ }
+}
+```
+
+---
+
+# Validation
+
+Validate
+
+* passport number
+
+* expiry date
+
+* issue date
+
+* birth date
+
+* nationality
+
+* MRZ checksum
+
+Reject invalid passports.
+
+---
+
+# Error Responses
+
+400
+
+Invalid image
+
+401
+
+Unauthorized
+
+413
+
+File too large
+
+415
+
+Unsupported image type
+
+422
+
+Passport not detected
+
+500
+
+OCR processing failed
+
+Never expose internal stack traces.
+
+---
+
+# Logging
+
+Log
+
+OCR duration
+
+provider
+
+confidence
+
+image size
+
+MRZ detected
+
+errors
+
+---
+
+# Storage
+
+Store uploaded passport image using the existing Object Storage implementation.
+
+Save
+
+```
+passportImageUrl
+```
+
+inside
+
+```
+visaApplications
+```
+
+---
+
+# Security
+
+Only authenticated users.
+
+Rate limit
+
+10 OCR requests
+
+per minute
+
+per user.
+
+---
+
+# Performance
+
+Resize very large images before OCR.
+
+Run OCR asynchronously.
+
+Keep memory usage low.
+
+---
+
+# Tests
+
+Create unit tests for
+
+PassportOcrService
+
+MRZ parser
+
+Validators
+
+Image preprocessing
+
+Provider abstraction
+
+---
+
+# Final Requirement
+
+The OCR module must work end-to-end:
+
+1. User uploads passport image.
+2. Image is automatically optimized.
+3. OCR runs.
+4. MRZ is detected and parsed.
+5. Passport fields are extracted.
+6. Validation is performed.
+7. Confidence score is calculated.
+8. Data is returned in structured JSON.
+9. Passport image is stored.
+10. The extracted data can be saved directly into the existing `visa_applications` table.
+
+Do not generate partial implementations. Build the complete production-ready feature integrated with the current project architecture.

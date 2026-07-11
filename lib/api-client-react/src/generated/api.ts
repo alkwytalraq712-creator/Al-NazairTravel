@@ -27,6 +27,8 @@ import type {
   EmployeeInput,
   EmployeeUpdate,
   ErrorResponse,
+  FinalizeUploadRequest,
+  FinalizeUploadResponse,
   FlightBooking,
   FlightBookingInput,
   FlightBookingStatusUpdate,
@@ -51,12 +53,14 @@ import type {
   PackageBookingStatusUpdate,
   PackageInput,
   PackageUpdate,
+  PassportOcrResponse,
   PasswordReset,
   PasswordResetRequest,
   Payment,
   PaymentInput,
   PaymentUpdate,
   ProfileUpdate,
+  ScanPassportOcrBody,
   SearchFlightsParams,
   SignupInput,
   Testimonial,
@@ -251,6 +255,158 @@ export function useGetPublicObject<TData = Awaited<ReturnType<typeof getPublicOb
 
 
 
+
+export const getScanPassportOcrUrl = () => {
+
+
+
+
+  return `/api/ocr/passport`
+}
+
+/**
+ * Accepts multipart/form-data with a passport image (JPEG/PNG ≤ 10 MB).
+ * Preprocesses the image, runs OCR (Google Vision → Azure → OpenAI → Tesseract),
+ * parses the MRZ zone, extracts and validates all passport fields,
+ * stores the image in object storage, and returns structured JSON.
+ * Rate-limited to 10 requests per minute per user.
+ * @summary OCR a passport image and extract structured data
+ */
+export const scanPassportOcr = async (scanPassportOcrBody: ScanPassportOcrBody, options?: RequestInit): Promise<PassportOcrResponse> => {
+    const formData = new FormData();
+formData.append(`passportImage`, scanPassportOcrBody.passportImage);
+
+  return customFetch<PassportOcrResponse>(getScanPassportOcrUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+
+export const getScanPassportOcrMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scanPassportOcr>>, TError,{data: BodyType<ScanPassportOcrBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof scanPassportOcr>>, TError,{data: BodyType<ScanPassportOcrBody>}, TContext> => {
+
+const mutationKey = ['scanPassportOcr'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof scanPassportOcr>>, {data: BodyType<ScanPassportOcrBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  scanPassportOcr(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ScanPassportOcrMutationResult = NonNullable<Awaited<ReturnType<typeof scanPassportOcr>>>
+    export type ScanPassportOcrMutationBody = BodyType<ScanPassportOcrBody>
+    export type ScanPassportOcrMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary OCR a passport image and extract structured data
+ */
+export const useScanPassportOcr = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scanPassportOcr>>, TError,{data: BodyType<ScanPassportOcrBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof scanPassportOcr>>,
+        TError,
+        {data: BodyType<ScanPassportOcrBody>},
+        TContext
+      > => {
+      return useMutation(getScanPassportOcrMutationOptions(options));
+    }
+
+export const getFinalizeUploadUrl = () => {
+
+
+
+
+  return `/api/storage/uploads/finalize`
+}
+
+/**
+ * Call after the file has been PUT to the presigned upload URL. Marks the
+ * authenticated caller as the object's owner (private visibility) so it
+ * can later be retrieved via GET /storage/objects/{objectPath}.
+ * @summary Finalize an uploaded object and set its ACL policy
+ */
+export const finalizeUpload = async (finalizeUploadRequest: FinalizeUploadRequest, options?: RequestInit): Promise<FinalizeUploadResponse> => {
+
+  return customFetch<FinalizeUploadResponse>(getFinalizeUploadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(finalizeUploadRequest)
+  }
+);}
+
+
+
+
+
+export const getFinalizeUploadMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof finalizeUpload>>, TError,{data: BodyType<FinalizeUploadRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof finalizeUpload>>, TError,{data: BodyType<FinalizeUploadRequest>}, TContext> => {
+
+const mutationKey = ['finalizeUpload'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof finalizeUpload>>, {data: BodyType<FinalizeUploadRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  finalizeUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type FinalizeUploadMutationResult = NonNullable<Awaited<ReturnType<typeof finalizeUpload>>>
+    export type FinalizeUploadMutationBody = BodyType<FinalizeUploadRequest>
+    export type FinalizeUploadMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Finalize an uploaded object and set its ACL policy
+ */
+export const useFinalizeUpload = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof finalizeUpload>>, TError,{data: BodyType<FinalizeUploadRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof finalizeUpload>>,
+        TError,
+        {data: BodyType<FinalizeUploadRequest>},
+        TContext
+      > => {
+      return useMutation(getFinalizeUploadMutationOptions(options));
+    }
 
 export const getGetStorageObjectUrl = (objectPath: string,) => {
 

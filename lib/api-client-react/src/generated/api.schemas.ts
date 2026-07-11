@@ -31,6 +31,15 @@ export interface UploadUrlResponse {
   metadata?: UploadUrlRequest;
 }
 
+export interface FinalizeUploadRequest {
+  /** Normalized object path returned from requestUploadUrl (e.g. `/objects/uploads/uuid`). */
+  objectPath: string;
+}
+
+export interface FinalizeUploadResponse {
+  objectPath: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -396,8 +405,55 @@ export interface VisaApplication {
   passportImageUrl?: string | null;
   /** @nullable */
   personalPhotoUrl?: string | null;
+  /** @nullable */
+  passportType?: string | null;
+  /** @nullable */
+  issuingCountry?: string | null;
+  /** @nullable */
+  passportIssueDate?: string | null;
+  /** @nullable */
+  placeOfBirth?: string | null;
+  /** @nullable */
+  mrz?: string | null;
+  /** @nullable */
+  ocrConfidence?: number | null;
+  ocrVerified?: boolean;
   status: VisaApplicationStatus;
   createdAt: string;
+}
+
+export interface PassportData {
+  passportType: string;
+  passportNumber: string;
+  surname: string;
+  givenNames: string;
+  fullName: string;
+  nationality: string;
+  issuingCountry: string;
+  gender: string;
+  dateOfBirth: string;
+  passportIssueDate: string;
+  passportExpiry: string;
+  placeOfBirth: string;
+  mrz: string;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  confidence: number;
+}
+
+export type PassportOcrResponseMeta = {
+  provider: string;
+  durationMs: number;
+  /** @nullable */
+  passportImagePath?: string | null;
+};
+
+export interface PassportOcrResponse {
+  success: boolean;
+  passport: PassportData;
+  meta: PassportOcrResponseMeta;
 }
 
 export interface VisaApplicationInput {
@@ -760,6 +816,11 @@ export interface AdminDashboardSummary {
   pendingFlightBookings: number;
   recentActivity: RecentActivity[];
 }
+
+export type ScanPassportOcrBody = {
+  /** JPEG or PNG passport image, max 10 MB. */
+  passportImage: Blob;
+};
 
 export type ListVisasParams = {
 visaType?: VisaType;

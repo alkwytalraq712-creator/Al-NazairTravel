@@ -13,6 +13,7 @@ import testimonialsRouter from "./testimonials";
 import adminRouter from "./admin";
 import visasScanRouter from "./visas-scan";
 import storageRouter from "./storage";
+import passportOcrRouter from "../modules/passport-ocr/passport-ocr.controller";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(testimonialsRouter);
 router.use(adminRouter);
 router.use(visasScanRouter);
 router.use(storageRouter);
+router.use(passportOcrRouter);
 
 export default router;

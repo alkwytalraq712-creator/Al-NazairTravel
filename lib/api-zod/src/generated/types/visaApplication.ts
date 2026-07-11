@@ -28,6 +28,19 @@ export interface VisaApplication {
   passportImageUrl?: string | null;
   /** @nullable */
   personalPhotoUrl?: string | null;
+  /** @nullable */
+  passportType?: string | null;
+  /** @nullable */
+  issuingCountry?: string | null;
+  /** @nullable */
+  passportIssueDate?: Date | null;
+  /** @nullable */
+  placeOfBirth?: string | null;
+  /** @nullable */
+  mrz?: string | null;
+  /** @nullable */
+  ocrConfidence?: number | null;
+  ocrVerified?: boolean;
   status: VisaApplicationStatus;
   createdAt: Date;
 }

@@ -53,6 +53,64 @@ export const GetPublicObjectResponse = zod.unknown()
 
 
 /**
+ * Accepts multipart/form-data with a passport image (JPEG/PNG ≤ 10 MB).
+ * Preprocesses the image, runs OCR (Google Vision → Azure → OpenAI → Tesseract),
+ * parses the MRZ zone, extracts and validates all passport fields,
+ * stores the image in object storage, and returns structured JSON.
+ * Rate-limited to 10 requests per minute per user.
+ * @summary OCR a passport image and extract structured data
+ */
+export const ScanPassportOcrBody = zod.object({
+  "passportImage": zod.instanceof(File).describe('JPEG or PNG passport image, max 10 MB.')
+})
+
+export const scanPassportOcrResponsePassportConfidenceMin = 0;
+export const scanPassportOcrResponsePassportConfidenceMax = 100;
+
+
+
+export const ScanPassportOcrResponse = zod.object({
+  "success": zod.boolean(),
+  "passport": zod.object({
+  "passportType": zod.string(),
+  "passportNumber": zod.string(),
+  "surname": zod.string(),
+  "givenNames": zod.string(),
+  "fullName": zod.string(),
+  "nationality": zod.string(),
+  "issuingCountry": zod.string(),
+  "gender": zod.string(),
+  "dateOfBirth": zod.coerce.date(),
+  "passportIssueDate": zod.coerce.date(),
+  "passportExpiry": zod.coerce.date(),
+  "placeOfBirth": zod.string(),
+  "mrz": zod.string(),
+  "confidence": zod.number().min(scanPassportOcrResponsePassportConfidenceMin).max(scanPassportOcrResponsePassportConfidenceMax)
+}),
+  "meta": zod.object({
+  "provider": zod.string(),
+  "durationMs": zod.number(),
+  "passportImagePath": zod.string().nullish()
+})
+})
+
+
+/**
+ * Call after the file has been PUT to the presigned upload URL. Marks the
+ * authenticated caller as the object's owner (private visibility) so it
+ * can later be retrieved via GET /storage/objects/{objectPath}.
+ * @summary Finalize an uploaded object and set its ACL policy
+ */
+export const FinalizeUploadBody = zod.object({
+  "objectPath": zod.string().describe('Normalized object path returned from requestUploadUrl (e.g. `\/objects\/uploads\/uuid`).')
+})
+
+export const FinalizeUploadResponse = zod.object({
+  "objectPath": zod.string()
+})
+
+
+/**
  * Serves object entities uploaded via presigned URLs. These can optionally
  * be protected with authentication or ACL checks based on the use case.
  * @summary Serve an object entity from PRIVATE_OBJECT_DIR
@@ -493,6 +551,13 @@ export const ListMyVisaApplicationsResponseItem = zod.object({
   "city": zod.string(),
   "passportImageUrl": zod.string().nullish(),
   "personalPhotoUrl": zod.string().nullish(),
+  "passportType": zod.string().nullish(),
+  "issuingCountry": zod.string().nullish(),
+  "passportIssueDate": zod.coerce.date().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "mrz": zod.string().nullish(),
+  "ocrConfidence": zod.number().nullish(),
+  "ocrVerified": zod.boolean().optional(),
   "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
   "createdAt": zod.coerce.date()
 })
@@ -555,6 +620,13 @@ export const CreateVisaApplicationResponse = zod.object({
   "city": zod.string(),
   "passportImageUrl": zod.string().nullish(),
   "personalPhotoUrl": zod.string().nullish(),
+  "passportType": zod.string().nullish(),
+  "issuingCountry": zod.string().nullish(),
+  "passportIssueDate": zod.coerce.date().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "mrz": zod.string().nullish(),
+  "ocrConfidence": zod.number().nullish(),
+  "ocrVerified": zod.boolean().optional(),
   "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
   "createdAt": zod.coerce.date()
 })
@@ -601,6 +673,13 @@ export const GetVisaApplicationResponse = zod.object({
   "city": zod.string(),
   "passportImageUrl": zod.string().nullish(),
   "personalPhotoUrl": zod.string().nullish(),
+  "passportType": zod.string().nullish(),
+  "issuingCountry": zod.string().nullish(),
+  "passportIssueDate": zod.coerce.date().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "mrz": zod.string().nullish(),
+  "ocrConfidence": zod.number().nullish(),
+  "ocrVerified": zod.boolean().optional(),
   "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
   "createdAt": zod.coerce.date()
 })
@@ -647,6 +726,13 @@ export const ListAllVisaApplicationsResponseItem = zod.object({
   "city": zod.string(),
   "passportImageUrl": zod.string().nullish(),
   "personalPhotoUrl": zod.string().nullish(),
+  "passportType": zod.string().nullish(),
+  "issuingCountry": zod.string().nullish(),
+  "passportIssueDate": zod.coerce.date().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "mrz": zod.string().nullish(),
+  "ocrConfidence": zod.number().nullish(),
+  "ocrVerified": zod.boolean().optional(),
   "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
   "createdAt": zod.coerce.date()
 })
@@ -698,6 +784,13 @@ export const UpdateVisaApplicationStatusResponse = zod.object({
   "city": zod.string(),
   "passportImageUrl": zod.string().nullish(),
   "personalPhotoUrl": zod.string().nullish(),
+  "passportType": zod.string().nullish(),
+  "issuingCountry": zod.string().nullish(),
+  "passportIssueDate": zod.coerce.date().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "mrz": zod.string().nullish(),
+  "ocrConfidence": zod.number().nullish(),
+  "ocrVerified": zod.boolean().optional(),
   "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
   "createdAt": zod.coerce.date()
 })
