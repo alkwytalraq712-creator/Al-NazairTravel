@@ -26,10 +26,13 @@ import { router } from 'expo-router';
 
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/context/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useUpdateProfile,
   useScanPassportOcr,
   customFetch,
+  getGetCurrentUserQueryKey,
+  getGetProfileCompletionQueryKey,
 } from '@workspace/api-client-react';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -262,6 +265,7 @@ export default function ProfileEditScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const { user: u } = useAuth();
+  const queryClient = useQueryClient();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   // ── Navigation state ──
@@ -539,7 +543,13 @@ export default function ProfileEditScreen() {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          // Refresh the cached profile immediately so the profile screen shows the
+          // new data + avatar the moment we navigate back (no 60s stale-time wait).
+          queryClient.setQueryData(getGetCurrentUserQueryKey(), data);
+          queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetProfileCompletionQueryKey() });
+
           setSuccessVisible(true);
           Animated.sequence([
             Animated.timing(successOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),

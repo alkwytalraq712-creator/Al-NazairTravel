@@ -39,6 +39,25 @@ const RESIDENCE_LABELS: Record<string, string> = {
   usa:       'الولايات المتحدة الأمريكية',
 };
 
+const GENDER_LABELS: Record<string, string> = { M: 'ذكر', F: 'أنثى', X: 'غير محدد' };
+
+const MARITAL_LABELS: Record<string, string> = {
+  single: 'أعزب', married: 'متزوج', divorced: 'مطلّق', widowed: 'أرمل',
+};
+
+// Prefer the Arabic name (from the four name parts), then the passport English
+// name, then the account name — so the profile never shows a bare signup stub.
+function arabicFullName(u: any): string {
+  return [u?.firstName, u?.fatherName, u?.grandfatherName, u?.familyName]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+}
+
+function displayName(u: any): string {
+  return arabicFullName(u) || u?.englishName || u?.fullName || '—';
+}
+
 function InfoRow({ label, value }: { label: string; value: string }) {
   const colors = useColors();
   return (
@@ -104,6 +123,7 @@ export default function MyProfileScreen() {
   }
 
   const u = user as any;
+  const name = displayName(u);
   const residenceType = u?.residenceType ?? 'none';
   const hasResidencePhotos = residenceType !== 'none' && (u?.gulfResidenceFrontUrl || u?.gulfResidenceBackUrl);
 
@@ -132,13 +152,13 @@ export default function MyProfileScreen() {
             ) : (
               <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary }}>
                 <Text style={{ color: '#fff', fontSize: 32, fontFamily: 'Tajawal_700Bold' }}>
-                  {u?.fullName?.charAt(0) ?? 'م'}
+                  {name !== '—' ? name.charAt(0) : 'م'}
                 </Text>
               </View>
             )}
           </View>
 
-          <Text style={{ fontSize: 20, fontFamily: 'Tajawal_700Bold', color: colors.foreground }}>{u?.fullName ?? '—'}</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Tajawal_700Bold', color: colors.foreground }}>{name}</Text>
           {u?.phone && <Text style={{ color: colors.mutedForeground, fontSize: 14, fontFamily: 'Tajawal_400Regular', marginTop: 2 }}>{u.phone}</Text>}
           {u?.email && <Text style={{ color: colors.mutedForeground, fontSize: 13, fontFamily: 'Tajawal_400Regular' }}>{u.email}</Text>}
 
@@ -176,13 +196,21 @@ export default function MyProfileScreen() {
 
           {/* Personal info */}
           <Section title="المعلومات الشخصية" icon="person-outline">
-            <InfoRow label="الاسم الكامل" value={u?.fullName ?? ''} />
+            <InfoRow label="الاسم الكامل" value={name} />
+            {u?.englishName ? <InfoRow label="الاسم كما في الجواز" value={u.englishName} /> : null}
+            <InfoRow label="الجنسية" value={u?.nationality ?? ''} />
+            <InfoRow label="الجنس" value={GENDER_LABELS[u?.gender] ?? ''} />
             <InfoRow label="تاريخ الميلاد" value={formatDateAr(u?.dob)} />
+            {u?.placeOfBirth ? <InfoRow label="مكان الميلاد" value={u.placeOfBirth} /> : null}
+            {u?.maritalStatus ? <InfoRow label="الحالة الاجتماعية" value={MARITAL_LABELS[u.maritalStatus] ?? u.maritalStatus} /> : null}
+            {u?.occupation ? <InfoRow label="المهنة" value={u.occupation} /> : null}
           </Section>
 
           {/* Passport */}
           <Section title="جواز السفر" icon="card-outline">
             <InfoRow label="رقم الجواز" value={u?.passportNumber ?? ''} />
+            {u?.passportIssuingCountry ? <InfoRow label="بلد الإصدار" value={u.passportIssuingCountry} /> : null}
+            {u?.passportIssuingPlace ? <InfoRow label="مكان الإصدار" value={u.passportIssuingPlace} /> : null}
             <InfoRow label="تاريخ الإصدار" value={formatDateAr(u?.passportIssueDate)} />
             <InfoRow label="تاريخ الانتهاء" value={formatDateAr(u?.passportExpiry)} />
             {u?.passportImageUrl && (
@@ -195,6 +223,9 @@ export default function MyProfileScreen() {
           {/* Residence */}
           <Section title="الإقامة" icon="home-outline">
             <InfoRow label="حالة الإقامة" value={RESIDENCE_LABELS[residenceType] ?? '—'} />
+            {u?.gulfResidenceCountry ? <InfoRow label="بلد الإقامة" value={u.gulfResidenceCountry} /> : null}
+            {u?.gulfResidenceNumber ? <InfoRow label="رقم الإقامة" value={u.gulfResidenceNumber} /> : null}
+            {u?.gulfResidenceExpiry ? <InfoRow label="تاريخ انتهاء الإقامة" value={formatDateAr(u.gulfResidenceExpiry)} /> : null}
             {hasResidencePhotos && (
               <View style={{ paddingTop: 8 }}>
                 {u?.gulfResidenceFrontUrl && (
@@ -206,6 +237,14 @@ export default function MyProfileScreen() {
               </View>
             )}
           </Section>
+
+          {/* Contact (only if extra contact details exist) */}
+          {(u?.whatsapp || u?.address) ? (
+            <Section title="معلومات التواصل" icon="call-outline">
+              {u?.whatsapp ? <InfoRow label="واتساب" value={u.whatsapp} /> : null}
+              {u?.address ? <InfoRow label="العنوان" value={u.address} /> : null}
+            </Section>
+          ) : null}
         </View>
       </ScrollView>
     </View>
