@@ -64,7 +64,17 @@ export default function FlightReviewScreen() {
       reset();
       router.replace({
         pathname: '/flight-success',
-        params: { referenceNumber: result.referenceNumber, total: String(total), currency: offer.currency },
+        params: {
+          referenceNumber: result.referenceNumber,
+          bookingReference: result.bookingReference ?? '',
+          airline: offer.airlineName,
+          fromAirport: offer.fromAirport,
+          toAirport: offer.toAirport,
+          departDate: String(offer.departTime).slice(0, 10),
+          bookingId: String(result.id),
+          total: String(total),
+          currency: offer.currency,
+        },
       } as any);
     } catch (e: any) {
       Alert.alert('تعذر إتمام الحجز', e?.message ?? 'حدث خطأ غير متوقع، يرجى المحاولة مجدداً');

@@ -121,7 +121,7 @@ export default function AccountScreen() {
             <Text style={[styles.statLabel, { color: colors.foreground }]}>إشعاراتي</Text>
           </TouchableOpacity>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <TouchableOpacity style={styles.stat}>
+          <TouchableOpacity style={styles.stat} onPress={() => router.push('/my-flights' as any)}>
             <Ionicons name="airplane" size={22} color={colors.primary} />
             <Text style={[styles.statLabel, { color: colors.foreground }]}>رحلاتي</Text>
           </TouchableOpacity>

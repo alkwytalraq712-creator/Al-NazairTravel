@@ -1,6 +1,6 @@
 /**
  * Traveler Details Screen — dynamic form for N passengers.
- * Validates required fields and date formats before proceeding to review.
+ * Uses DatePickerField for DOB and passport dates.
  */
 import React, { useState } from 'react';
 import {
@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFlightBookingContext } from '@/context/FlightBookingContext';
+import DatePickerField from '@/components/DatePickerField';
 import type { FlightOffer, PassengerInput } from '@/lib/flightService';
 
 const GOLD = '#C9A060';
@@ -23,15 +24,26 @@ const CARD_BG = 'rgba(255,255,255,0.05)';
 const INPUT_BG = 'rgba(255,255,255,0.07)';
 const ERROR_COLOR = '#EF4444';
 
-function isValidDate(d: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
-  const dt = new Date(d + 'T00:00:00');
-  return !isNaN(dt.getTime());
+const TODAY = new Date().toISOString().slice(0, 10);
+
+// Minimum DOB: 130 years ago
+const MIN_DOB = `${new Date().getFullYear() - 130}-01-01`;
+// Maximum DOB: today (must be born by today)
+const MAX_DOB = TODAY;
+// Minimum passport expiry: tomorrow
+function minExpiry(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
 }
+// Max passport expiry: 20 years ahead
+const MAX_EXPIRY = `${new Date().getFullYear() + 20}-12-31`;
+
+// Passport issue: 20 years ago to today
+const MIN_ISSUE = `${new Date().getFullYear() - 20}-01-01`;
 
 function isFutureDate(d: string): boolean {
-  const dt = new Date(d + 'T00:00:00');
-  return dt > new Date();
+  return d > TODAY;
 }
 
 const GENDERS = ['ذكر', 'أنثى'];
@@ -42,23 +54,6 @@ function emptyPassenger(): PassengerInput {
     dob: '', passportNumber: '', passportExpiry: '', passportIssueCountry: '',
   };
 }
-
-interface FieldDef {
-  key: keyof PassengerInput;
-  label: string;
-  placeholder: string;
-  keyboard?: 'default' | 'numbers-and-punctuation';
-}
-
-const FIELDS: FieldDef[] = [
-  { key: 'firstName', label: 'الاسم الأول', placeholder: 'كما في جواز السفر' },
-  { key: 'lastName', label: 'اسم العائلة', placeholder: 'كما في جواز السفر' },
-  { key: 'nationality', label: 'الجنسية', placeholder: 'مثال: عراقي' },
-  { key: 'dob', label: 'تاريخ الميلاد', placeholder: 'YYYY-MM-DD', keyboard: 'numbers-and-punctuation' },
-  { key: 'passportNumber', label: 'رقم جواز السفر', placeholder: 'A12345678' },
-  { key: 'passportExpiry', label: 'تاريخ انتهاء الجواز', placeholder: 'YYYY-MM-DD', keyboard: 'numbers-and-punctuation' },
-  { key: 'passportIssueCountry', label: 'دولة الإصدار (اختياري)', placeholder: 'مثال: العراق' },
-];
 
 export default function FlightTravelersScreen() {
   const insets = useSafeAreaInsets();
@@ -90,7 +85,6 @@ export default function FlightTravelersScreen() {
       next[idx] = { ...next[idx], [key]: val };
       return next;
     });
-    // Clear error on edit
     const ek = `${idx}.${key}`;
     if (errors[ek]) setErrors(e => { const n = { ...e }; delete n[ek]; return n; });
   }
@@ -102,10 +96,12 @@ export default function FlightTravelersScreen() {
       required.forEach(k => {
         if (!p[k]?.trim()) errs[`${i}.${k}`] = 'مطلوب';
       });
-      if (p.dob && !isValidDate(p.dob)) errs[`${i}.dob`] = 'صيغة التاريخ غير صحيحة (YYYY-MM-DD)';
-      if (p.passportExpiry) {
-        if (!isValidDate(p.passportExpiry)) errs[`${i}.passportExpiry`] = 'صيغة التاريخ غير صحيحة';
-        else if (!isFutureDate(p.passportExpiry)) errs[`${i}.passportExpiry`] = 'جواز السفر منتهي الصلاحية';
+      if (p.dob && !isFutureDate(p.dob) === false) {
+        // dob must be in the past
+        if (p.dob >= TODAY) errs[`${i}.dob`] = 'تاريخ الميلاد يجب أن يكون في الماضي';
+      }
+      if (p.passportExpiry && !isFutureDate(p.passportExpiry)) {
+        errs[`${i}.passportExpiry`] = 'جواز السفر منتهي الصلاحية';
       }
     });
     if (!phone.trim()) errs['phone'] = 'مطلوب';
@@ -116,7 +112,7 @@ export default function FlightTravelersScreen() {
 
   function handleContinue() {
     if (!validate()) {
-      Alert.alert('بيانات ناقصة أو غير صحيحة', 'يرجى مراجعة الحقول المميزة باللون الأحمر');
+      Alert.alert('بيانات ناقصة أو غير صحيحة', 'يرجى مراجعة الحقول المميزة');
       return;
     }
     if (offer) setOffer(offer);
@@ -159,7 +155,7 @@ export default function FlightTravelersScreen() {
               المسافر {i + 1} {i < adults ? '(بالغ)' : '(طفل)'}
             </Text>
 
-            {/* Gender picker */}
+            {/* Gender */}
             <Text style={styles.fieldLabel}>الجنس <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
             <View style={styles.genderRow}>
               {GENDERS.map(g => {
@@ -170,46 +166,89 @@ export default function FlightTravelersScreen() {
                     key={g}
                     onPress={() => updatePassenger(i, 'gender', g)}
                     activeOpacity={0.8}
-                    style={[styles.genderBtn,
-                      active && styles.genderBtnActive,
-                      hasErr && !active && { borderColor: ERROR_COLOR + '80' },
-                    ]}
+                    style={[styles.genderBtn, active && styles.genderBtnActive,
+                      hasErr && !active && { borderColor: ERROR_COLOR + '80' }]}
                   >
-                    <Ionicons
-                      name={g === 'ذكر' ? 'male-outline' : 'female-outline'}
-                      size={16}
-                      color={active ? DARK : MUTED}
-                    />
+                    <Ionicons name={g === 'ذكر' ? 'male-outline' : 'female-outline'} size={16} color={active ? DARK : MUTED} />
                     <Text style={[styles.genderBtnText, active && { color: DARK }]}>{g}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
+            {errors[`${i}.gender`] && <Text style={styles.errorText}>{errors[`${i}.gender`]}</Text>}
 
-            {FIELDS.map(f => {
-              const errKey = `${i}.${f.key}`;
-              const hasErr = !!errors[errKey];
-              return (
-                <View key={f.key}>
-                  <Text style={styles.fieldLabel}>
-                    {f.label}
-                    {f.key !== 'passportIssueCountry' && <Text style={{ color: ERROR_COLOR }}> *</Text>}
-                  </Text>
-                  <TextInput
-                    style={[styles.input, hasErr && styles.inputError]}
-                    placeholder={f.placeholder}
-                    placeholderTextColor={MUTED}
-                    value={(pax[f.key] as string) ?? ''}
-                    onChangeText={v => updatePassenger(i, f.key, v)}
-                    keyboardType={f.keyboard as any ?? 'default'}
-                    autoCapitalize="none"
-                    textAlign="right"
-                    selectionColor={GOLD}
-                  />
-                  {hasErr && <Text style={styles.errorText}>{errors[errKey]}</Text>}
-                </View>
-              );
-            })}
+            {/* First name */}
+            <Text style={styles.fieldLabel}>الاسم الأول <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
+            <TextInput
+              style={[styles.input, errors[`${i}.firstName`] && styles.inputError]}
+              placeholder="كما في جواز السفر" placeholderTextColor={MUTED}
+              value={pax.firstName} onChangeText={v => updatePassenger(i, 'firstName', v)}
+              textAlign="right" selectionColor={GOLD}
+            />
+            {errors[`${i}.firstName`] && <Text style={styles.errorText}>{errors[`${i}.firstName`]}</Text>}
+
+            {/* Last name */}
+            <Text style={styles.fieldLabel}>اسم العائلة <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
+            <TextInput
+              style={[styles.input, errors[`${i}.lastName`] && styles.inputError]}
+              placeholder="كما في جواز السفر" placeholderTextColor={MUTED}
+              value={pax.lastName} onChangeText={v => updatePassenger(i, 'lastName', v)}
+              textAlign="right" selectionColor={GOLD}
+            />
+            {errors[`${i}.lastName`] && <Text style={styles.errorText}>{errors[`${i}.lastName`]}</Text>}
+
+            {/* Nationality */}
+            <Text style={styles.fieldLabel}>الجنسية <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
+            <TextInput
+              style={[styles.input, errors[`${i}.nationality`] && styles.inputError]}
+              placeholder="مثال: عراقي" placeholderTextColor={MUTED}
+              value={pax.nationality} onChangeText={v => updatePassenger(i, 'nationality', v)}
+              textAlign="right" selectionColor={GOLD}
+            />
+            {errors[`${i}.nationality`] && <Text style={styles.errorText}>{errors[`${i}.nationality`]}</Text>}
+
+            {/* DOB — date picker */}
+            <DatePickerField
+              label="تاريخ الميلاد"
+              value={pax.dob}
+              onChange={v => updatePassenger(i, 'dob', v)}
+              maxDate={MAX_DOB}
+              minDate={MIN_DOB}
+              required
+              hasError={!!errors[`${i}.dob`]}
+              errorText={errors[`${i}.dob`]}
+            />
+
+            {/* Passport number */}
+            <Text style={styles.fieldLabel}>رقم جواز السفر <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
+            <TextInput
+              style={[styles.input, errors[`${i}.passportNumber`] && styles.inputError]}
+              placeholder="A12345678" placeholderTextColor={MUTED}
+              value={pax.passportNumber} onChangeText={v => updatePassenger(i, 'passportNumber', v)}
+              autoCapitalize="characters" textAlign="right" selectionColor={GOLD}
+            />
+            {errors[`${i}.passportNumber`] && <Text style={styles.errorText}>{errors[`${i}.passportNumber`]}</Text>}
+
+            {/* Passport expiry — date picker */}
+            <DatePickerField
+              label="تاريخ انتهاء الجواز"
+              value={pax.passportExpiry}
+              onChange={v => updatePassenger(i, 'passportExpiry', v)}
+              minDate={minExpiry()}
+              maxDate={MAX_EXPIRY}
+              required
+              hasError={!!errors[`${i}.passportExpiry`]}
+              errorText={errors[`${i}.passportExpiry`]}
+            />
+
+            {/* Passport issue country (optional) */}
+            <Text style={styles.fieldLabel}>دولة الإصدار (اختياري)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="مثال: العراق" placeholderTextColor={MUTED}
+              value={pax.passportIssueCountry ?? ''} onChangeText={v => updatePassenger(i, 'passportIssueCountry', v)}
+              textAlign="right" selectionColor={GOLD}
+            />
           </View>
         ))}
 
@@ -219,27 +258,20 @@ export default function FlightTravelersScreen() {
           <Text style={styles.fieldLabel}>رقم الهاتف <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
           <TextInput
             style={[styles.input, errors.phone && styles.inputError]}
-            placeholder="+964 7XX XXXX"
-            placeholderTextColor={MUTED}
+            placeholder="+964 7XX XXXX" placeholderTextColor={MUTED}
             value={phone}
             onChangeText={v => { setPhone(v); if (errors.phone) setErrors(e => { const n = { ...e }; delete n.phone; return n; }); }}
-            keyboardType="phone-pad"
-            textAlign="right"
-            selectionColor={GOLD}
+            keyboardType="phone-pad" textAlign="right" selectionColor={GOLD}
           />
           {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
           <Text style={styles.fieldLabel}>البريد الإلكتروني <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
           <TextInput
             style={[styles.input, errors.email && styles.inputError]}
-            placeholder="example@email.com"
-            placeholderTextColor={MUTED}
+            placeholder="example@email.com" placeholderTextColor={MUTED}
             value={email}
             onChangeText={v => { setEmail(v); if (errors.email) setErrors(e => { const n = { ...e }; delete n.email; return n; }); }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            textAlign="right"
-            selectionColor={GOLD}
+            keyboardType="email-address" autoCapitalize="none" textAlign="right" selectionColor={GOLD}
           />
           {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
         </View>
