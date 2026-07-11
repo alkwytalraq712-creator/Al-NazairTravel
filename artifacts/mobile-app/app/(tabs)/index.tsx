@@ -169,7 +169,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>الباقات الشعبية</Text>
           </View>
-          {home!.popularPackages.map((pkg) => (
+          {(home?.popularPackages ?? []).map((pkg) => (
             <PackageCard
               key={pkg.id}
               pkg={pkg}

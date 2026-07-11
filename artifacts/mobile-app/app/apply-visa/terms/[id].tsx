@@ -43,14 +43,15 @@ const TERMS_ITEMS = [
 // ─── Gate walls ───────────────────────────────────────────────────────────────
 
 function ProfileIncompleteWall({
-  pct,
-  missing,
+  pct = 0,
+  missing = [],
   paddingTop,
 }: {
-  pct: number;
-  missing: string[];
+  pct?: number;
+  missing?: string[];
   paddingTop: number;
 }) {
+  const safeMissing = Array.isArray(missing) ? missing : [];
   const colors = useColors();
   return (
     <View style={[{ flex: 1, backgroundColor: colors.background }]}>
@@ -87,7 +88,7 @@ function ProfileIncompleteWall({
             التأشيرة.
           </Text>
 
-          {missing.length > 0 && (
+          {safeMissing.length > 0 && (
             <View
               style={[
                 styles.missingBox,
@@ -104,7 +105,7 @@ function ProfileIncompleteWall({
               >
                 الحقول المطلوبة:
               </Text>
-              {missing.slice(0, 8).map((f) => (
+              {safeMissing.slice(0, 8).map((f) => (
                 <Text
                   key={f}
                   style={{
@@ -117,7 +118,7 @@ function ProfileIncompleteWall({
                   • {f}
                 </Text>
               ))}
-              {missing.length > 8 && (
+              {safeMissing.length > 8 && (
                 <Text
                   style={{
                     color: '#78350f',
@@ -126,7 +127,7 @@ function ProfileIncompleteWall({
                     textAlign: 'right',
                   }}
                 >
-                  وأيضاً {missing.length - 8} حقول أخرى...
+                  وأيضاً {safeMissing.length - 8} حقول أخرى...
                 </Text>
               )}
             </View>
@@ -162,12 +163,13 @@ function ProfileIncompleteWall({
 }
 
 function EligibilityBlockWall({
-  blockers,
+  blockers = [],
   paddingTop,
 }: {
-  blockers: Array<{ type: string; message: string; actionRoute: string | null }>;
+  blockers?: Array<{ type: string; message: string; actionRoute?: string | null }>;
   paddingTop: number;
 }) {
+  const safeBlockers = Array.isArray(blockers) ? blockers : [];
   const colors = useColors();
   return (
     <View style={[{ flex: 1, backgroundColor: colors.background }]}>
@@ -210,38 +212,44 @@ function EligibilityBlockWall({
               { backgroundColor: '#fef2f2', borderColor: '#fca5a5' },
             ]}
           >
-            {blockers.map((b, i) => (
-              <View
-                key={i}
-                style={{
-                  flexDirection: 'row-reverse',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginBottom: 4,
-                }}
-              >
-                <Ionicons name="close-circle" size={14} color="#ef4444" />
-                <Text
+            {safeBlockers.length === 0 ? (
+              <Text style={{ color: '#7f1d1d', fontSize: 13, fontFamily: 'Tajawal_400Regular', textAlign: 'right' }}>
+                لا توجد موانع حالياً.
+              </Text>
+            ) : (
+              safeBlockers.map((b, i) => (
+                <View
+                  key={i}
                   style={{
-                    color: '#7f1d1d',
-                    fontSize: 13,
-                    fontFamily: 'Tajawal_400Regular',
-                    textAlign: 'right',
-                    flex: 1,
+                    flexDirection: 'row-reverse',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginBottom: 4,
                   }}
                 >
-                  {b.message}
-                </Text>
-              </View>
-            ))}
+                  <Ionicons name="close-circle" size={14} color="#ef4444" />
+                  <Text
+                    style={{
+                      color: '#7f1d1d',
+                      fontSize: 13,
+                      fontFamily: 'Tajawal_400Regular',
+                      textAlign: 'right',
+                      flex: 1,
+                    }}
+                  >
+                    {b.message}
+                  </Text>
+                </View>
+              ))
+            )}
           </View>
 
-          {blockers.some((b) => b.actionRoute) && (
+          {safeBlockers.some((b) => b.actionRoute) && (
             <TouchableOpacity
               style={[styles.wallBtn, { backgroundColor: '#f59e0b' }]}
               onPress={() => {
                 const route =
-                  blockers.find((b) => b.actionRoute)?.actionRoute ??
+                  safeBlockers.find((b) => b.actionRoute)?.actionRoute ??
                   '/profile-edit';
                 router.push(route as any);
               }}
@@ -336,8 +344,8 @@ export default function VisaTermsScreen() {
   if (completion && !completion.isComplete) {
     return (
       <ProfileIncompleteWall
-        pct={completion.percentage}
-        missing={completion.missingFields}
+        pct={completion.percentage ?? 0}
+        missing={Array.isArray(completion.missingFields) ? completion.missingFields : []}
         paddingTop={paddingTop}
       />
     );
@@ -347,7 +355,7 @@ export default function VisaTermsScreen() {
   if (eligibility && !eligibility.eligible) {
     return (
       <EligibilityBlockWall
-        blockers={eligibility.blockers as any}
+        blockers={Array.isArray(eligibility.blockers) ? eligibility.blockers : []}
         paddingTop={paddingTop}
       />
     );

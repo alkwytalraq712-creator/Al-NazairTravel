@@ -40,9 +40,9 @@ export default function PackageDetailScreen() {
           <TouchableOpacity style={[styles.backBtn, { top: paddingTop + 12 }]} onPress={() => router.back()}>
             <Ionicons name="chevron-forward" size={24} color="#fff" />
           </TouchableOpacity>
-          {pkg.images.length > 1 && (
+          {(pkg.images ?? []).length > 1 && (
             <View style={styles.imageDots}>
-              {pkg.images.map((_, i) => (
+              {(pkg.images ?? []).map((_, i) => (
                 <TouchableOpacity key={i} onPress={() => setImageIdx(i)}>
                   <View style={[styles.imageDot, { backgroundColor: i === imageIdx ? colors.primary : '#ffffff80' }, i === imageIdx && { width: 18 }]} />
                 </TouchableOpacity>
@@ -79,10 +79,10 @@ export default function PackageDetailScreen() {
           )}
 
           {/* Itinerary */}
-          {pkg.itinerary.length > 0 && (
+          {(pkg.itinerary ?? []).length > 0 && (
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={[styles.cardTitle, { color: colors.foreground }]}>برنامج الرحلة</Text>
-              {pkg.itinerary.map((day) => (
+              {(pkg.itinerary ?? []).map((day) => (
                 <TouchableOpacity key={day.day} onPress={() => setExpandedDay(expandedDay === day.day ? null : day.day)} style={[styles.dayRow, { borderBottomColor: colors.border }]}>
                   <Ionicons name={expandedDay === day.day ? 'chevron-up' : 'chevron-down'} size={16} color={colors.mutedForeground} />
                   <View style={styles.dayContent}>
@@ -96,10 +96,10 @@ export default function PackageDetailScreen() {
           )}
 
           {/* Included Services */}
-          {pkg.includedServices.length > 0 && (
+          {(pkg.includedServices ?? []).length > 0 && (
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={[styles.cardTitle, { color: colors.foreground }]}>الخدمات المشمولة</Text>
-              {pkg.includedServices.map((s, i) => (
+              {(pkg.includedServices ?? []).map((s, i) => (
                 <View key={i} style={styles.serviceRow}>
                   <Text style={[styles.serviceText, { color: colors.foreground }]}>{s}</Text>
                   <Ionicons name="checkmark-circle" size={18} color={colors.success} />
@@ -109,10 +109,10 @@ export default function PackageDetailScreen() {
           )}
 
           {/* Excluded */}
-          {pkg.excludedServices.length > 0 && (
+          {(pkg.excludedServices ?? []).length > 0 && (
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={[styles.cardTitle, { color: colors.foreground }]}>غير مشمول</Text>
-              {pkg.excludedServices.map((s, i) => (
+              {(pkg.excludedServices ?? []).map((s, i) => (
                 <View key={i} style={styles.serviceRow}>
                   <Text style={[styles.serviceText, { color: colors.foreground }]}>{s}</Text>
                   <Ionicons name="close-circle" size={18} color={colors.destructive} />

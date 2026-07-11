@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -8,8 +8,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

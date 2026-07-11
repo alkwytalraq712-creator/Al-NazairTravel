@@ -101,10 +101,10 @@ export default function VisaDetailScreen() {
           )}
 
           {/* Required Documents */}
-          {visa.requiredDocuments.length > 0 && (
+          {(visa.requiredDocuments ?? []).length > 0 && (
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={[styles.cardTitle, { color: colors.foreground }]}>المستندات المطلوبة</Text>
-              {visa.requiredDocuments.map((doc, i) => (
+              {(visa.requiredDocuments ?? []).map((doc, i) => (
                 <View key={i} style={styles.docRow}>
                   <Text style={[styles.docText, { color: colors.foreground }]}>{doc}</Text>
                   <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
