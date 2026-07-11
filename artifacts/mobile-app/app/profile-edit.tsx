@@ -13,6 +13,7 @@ import {
   Platform,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -186,34 +187,45 @@ function StepHeader({ step, total }: { step: number; total: number }) {
   );
 }
 
-// ─── Row for OCR data display ───────────────────────────────────────────────────
+// ─── Editable field after OCR ────────────────────────────────────────────────────
 
-function DataRow({ label, value }: { label: string; value: string }) {
+function EditableField({
+  label,
+  value,
+  onChangeText,
+  keyboardType = 'default',
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (t: string) => void;
+  keyboardType?: 'default' | 'numeric' | 'email-address';
+  placeholder?: string;
+}) {
   return (
-    <View
-      style={{
-        flexDirection: 'row-reverse',
-        justifyContent: 'space-between',
-        paddingVertical: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.07)',
-      }}
-    >
-      <Text style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Tajawal_400Regular', fontSize: 13 }}>
+    <View style={{ paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' }}>
+      <Text style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Tajawal_400Regular', fontSize: 11, textAlign: 'right', marginBottom: 3 }}>
         {label}
       </Text>
-      <Text
-        style={{
-          color: '#fff',
-          fontFamily: 'Tajawal_700Bold',
-          fontSize: 14,
-          textAlign: 'left',
-          maxWidth: '65%',
-        }}
-        numberOfLines={2}
-      >
-        {value || '—'}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Ionicons name="create-outline" size={12} color="rgba(96,165,250,0.45)" />
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder ?? '—'}
+          placeholderTextColor="rgba(255,255,255,0.2)"
+          keyboardType={keyboardType}
+          autoCapitalize="characters"
+          style={{
+            flex: 1,
+            color: '#fff',
+            fontFamily: 'Tajawal_400Regular',
+            fontSize: 14,
+            textAlign: 'left',
+            paddingVertical: 2,
+          }}
+        />
+      </View>
     </View>
   );
 }
@@ -261,21 +273,25 @@ export default function ProfileEditScreen() {
 
   // ── Step 1: Passport ──
   const [passportImageUrl, setPassportImageUrl] = useState(u?.passportImageUrl ?? '');
+  const existingPassport = u?.passportNumber
+    ? {
+        fullName: u.englishName ?? '',
+        nationality: u.nationality ?? '',
+        passportNumber: u.passportNumber ?? '',
+        dob: u.dob ?? '',
+        passportIssueDate: u.passportIssueDate ?? '',
+        passportExpiry: u.passportExpiry ?? '',
+        issuingCountry: u.passportIssuingCountry ?? '',
+        gender: u.gender ?? '',
+        placeOfBirth: u.placeOfBirth ?? '',
+      }
+    : null;
   const [passportData, setPassportData] = useState<ExtractedPassport | null>(
-    u?.passportNumber
-      ? {
-          fullName: u.englishName ?? '',
-          nationality: u.nationality ?? '',
-          passportNumber: u.passportNumber ?? '',
-          dob: u.dob ?? '',
-          passportIssueDate: u.passportIssueDate ?? '',
-          passportExpiry: u.passportExpiry ?? '',
-          issuingCountry: u.passportIssuingCountry ?? '',
-          gender: u.gender ?? '',
-          placeOfBirth: u.placeOfBirth ?? '',
-          confidence: 100,
-        }
-      : null,
+    existingPassport ? { ...existingPassport, confidence: 100 } : null,
+  );
+  // editedPassport is the user-editable copy — pre-filled from OCR, can be corrected
+  const [editedPassport, setEditedPassport] = useState<Omit<ExtractedPassport, 'confidence'> | null>(
+    existingPassport,
   );
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrError, setOcrError] = useState('');
@@ -413,6 +429,18 @@ export default function ProfileEditScreen() {
             }
 
             setPassportData(extracted);
+            // Pre-fill the editable copy so the user can correct OCR errors
+            setEditedPassport({
+              fullName: extracted.fullName,
+              nationality: extracted.nationality,
+              passportNumber: extracted.passportNumber,
+              dob: extracted.dob,
+              passportIssueDate: extracted.passportIssueDate,
+              passportExpiry: extracted.passportExpiry,
+              issuingCountry: extracted.issuingCountry,
+              gender: extracted.gender,
+              placeOfBirth: extracted.placeOfBirth,
+            });
           },
           onError: (err: any) => {
             const msg = err?.data?.error || err?.message || '';
@@ -469,8 +497,8 @@ export default function ProfileEditScreen() {
 
     // ── Step 1 validation ──
     if (step === 1) {
-      if (!passportData || !passportData.passportNumber) {
-        Alert.alert('مسح الجواز مطلوب', 'يرجى مسح جواز السفر ضوئياً حتى يمكن متابعة التسجيل.');
+      if (!editedPassport || !editedPassport.passportNumber.trim()) {
+        Alert.alert('مسح الجواز مطلوب', 'يرجى مسح جواز السفر ضوئياً أو إدخال رقم الجواز.');
         return;
       }
       setStep(2);
@@ -483,16 +511,16 @@ export default function ProfileEditScreen() {
         data: {
           avatarUrl,
           passportImageUrl,
-          // Passport fields from OCR
-          englishName: passportData?.fullName,
-          nationality: passportData?.nationality,
-          passportNumber: passportData?.passportNumber,
-          passportIssuingCountry: passportData?.issuingCountry,
-          passportIssueDate: passportData?.passportIssueDate,
-          passportExpiry: passportData?.passportExpiry,
-          dob: passportData?.dob,
-          gender: passportData?.gender,
-          placeOfBirth: passportData?.placeOfBirth,
+          // Use editedPassport (user may have corrected OCR errors)
+          englishName: editedPassport?.fullName,
+          nationality: editedPassport?.nationality,
+          passportNumber: editedPassport?.passportNumber,
+          passportIssuingCountry: editedPassport?.issuingCountry,
+          passportIssueDate: editedPassport?.passportIssueDate,
+          passportExpiry: editedPassport?.passportExpiry,
+          dob: editedPassport?.dob,
+          gender: editedPassport?.gender,
+          placeOfBirth: editedPassport?.placeOfBirth,
           // Residence
           residenceType,
           hasGulfResidence: residenceType === 'gcc',
@@ -823,17 +851,85 @@ export default function ProfileEditScreen() {
               </View>
             </View>
 
-            <DataRow label="الاسم الكامل (إنجليزي)" value={passportData.fullName} />
-            <DataRow label="الجنسية" value={passportData.nationality} />
-            <DataRow label="رقم الجواز" value={passportData.passportNumber} />
-            <DataRow label="الجنس" value={GENDER_MAP[passportData.gender] ?? passportData.gender} />
-            <DataRow label="تاريخ الميلاد" value={formatDate(passportData.dob)} />
-            <DataRow label="تاريخ الإصدار" value={formatDate(passportData.passportIssueDate)} />
-            <DataRow label="تاريخ الانتهاء" value={formatDate(passportData.passportExpiry)} />
-            <DataRow label="دولة الإصدار" value={passportData.issuingCountry} />
-            {passportData.placeOfBirth ? (
-              <DataRow label="مكان الميلاد" value={passportData.placeOfBirth} />
-            ) : null}
+            {/* Editable fields — pre-filled from OCR, user can correct any error */}
+            {editedPassport && (
+              <>
+                <EditableField
+                  label="الاسم الكامل (إنجليزي)"
+                  value={editedPassport.fullName}
+                  onChangeText={(v) => setEditedPassport((p) => p ? { ...p, fullName: v } : p)}
+                />
+                <EditableField
+                  label="الجنسية"
+                  value={editedPassport.nationality}
+                  onChangeText={(v) => setEditedPassport((p) => p ? { ...p, nationality: v } : p)}
+                />
+                <EditableField
+                  label="رقم الجواز"
+                  value={editedPassport.passportNumber}
+                  onChangeText={(v) => setEditedPassport((p) => p ? { ...p, passportNumber: v } : p)}
+                />
+
+                {/* Gender toggle */}
+                <View style={{ paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Tajawal_400Regular', fontSize: 11, textAlign: 'right', marginBottom: 6 }}>
+                    الجنس
+                  </Text>
+                  <View style={{ flexDirection: 'row-reverse', gap: 8 }}>
+                    {(['M', 'F'] as const).map((g) => {
+                      const active = editedPassport.gender === g;
+                      return (
+                        <TouchableOpacity
+                          key={g}
+                          onPress={() => setEditedPassport((p) => p ? { ...p, gender: g } : p)}
+                          style={{
+                            paddingHorizontal: 22,
+                            paddingVertical: 6,
+                            borderRadius: 8,
+                            backgroundColor: active ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.05)',
+                            borderWidth: 1,
+                            borderColor: active ? '#3b82f6' : 'rgba(255,255,255,0.1)',
+                          }}
+                        >
+                          <Text style={{ color: active ? '#93c5fd' : 'rgba(255,255,255,0.5)', fontFamily: 'Tajawal_700Bold', fontSize: 13 }}>
+                            {GENDER_MAP[g] ?? g}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <EditableField
+                  label="تاريخ الميلاد (YYYY-MM-DD)"
+                  value={editedPassport.dob}
+                  onChangeText={(v) => setEditedPassport((p) => p ? { ...p, dob: v } : p)}
+                  keyboardType="numeric"
+                />
+                <EditableField
+                  label="تاريخ الإصدار (YYYY-MM-DD)"
+                  value={editedPassport.passportIssueDate}
+                  onChangeText={(v) => setEditedPassport((p) => p ? { ...p, passportIssueDate: v } : p)}
+                  keyboardType="numeric"
+                />
+                <EditableField
+                  label="تاريخ الانتهاء (YYYY-MM-DD)"
+                  value={editedPassport.passportExpiry}
+                  onChangeText={(v) => setEditedPassport((p) => p ? { ...p, passportExpiry: v } : p)}
+                  keyboardType="numeric"
+                />
+                <EditableField
+                  label="دولة الإصدار"
+                  value={editedPassport.issuingCountry}
+                  onChangeText={(v) => setEditedPassport((p) => p ? { ...p, issuingCountry: v } : p)}
+                />
+                <EditableField
+                  label="مكان الميلاد (اختياري)"
+                  value={editedPassport.placeOfBirth}
+                  onChangeText={(v) => setEditedPassport((p) => p ? { ...p, placeOfBirth: v } : p)}
+                />
+              </>
+            )}
 
             {/* Low confidence warning */}
             {passportData.confidence < 70 && (
@@ -1058,7 +1154,7 @@ export default function ProfileEditScreen() {
   const isNextLoading = step === 2 && updateMutation.isPending;
   const isNextDisabled =
     (step === 0 && (!faceValid || faceValidating)) ||
-    (step === 1 && (!passportData || ocrLoading)) ||
+    (step === 1 && (!editedPassport || ocrLoading)) ||
     isNextLoading;
 
   // ─── Render ────────────────────────────────────────────────────────────────────

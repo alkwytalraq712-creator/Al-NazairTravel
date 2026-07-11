@@ -178,16 +178,25 @@ class TesseractProvider implements OcrProvider {
   readonly name = 'tesseract';
 
   isAvailable(): boolean {
-    // Disabled: worker-script path not available in this deployment environment.
-    // When enabled, this was crashing the Node process via an unhandled worker error.
-    return false;
+    return true; // always available as final fallback
   }
 
   async extractText(image: Buffer): Promise<OcrResult> {
     const start = Date.now();
     const { createWorker } = await import('tesseract.js');
+    const { join } = await import('path');
+
+    // In a pnpm workspace, esbuild bundles this file but cannot bundle the
+    // Tesseract worker script (it's spawned as a separate Node.js process).
+    // Resolve it explicitly from the workspace root's pnpm store so the path
+    // survives esbuild bundling. process.cwd() = artifacts/api-server/ at runtime.
+    const workerPath = join(
+      process.cwd(),
+      '../../node_modules/.pnpm/tesseract.js@7.0.0/node_modules/tesseract.js/src/worker-script/node/index.js',
+    );
 
     const worker = await createWorker('eng', 1, {
+      workerPath,
       logger: () => undefined, // suppress progress logs
     });
     await worker.setParameters({

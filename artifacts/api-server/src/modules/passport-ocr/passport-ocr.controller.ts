@@ -13,6 +13,7 @@ import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { requireAuth } from '../../lib/auth.js';
 import { getAvailableProviders } from './ocr.provider.js';
+import { detectImageQuality } from './image.service.js';
 import { PassportOcrService } from './passport-ocr.service.js';
 import { validateImageBuffer, MAX_FILE_SIZE_BYTES } from './image.service.js';
 import { ObjectStorageService } from '../../lib/objectStorage.js';
@@ -121,6 +122,18 @@ router.post(
     const validationError = validateImageBuffer(file.buffer, file.mimetype);
     if (validationError) {
       res.status(validationError.includes('large') ? 413 : 415).json({ error: validationError });
+      return;
+    }
+
+    // Quality gate — reject visibly bad images before spending OCR quota
+    const quality = await detectImageQuality(file.buffer);
+    if (quality.issues.length > 0) {
+      req.log?.warn({ quality, event: 'ocr.quality_rejected' });
+      res.status(422).json({
+        error: 'image_quality_low',
+        issues: quality.issues,
+        message: quality.issues.join('، ') + '. يرجى إعادة تصوير الجواز.',
+      });
       return;
     }
 

@@ -65,6 +65,49 @@ export async function preprocessPassportImage(
   };
 }
 
+// ─── Image quality detection ───────────────────────────────────────────────────
+
+export interface ImageQualityResult {
+  isDark: boolean;
+  isBlurry: boolean;
+  isTooSmall: boolean;
+  issues: string[];
+}
+
+/**
+ * Analyse a passport image before OCR.
+ * Returns quality flags and human-readable Arabic issue descriptions.
+ * Thresholds are intentionally conservative so we don't block valid images.
+ */
+export async function detectImageQuality(buffer: Buffer): Promise<ImageQualityResult> {
+  const base = sharp(buffer, { failOn: 'none' }).rotate().grayscale();
+  const [stats, meta] = await Promise.all([
+    base.clone().stats(),
+    base.clone().metadata(),
+  ]);
+
+  const ch    = stats.channels[0];
+  const mean  = ch.mean;   // 0-255: brightness
+  const stdev = ch.stdev;  // spread: low = blurry / flat
+
+  const isDark    = mean  < 38;                               // very underexposed
+  const isBlurry  = stdev < 14;                               // near-uniform = blurry or blank
+  const isTooSmall = (meta.width ?? 0) < 350 || (meta.height ?? 0) < 220;
+
+  return {
+    isDark,
+    isBlurry,
+    isTooSmall,
+    issues: [
+      ...(isDark     ? ['الصورة مظلمة جداً، يرجى التقاطها في إضاءة أفضل'] : []),
+      ...(isBlurry   ? ['الصورة غير واضحة أو ضبابية، يرجى إعادة التصوير'] : []),
+      ...(isTooSmall ? ['دقة الصورة منخفضة جداً'] : []),
+    ],
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+
 /**
  * Validate the raw upload buffer: size and (basic) MIME type check.
  * Returns error string or null if valid.
