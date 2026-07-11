@@ -12,6 +12,7 @@ import { z } from "zod/v4";
 export const visasTable = pgTable("visas", {
   id: serial("id").primaryKey(),
   countryName: text("country_name").notNull(),
+  countryCode: text("country_code"),
   countryFlagUrl: text("country_flag_url").notNull(),
   countryImageUrl: text("country_image_url").notNull(),
   visaType: text("visa_type").notNull(),

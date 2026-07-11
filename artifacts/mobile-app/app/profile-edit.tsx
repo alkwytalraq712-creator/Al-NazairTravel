@@ -46,6 +46,7 @@ interface TravelTripEntry {
 
 interface ProfileForm {
   // Base
+  avatarUrl: string;
   fullName: string;
   email: string;
   phone: string;
@@ -211,19 +212,22 @@ function useImageUpload() {
       const asset = result.assets[0];
       const ext = asset.uri.split('.').pop() ?? 'jpg';
       const contentType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-      const fileName = `${folder}_${Date.now()}.${ext}`;
+      const name = `${folder}_${Date.now()}.${ext}`;
 
       setUploading(folder);
       try {
-        const { uploadUrl, objectPath } = await new Promise<any>((resolve, reject) =>
+        // Fetch blob first so we know the size
+        const body = await fetch(asset.uri).then(r => r.blob());
+        const size = body.size;
+
+        const { uploadURL, objectPath } = await new Promise<any>((resolve, reject) =>
           requestUrl.mutate(
-            { data: { fileName, contentType, folder } },
+            { data: { name, size, contentType } },
             { onSuccess: resolve, onError: reject },
           ),
         );
 
-        const body = await fetch(asset.uri).then(r => r.blob());
-        const put = await fetch(uploadUrl, { method: 'PUT', body, headers: { 'Content-Type': contentType } });
+        const put = await fetch(uploadURL, { method: 'PUT', body, headers: { 'Content-Type': contentType } });
         if (!put.ok) throw new Error('Upload failed');
 
         const { publicUrl } = await new Promise<any>((resolve, reject) =>
@@ -232,7 +236,7 @@ function useImageUpload() {
             { onSuccess: resolve, onError: reject },
           ),
         );
-        return publicUrl as string;
+        return (publicUrl ?? objectPath) as string;
       } catch (e: any) {
         Alert.alert('خطأ', 'فشل رفع الصورة، حاول مجدداً');
         return null;
@@ -324,6 +328,7 @@ export default function ProfileEditScreen() {
   const { data: completion } = useGetProfileCompletion();
 
   const [form, setForm] = useState<ProfileForm>({
+    avatarUrl: (user as any)?.avatarUrl ?? '',
     fullName: user?.fullName ?? '',
     email: user?.email ?? '',
     phone: user?.phone ?? '',
@@ -363,15 +368,28 @@ export default function ProfileEditScreen() {
 
   async function handleUploadField(folder: string) {
     // folder maps to form key for image fields
-    const fieldMap: Record<string, keyof ProfileForm> = {
+    const staticFieldMap: Record<string, keyof ProfileForm> = {
+      avatar: 'avatarUrl',
       passport: 'passportImageUrl',
       gulf_front: 'gulfResidenceFrontUrl',
       gulf_back: 'gulfResidenceBackUrl',
     };
     const url = await upload(folder);
-    if (url) {
-      const key = fieldMap[folder];
-      if (key) set(key)(url);
+    if (!url) return;
+    const key = staticFieldMap[folder];
+    if (key) {
+      set(key)(url);
+      return;
+    }
+    // Dynamic: visa_0, visa_1, ...
+    const visaMatch = folder.match(/^visa_(\d+)$/);
+    if (visaMatch) {
+      const i = parseInt(visaMatch[1], 10);
+      setForm(f => {
+        const av2 = [...f.activeVisas];
+        av2[i] = { ...av2[i], imageUrl: url };
+        return { ...f, activeVisas: av2 };
+      });
     }
   }
 
@@ -379,6 +397,7 @@ export default function ProfileEditScreen() {
     updateMutation.mutate(
       {
         data: {
+          avatarUrl: form.avatarUrl || undefined,
           fullName: form.fullName.trim() || undefined,
           email: form.email.trim() || undefined,
           phone: form.phone.trim() || undefined,
@@ -443,6 +462,39 @@ export default function ProfileEditScreen() {
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
         {/* Progress */}
         {completion && <ProgressBar pct={completion.percentage} />}
+
+        {/* ── Avatar ──────────────────────────────────────────────────────── */}
+        <View style={[styles.avatarCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.avatarWrap}>
+            {form.avatarUrl ? (
+              <Image source={{ uri: form.avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={[styles.avatarPlaceholder, { backgroundColor: colors.muted }]}>
+                <Ionicons name="person" size={40} color={colors.mutedForeground} />
+              </View>
+            )}
+            <TouchableOpacity
+              style={[styles.avatarEditBtn, { backgroundColor: colors.primary }]}
+              onPress={() => handleUploadField('avatar')}
+              disabled={uploading === 'avatar'}
+              activeOpacity={0.8}
+            >
+              {uploading === 'avatar' ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="camera" size={14} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+            <Text style={{ color: colors.foreground, fontWeight: '700', fontSize: 15, textAlign: 'right' }}>
+              {form.fullName || 'الملف الشخصي'}
+            </Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 2, textAlign: 'right' }}>
+              انقر على الصورة لتغييرها
+            </Text>
+          </View>
+        </View>
 
         {/* ── Personal Information ─────────────────────────────────────────── */}
         <SectionHeader title="البيانات الشخصية" icon="person-outline" />
@@ -538,6 +590,13 @@ export default function ProfileEditScreen() {
                   <Field label="رقم التأشيرة (اختياري)" value={av.visaNumber} onChangeText={v => setForm(f => { const av2 = [...f.activeVisas]; av2[i] = { ...av2[i], visaNumber: v }; return { ...f, activeVisas: av2 }; })} />
                   <Field label="تاريخ الإصدار (YYYY-MM-DD)" value={av.issueDate} onChangeText={v => setForm(f => { const av2 = [...f.activeVisas]; av2[i] = { ...av2[i], issueDate: v }; return { ...f, activeVisas: av2 }; })} />
                   <Field label="تاريخ الانتهاء (YYYY-MM-DD)" value={av.expiryDate} onChangeText={v => setForm(f => { const av2 = [...f.activeVisas]; av2[i] = { ...av2[i], expiryDate: v }; return { ...f, activeVisas: av2 }; })} />
+                  <ImageField
+                    label="صورة التأشيرة (اختياري)"
+                    value={av.imageUrl ?? ''}
+                    onUploaded={handleUploadField}
+                    folder={`visa_${i}`}
+                    uploading={uploading}
+                  />
                 </View>
               ))}
               <TouchableOpacity
@@ -717,4 +776,46 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  avatarCard: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 20,
+  },
+  avatarWrap: {
+    position: 'relative',
+    width: 72,
+    height: 72,
+    flexShrink: 0,
+  },
+  avatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#f3f4f6',
+  },
+  avatarPlaceholder: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarEditBtn: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
 });

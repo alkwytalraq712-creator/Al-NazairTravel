@@ -8,4 +8,6 @@
 
 export interface FinalizeUploadResponse {
   objectPath: string;
+  /** Full URL for serving the object (present when isPublic was true). */
+  publicUrl?: string;
 }

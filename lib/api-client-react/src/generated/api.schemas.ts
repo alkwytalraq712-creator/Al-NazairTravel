@@ -34,10 +34,14 @@ export interface UploadUrlResponse {
 export interface FinalizeUploadRequest {
   /** Normalized object path returned from requestUploadUrl (e.g. `/objects/uploads/uuid`). */
   objectPath: string;
+  /** When true, the object ACL is set to public so any authenticated user can read it. Returns a publicUrl. */
+  isPublic?: boolean;
 }
 
 export interface FinalizeUploadResponse {
   objectPath: string;
+  /** Full URL for serving the object (present when isPublic was true). */
+  publicUrl?: string;
 }
 
 export interface HealthStatus {
@@ -609,6 +613,8 @@ export interface VisaRequirements {
 export interface Visa {
   id: number;
   countryName: string;
+  /** @nullable */
+  countryCode?: string | null;
   countryFlagUrl: string;
   countryImageUrl: string;
   visaType: VisaType;
@@ -641,6 +647,7 @@ export interface Visa {
 export interface VisaInput {
   /** @minLength 1 */
   countryName: string;
+  countryCode?: string;
   countryFlagUrl: string;
   countryImageUrl: string;
   visaType: VisaType;
@@ -672,6 +679,7 @@ export interface VisaInput {
 export interface VisaUpdate {
   /** @minLength 1 */
   countryName?: string;
+  countryCode?: string;
   countryFlagUrl?: string;
   countryImageUrl?: string;
   visaType?: VisaType;

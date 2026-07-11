@@ -102,11 +102,13 @@ export const ScanPassportOcrResponse = zod.object({
  * @summary Finalize an uploaded object and set its ACL policy
  */
 export const FinalizeUploadBody = zod.object({
-  "objectPath": zod.string().describe('Normalized object path returned from requestUploadUrl (e.g. `\/objects\/uploads\/uuid`).')
+  "objectPath": zod.string().describe('Normalized object path returned from requestUploadUrl (e.g. `\/objects\/uploads\/uuid`).'),
+  "isPublic": zod.boolean().optional().describe('When true, the object ACL is set to public so any authenticated user can read it. Returns a publicUrl.')
 })
 
 export const FinalizeUploadResponse = zod.object({
-  "objectPath": zod.string()
+  "objectPath": zod.string(),
+  "publicUrl": zod.string().optional().describe('Full URL for serving the object (present when isPublic was true).')
 })
 
 
@@ -503,6 +505,7 @@ export const GetHomeSummaryResponse = zod.object({
   "featuredVisas": zod.array(zod.object({
   "id": zod.number(),
   "countryName": zod.string(),
+  "countryCode": zod.string().nullish(),
   "countryFlagUrl": zod.string(),
   "countryImageUrl": zod.string(),
   "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']),
@@ -619,6 +622,7 @@ export const ListVisasQueryParams = zod.object({
 export const ListVisasResponseItem = zod.object({
   "id": zod.number(),
   "countryName": zod.string(),
+  "countryCode": zod.string().nullish(),
   "countryFlagUrl": zod.string(),
   "countryImageUrl": zod.string(),
   "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']),
@@ -657,6 +661,7 @@ export const ListVisasResponse = zod.array(ListVisasResponseItem)
 
 export const CreateVisaBody = zod.object({
   "countryName": zod.string().min(1),
+  "countryCode": zod.string().optional(),
   "countryFlagUrl": zod.string(),
   "countryImageUrl": zod.string(),
   "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']),
@@ -687,6 +692,7 @@ export const CreateVisaBody = zod.object({
 export const CreateVisaResponse = zod.object({
   "id": zod.number(),
   "countryName": zod.string(),
+  "countryCode": zod.string().nullish(),
   "countryFlagUrl": zod.string(),
   "countryImageUrl": zod.string(),
   "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']),
@@ -726,6 +732,7 @@ export const GetVisaParams = zod.object({
 export const GetVisaResponse = zod.object({
   "id": zod.number(),
   "countryName": zod.string(),
+  "countryCode": zod.string().nullish(),
   "countryFlagUrl": zod.string(),
   "countryImageUrl": zod.string(),
   "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']),
@@ -767,6 +774,7 @@ export const UpdateVisaParams = zod.object({
 
 export const UpdateVisaBody = zod.object({
   "countryName": zod.string().min(1).optional(),
+  "countryCode": zod.string().optional(),
   "countryFlagUrl": zod.string().optional(),
   "countryImageUrl": zod.string().optional(),
   "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']).optional(),
@@ -797,6 +805,7 @@ export const UpdateVisaBody = zod.object({
 export const UpdateVisaResponse = zod.object({
   "id": zod.number(),
   "countryName": zod.string(),
+  "countryCode": zod.string().nullish(),
   "countryFlagUrl": zod.string(),
   "countryImageUrl": zod.string(),
   "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']),
@@ -1177,6 +1186,7 @@ export const ListMyVisaApplicationsResponseItem = zod.object({
   "visa": zod.union([zod.object({
   "id": zod.number(),
   "countryName": zod.string(),
+  "countryCode": zod.string().nullish(),
   "countryFlagUrl": zod.string(),
   "countryImageUrl": zod.string(),
   "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']),
@@ -1244,6 +1254,7 @@ export const CreateVisaApplicationResponse = zod.object({
   "visa": zod.union([zod.object({
   "id": zod.number(),
   "countryName": zod.string(),
+  "countryCode": zod.string().nullish(),
   "countryFlagUrl": zod.string(),
   "countryImageUrl": zod.string(),
   "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']),
@@ -1310,6 +1321,7 @@ export const GetVisaApplicationResponse = zod.object({
   "visa": zod.union([zod.object({
   "id": zod.number(),
   "countryName": zod.string(),
+  "countryCode": zod.string().nullish(),
   "countryFlagUrl": zod.string(),
   "countryImageUrl": zod.string(),
   "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']),
@@ -1376,6 +1388,7 @@ export const ListAllVisaApplicationsResponseItem = zod.object({
   "visa": zod.union([zod.object({
   "id": zod.number(),
   "countryName": zod.string(),
+  "countryCode": zod.string().nullish(),
   "countryFlagUrl": zod.string(),
   "countryImageUrl": zod.string(),
   "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']),
@@ -1447,6 +1460,7 @@ export const UpdateVisaApplicationStatusResponse = zod.object({
   "visa": zod.union([zod.object({
   "id": zod.number(),
   "countryName": zod.string(),
+  "countryCode": zod.string().nullish(),
   "countryFlagUrl": zod.string(),
   "countryImageUrl": zod.string(),
   "visaType": zod.enum(['tourism', 'business', 'medical', 'study', 'visit', 'investment']),

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { 
   useListVisas, 
   useCreateVisa, 
@@ -8,12 +8,14 @@ import {
   useCreateVisaEligibilityRule,
   useUpdateVisaEligibilityRule,
   useDeleteVisaEligibilityRule,
+  useRequestUploadUrl,
+  useFinalizeUpload,
   getListVisaEligibilityRulesQueryKey,
   Visa,
   VisaType,
   type VisaEligibilityRule,
 } from '@workspace/api-client-react';
-import { Loader2, Plus, Edit, Trash2, Clock, Filter, ShieldCheck, Users, Globe, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Clock, Filter, ShieldCheck, Users, Globe, CheckCircle2, XCircle, Search, Upload, X, ImageIcon } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getListVisasQueryKey } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
@@ -31,13 +33,183 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { VISA_TYPE_ARABIC } from '@/lib/translations';
+import { COUNTRIES, getFlagUrl, type Country } from '@/lib/countries';
+
+// ─── Country Picker ───────────────────────────────────────────────────────────
+
+function CountryPicker({ value, onChange }: { value: string; onChange: (c: Country) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const selected = COUNTRIES.find(c => c.code === value);
+  const filtered = search.length > 0
+    ? COUNTRIES.filter(c =>
+        c.nameAr.includes(search) ||
+        c.nameEn.toLowerCase().includes(search.toLowerCase()) ||
+        c.code.toLowerCase().includes(search.toLowerCase())
+      )
+    : COUNTRIES;
+
+  return (
+    <div className="space-y-1.5">
+      <div
+        className="flex items-center gap-3 border rounded-md px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
+        onClick={() => setOpen(true)}
+      >
+        {selected ? (
+          <>
+            <img src={getFlagUrl(selected.code)} alt={selected.nameEn} className="w-7 h-5 rounded-sm object-cover flex-shrink-0" />
+            <span className="flex-1 text-sm">{selected.nameAr}</span>
+            <span className="text-xs text-muted-foreground">{selected.nameEn}</span>
+          </>
+        ) : (
+          <>
+            <Globe className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm text-muted-foreground flex-1">اختر الدولة...</span>
+          </>
+        )}
+        <Search className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm max-h-[80dvh] flex flex-col p-0">
+          <div className="p-4 pb-2 border-b">
+            <Input
+              autoFocus
+              placeholder="بحث عن دولة..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="text-right"
+            />
+          </div>
+          <div className="overflow-y-auto flex-1">
+            {filtered.map(c => (
+              <div
+                key={c.code}
+                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-muted/60 transition-colors ${c.code === value ? 'bg-primary/10' : ''}`}
+                onClick={() => { onChange(c); setSearch(''); setOpen(false); }}
+              >
+                <img src={getFlagUrl(c.code)} alt={c.nameEn} className="w-7 h-5 rounded-sm object-cover flex-shrink-0" />
+                <span className="flex-1 text-sm">{c.nameAr}</span>
+                <span className="text-xs text-muted-foreground">{c.nameEn}</span>
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <p className="text-center text-muted-foreground py-8 text-sm">لا توجد نتائج</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ─── Cover Image Upload ───────────────────────────────────────────────────────
+
+function CoverImageUpload({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const { toast } = useToast();
+  const requestUrl = useRequestUploadUrl();
+  const finalize = useFinalizeUpload();
+  const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const uploadFile = useCallback(async (file: File) => {
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      toast({ title: 'نوع ملف غير مدعوم', description: 'يدعم النظام: JPG, PNG, WEBP', variant: 'destructive' });
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() ?? 'jpg';
+      const name = `visa_cover_${Date.now()}.${ext}`;
+      const { uploadURL, objectPath } = await new Promise<any>((res, rej) =>
+        requestUrl.mutate({ data: { name, size: file.size, contentType: file.type } }, { onSuccess: res, onError: rej })
+      );
+      const put = await fetch(uploadURL, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+      if (!put.ok) throw new Error('Upload failed');
+      const { publicUrl } = await new Promise<any>((res, rej) =>
+        finalize.mutate({ data: { objectPath, isPublic: true } }, { onSuccess: res, onError: rej })
+      );
+      onChange(publicUrl as string);
+      toast({ title: 'تم رفع الصورة بنجاح' });
+    } catch {
+      toast({ title: 'فشل رفع الصورة', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
+  }, [requestUrl, finalize, toast, onChange]);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadFile(file);
+    e.target.value = '';
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) uploadFile(file);
+  };
+
+  if (value) {
+    return (
+      <div className="space-y-2">
+        <div className="relative rounded-xl overflow-hidden border aspect-video bg-muted max-h-48">
+          <img src={value} alt="صورة الغلاف" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            <Button size="sm" variant="secondary" onClick={() => inputRef.current?.click()} disabled={uploading}>
+              {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              تغيير
+            </Button>
+            <Button size="sm" variant="destructive" onClick={() => onChange('')}>
+              <X className="w-3.5 h-3.5" />
+              حذف
+            </Button>
+          </div>
+        </div>
+        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${dragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/30'}`}
+      onClick={() => inputRef.current?.click()}
+      onDragOver={e => { e.preventDefault(); setDragging(true); }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={handleDrop}
+    >
+      {uploading ? (
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          <p className="text-sm text-muted-foreground">جارٍ الرفع...</p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+            <ImageIcon className="w-6 h-6 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">📤 رفع صورة الغلاف</p>
+            <p className="text-xs text-muted-foreground mt-1">اسحب الصورة هنا أو انقر للاختيار</p>
+            <p className="text-xs text-muted-foreground">JPG, PNG, WEBP</p>
+          </div>
+        </div>
+      )}
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
+    </div>
+  );
+}
 
 // ─── Zod schema ──────────────────────────────────────────────────────────────
 
 const visaSchema = z.object({
+  countryCode: z.string().min(2, 'اختر الدولة'),
   countryName: z.string().min(1, 'اسم الدولة مطلوب'),
-  countryFlagUrl: z.string().url('يجب أن يكون رابطاً صحيحاً'),
-  countryImageUrl: z.string().url('يجب أن يكون رابطاً صحيحاً'),
+  countryFlagUrl: z.string().min(1),
+  countryImageUrl: z.string().min(1, 'صورة الغلاف مطلوبة'),
   visaType: z.nativeEnum(VisaType),
   processingTime: z.string().min(1, 'مطلوب'),
   stayDuration: z.string().min(1, 'مطلوب'),
@@ -575,6 +747,7 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null; onSuccess:
     resolver: zodResolver(visaSchema),
     defaultValues: visa ? {
       ...visa,
+      countryCode: v?.countryCode ?? '',
       price: Number(visa.price),
       requiredDocuments: visa.requiredDocuments.join('\n'),
       requiresGulfResidence:    v?.requiresGulfResidence    ?? false,
@@ -587,6 +760,7 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null; onSuccess:
       requiresAdditionalDocs:   v?.requiresAdditionalDocs   ?? false,
       requiresInvitationLetter: v?.requiresInvitationLetter ?? false,
     } : {
+      countryCode: '',
       countryName: '',
       countryFlagUrl: '',
       countryImageUrl: '',
@@ -644,10 +818,23 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null; onSuccess:
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {/* Basic fields */}
-        <div className="grid grid-cols-2 gap-4">
-          <FormField control={form.control} name="countryName" render={({ field }) => (
-            <FormItem><FormLabel>اسم الدولة</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+        {/* Country + Type */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField control={form.control} name="countryCode" render={({ field }) => (
+            <FormItem>
+              <FormLabel>الدولة *</FormLabel>
+              <FormControl>
+                <CountryPicker
+                  value={field.value}
+                  onChange={c => {
+                    form.setValue('countryCode', c.code);
+                    form.setValue('countryName', c.nameAr);
+                    form.setValue('countryFlagUrl', getFlagUrl(c.code));
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )} />
           <FormField control={form.control} name="visaType" render={({ field }) => (
             <FormItem>
@@ -665,14 +852,16 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null; onSuccess:
           )} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField control={form.control} name="countryFlagUrl" render={({ field }) => (
-            <FormItem><FormLabel>رابط العلم</FormLabel><FormControl><Input dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
-          <FormField control={form.control} name="countryImageUrl" render={({ field }) => (
-            <FormItem><FormLabel>رابط صورة الغلاف</FormLabel><FormControl><Input dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
-        </div>
+        {/* Cover Image */}
+        <FormField control={form.control} name="countryImageUrl" render={({ field }) => (
+          <FormItem>
+            <FormLabel>صورة الغلاف *</FormLabel>
+            <FormControl>
+              <CoverImageUpload value={field.value} onChange={field.onChange} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
 
         <div className="grid grid-cols-4 gap-4">
           <FormField control={form.control} name="price" render={({ field }) => (

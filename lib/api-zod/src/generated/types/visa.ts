@@ -10,6 +10,8 @@ import type { VisaType } from './visaType';
 export interface Visa {
   id: number;
   countryName: string;
+  /** @nullable */
+  countryCode?: string | null;
   countryFlagUrl: string;
   countryImageUrl: string;
   visaType: VisaType;

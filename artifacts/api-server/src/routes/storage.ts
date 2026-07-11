@@ -74,14 +74,16 @@ router.post(
     }
 
     try {
-      const objectFile = await objectStorageService.getObjectEntityFile(
-        parsed.data.objectPath,
-      );
+      const { objectPath, isPublic } = parsed.data;
+      const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
       await setObjectAclPolicy(objectFile, {
         owner: String(req.session.userId),
-        visibility: 'private',
+        visibility: isPublic ? 'public' : 'private',
       });
-      res.json(FinalizeUploadResponse.parse({ objectPath: parsed.data.objectPath }));
+      const publicUrl = isPublic
+        ? `${req.protocol}://${req.get('host')}/storage${objectPath}`
+        : undefined;
+      res.json(FinalizeUploadResponse.parse({ objectPath, ...(publicUrl ? { publicUrl } : {}) }));
     } catch (error) {
       if (error instanceof ObjectNotFoundError) {
         res.status(404).json({ error: 'Object not found' });

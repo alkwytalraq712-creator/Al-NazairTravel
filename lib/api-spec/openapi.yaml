@@ -1834,12 +1834,18 @@ components:
         objectPath:
           type: string
           description: Normalized object path returned from requestUploadUrl (e.g. `/objects/uploads/uuid`).
+        isPublic:
+          type: boolean
+          description: When true, the object ACL is set to public so any authenticated user can read it. Returns a publicUrl.
     FinalizeUploadResponse:
       type: object
       required: [objectPath]
       properties:
         objectPath:
           type: string
+        publicUrl:
+          type: string
+          description: Full URL for serving the object (present when isPublic was true).
     HealthStatus:
       type: object
       properties:
@@ -2428,6 +2434,7 @@ components:
       properties:
         id: { type: integer }
         countryName: { type: string }
+        countryCode: { type: ["string", "null"] }
         countryFlagUrl: { type: string }
         countryImageUrl: { type: string }
         visaType:
@@ -2483,6 +2490,7 @@ components:
         ]
       properties:
         countryName: { type: string, minLength: 1 }
+        countryCode: { type: string }
         countryFlagUrl: { type: string }
         countryImageUrl: { type: string }
         visaType:
@@ -2522,6 +2530,7 @@ components:
       type: object
       properties:
         countryName: { type: string, minLength: 1 }
+        countryCode: { type: string }
         countryFlagUrl: { type: string }
         countryImageUrl: { type: string }
         visaType:

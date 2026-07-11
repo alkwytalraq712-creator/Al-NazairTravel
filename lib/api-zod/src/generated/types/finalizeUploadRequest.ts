@@ -9,4 +9,6 @@
 export interface FinalizeUploadRequest {
   /** Normalized object path returned from requestUploadUrl (e.g. `/objects/uploads/uuid`). */
   objectPath: string;
+  /** When true, the object ACL is set to public so any authenticated user can read it. Returns a publicUrl. */
+  isPublic?: boolean;
 }
