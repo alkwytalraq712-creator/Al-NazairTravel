@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,7 +14,14 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/context/AuthContext';
-import { useAcceptVisaTerms } from '@workspace/api-client-react';
+import {
+  useAcceptVisaTerms,
+  useCreateVisaApplication,
+  useGetProfileCompletion,
+  useGetVisaEligibility,
+  getListMyVisaApplicationsQueryKey,
+} from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 // ─── Terms content ────────────────────────────────────────────────────────────
 
@@ -32,6 +40,238 @@ const TERMS_ITEMS = [
   'أوافق على استقبال الإشعارات والرسائل المتعلقة بطلبي عبر التطبيق أو البريد الإلكتروني أو الرسائل النصية أو الهاتف أو الواتساب.',
 ];
 
+// ─── Gate walls ───────────────────────────────────────────────────────────────
+
+function ProfileIncompleteWall({
+  pct,
+  missing,
+  paddingTop,
+}: {
+  pct: number;
+  missing: string[];
+  paddingTop: number;
+}) {
+  const colors = useColors();
+  return (
+    <View style={[{ flex: 1, backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.header,
+          { paddingTop: paddingTop + 12, backgroundColor: '#0D1526' },
+        ]}
+      >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>التقديم على التأشيرة</Text>
+        <View style={{ width: 24 }} />
+      </View>
+      <View style={[styles.wallContainer]}>
+        <View
+          style={[
+            styles.wallCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Ionicons
+            name="person-circle-outline"
+            size={64}
+            color="#f59e0b"
+            style={{ alignSelf: 'center' }}
+          />
+          <Text style={[styles.wallTitle, { color: colors.foreground }]}>
+            الملف الشخصي غير مكتمل
+          </Text>
+          <Text style={[styles.wallSub, { color: colors.mutedForeground }]}>
+            يجب إكمال ملفك الشخصي بالكامل ({pct}% مكتمل) قبل تقديم طلب
+            التأشيرة.
+          </Text>
+
+          {missing.length > 0 && (
+            <View
+              style={[
+                styles.missingBox,
+                { backgroundColor: '#fef3c7', borderColor: '#f59e0b' },
+              ]}
+            >
+              <Text
+                style={{
+                  color: '#92400e',
+                  fontFamily: 'Tajawal_700Bold',
+                  marginBottom: 4,
+                  textAlign: 'right',
+                }}
+              >
+                الحقول المطلوبة:
+              </Text>
+              {missing.slice(0, 8).map((f) => (
+                <Text
+                  key={f}
+                  style={{
+                    color: '#78350f',
+                    fontSize: 12,
+                    fontFamily: 'Tajawal_400Regular',
+                    textAlign: 'right',
+                  }}
+                >
+                  • {f}
+                </Text>
+              ))}
+              {missing.length > 8 && (
+                <Text
+                  style={{
+                    color: '#78350f',
+                    fontSize: 12,
+                    fontFamily: 'Tajawal_400Regular',
+                    textAlign: 'right',
+                  }}
+                >
+                  وأيضاً {missing.length - 8} حقول أخرى...
+                </Text>
+              )}
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.wallBtn, { backgroundColor: '#f59e0b' }]}
+            onPress={() => router.replace('/profile-edit' as any)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="person-outline" size={16} color="#fff" />
+            <Text style={styles.wallBtnText}>إكمال الملف الشخصي</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{ marginTop: 12, alignSelf: 'center' }}
+          >
+            <Text
+              style={{
+                color: colors.mutedForeground,
+                fontSize: 13,
+                fontFamily: 'Tajawal_400Regular',
+              }}
+            >
+              رجوع
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function EligibilityBlockWall({
+  blockers,
+  paddingTop,
+}: {
+  blockers: Array<{ type: string; message: string; actionRoute: string | null }>;
+  paddingTop: number;
+}) {
+  const colors = useColors();
+  return (
+    <View style={[{ flex: 1, backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.header,
+          { paddingTop: paddingTop + 12, backgroundColor: '#0D1526' },
+        ]}
+      >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>التقديم على التأشيرة</Text>
+        <View style={{ width: 24 }} />
+      </View>
+      <View style={styles.wallContainer}>
+        <View
+          style={[
+            styles.wallCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Ionicons
+            name="ban-outline"
+            size={64}
+            color="#ef4444"
+            style={{ alignSelf: 'center' }}
+          />
+          <Text style={[styles.wallTitle, { color: colors.foreground }]}>
+            غير مؤهل حالياً
+          </Text>
+          <Text style={[styles.wallSub, { color: colors.mutedForeground }]}>
+            لا تستوفي المتطلبات اللازمة للتقديم على هذه التأشيرة في الوقت
+            الحالي.
+          </Text>
+
+          <View
+            style={[
+              styles.missingBox,
+              { backgroundColor: '#fef2f2', borderColor: '#fca5a5' },
+            ]}
+          >
+            {blockers.map((b, i) => (
+              <View
+                key={i}
+                style={{
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 4,
+                }}
+              >
+                <Ionicons name="close-circle" size={14} color="#ef4444" />
+                <Text
+                  style={{
+                    color: '#7f1d1d',
+                    fontSize: 13,
+                    fontFamily: 'Tajawal_400Regular',
+                    textAlign: 'right',
+                    flex: 1,
+                  }}
+                >
+                  {b.message}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {blockers.some((b) => b.actionRoute) && (
+            <TouchableOpacity
+              style={[styles.wallBtn, { backgroundColor: '#f59e0b' }]}
+              onPress={() => {
+                const route =
+                  blockers.find((b) => b.actionRoute)?.actionRoute ??
+                  '/profile-edit';
+                router.push(route as any);
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="create-outline" size={16} color="#fff" />
+              <Text style={styles.wallBtnText}>استكمال المتطلبات</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{ marginTop: 12, alignSelf: 'center' }}
+          >
+            <Text
+              style={{
+                color: colors.mutedForeground,
+                fontSize: 13,
+                fontFamily: 'Tajawal_400Regular',
+              }}
+            >
+              رجوع
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function VisaTermsScreen() {
@@ -39,41 +279,136 @@ export default function VisaTermsScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   const [agreed, setAgreed] = useState(false);
-  const acceptMutation = useAcceptVisaTerms();
 
   const visaId = Number(id);
 
+  // ── Preflight checks
+  const { data: completion, isLoading: compLoading } = useGetProfileCompletion();
+  const { data: eligibility, isLoading: eligLoading } = useGetVisaEligibility(visaId);
+
+  // ── Mutations
+  const acceptMutation = useAcceptVisaTerms();
+  const createMutation = useCreateVisaApplication();
+
+  const isPending = createMutation.isPending || acceptMutation.isPending;
+
+  // ── Auth gate
+  if (!isAuthenticated) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <Ionicons name="lock-closed-outline" size={48} color={colors.mutedForeground} />
+        <Text style={{ color: colors.foreground, fontFamily: 'Tajawal_700Bold', fontSize: 16, textAlign: 'center' }}>
+          يجب تسجيل الدخول أولاً
+        </Text>
+        <TouchableOpacity
+          style={[styles.wallBtn, { backgroundColor: colors.primary }]}
+          onPress={() => router.push('/auth/login' as any)}
+        >
+          <Text style={styles.wallBtnText}>تسجيل الدخول</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ── Loading preflight
+  if (compLoading || eligLoading) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text
+          style={{
+            color: colors.mutedForeground,
+            fontFamily: 'Tajawal_400Regular',
+            marginTop: 12,
+          }}
+        >
+          جاري التحقق من أهليتك للتقديم...
+        </Text>
+      </View>
+    );
+  }
+
+  // ── Profile incomplete gate
+  if (completion && !completion.isComplete) {
+    return (
+      <ProfileIncompleteWall
+        pct={completion.percentage}
+        missing={completion.missingFields}
+        paddingTop={paddingTop}
+      />
+    );
+  }
+
+  // ── Eligibility gate
+  if (eligibility && !eligibility.eligible) {
+    return (
+      <EligibilityBlockWall
+        blockers={eligibility.blockers as any}
+        paddingTop={paddingTop}
+      />
+    );
+  }
+
+  // ── Submit handler: accept terms + create application
   const handleContinue = () => {
-    if (!agreed) return;
-    acceptMutation.mutate(
+    if (!agreed || isPending) return;
+
+    // Record consent (best-effort audit log — fire and forget)
+    acceptMutation.mutate({ data: { visaId } });
+
+    // Create the visa application
+    createMutation.mutate(
       { data: { visaId } },
       {
-        onSuccess: () => {
-          router.replace(`/apply-visa/${id}` as any);
+        onSuccess: (app) => {
+          const appId = (app as any).id;
+          const refNum = (app as any).referenceNumber ?? '—';
+          queryClient.invalidateQueries({ queryKey: getListMyVisaApplicationsQueryKey() });
+          // Navigate to tracking page
+          router.replace(`/visa-application/${appId}` as any);
+          // Brief confirmation toast via alert (fires after navigation)
+          setTimeout(() => {
+            Alert.alert(
+              '✅ تم تقديم الطلب بنجاح',
+              `رقم طلبك: ${refNum}\nسيتم التواصل معك قريباً لمتابعة الإجراءات.`,
+              [{ text: 'حسناً' }],
+            );
+          }, 500);
         },
-        onError: () => {
-          // Even if consent recording fails, navigate forward — consent is a best-effort audit log
-          router.replace(`/apply-visa/${id}` as any);
+        onError: (e: any) => {
+          const code = e?.data?.code ?? '';
+          const msg =
+            e?.data?.error ?? e?.message ?? 'فشل تقديم الطلب، حاول مجدداً';
+
+          if (code === 'PROFILE_INCOMPLETE') {
+            Alert.alert('الملف الشخصي غير مكتمل', msg, [
+              { text: 'لاحقاً', style: 'cancel' },
+              {
+                text: 'أكمل ملفك الآن',
+                onPress: () => router.push('/profile-edit' as any),
+              },
+            ]);
+          } else {
+            Alert.alert('خطأ في تقديم الطلب', msg, [{ text: 'حسناً' }]);
+          }
         },
       },
     );
   };
 
-  if (!isAuthenticated) {
-    return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <Text style={{ color: colors.foreground }}>يجب تسجيل الدخول أولاً</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: paddingTop + 12, backgroundColor: '#0D1526' }]}>
+      <View
+        style={[
+          styles.header,
+          { paddingTop: paddingTop + 12, backgroundColor: '#0D1526' },
+        ]}
+      >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
@@ -90,7 +425,8 @@ export default function VisaTermsScreen() {
           <Text style={styles.introTitle}>الإقرار والشروط والأحكام</Text>
           <Text style={styles.introCompany}>قمة النظائر للسفريات والسياحة</Text>
           <Text style={styles.introSub}>
-            يرجى قراءة الشروط والأحكام التالية بعناية قبل تقديم طلب التأشيرة، حيث إن إرسال الطلب يعني موافقتك الكاملة على جميع البنود التالية.
+            يرجى قراءة الشروط والأحكام التالية بعناية قبل تقديم طلب التأشيرة،
+            حيث إن إرسال الطلب يعني موافقتك الكاملة على جميع البنود التالية.
           </Text>
         </View>
 
@@ -98,10 +434,17 @@ export default function VisaTermsScreen() {
         {TERMS_ITEMS.map((item, index) => (
           <View
             key={index}
-            style={[styles.termItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+            style={[
+              styles.termItem,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
           >
-            <Text style={[styles.termNumber, { color: colors.primary }]}>{index + 1}</Text>
-            <Text style={[styles.termText, { color: colors.foreground }]}>{item}</Text>
+            <Text style={[styles.termNumber, { color: colors.primary }]}>
+              {index + 1}
+            </Text>
+            <Text style={[styles.termText, { color: colors.foreground }]}>
+              {item}
+            </Text>
           </View>
         ))}
 
@@ -114,7 +457,7 @@ export default function VisaTermsScreen() {
               borderColor: agreed ? '#22c55e' : colors.border,
             },
           ]}
-          onPress={() => setAgreed(v => !v)}
+          onPress={() => setAgreed((v) => !v)}
           activeOpacity={0.8}
         >
           <View
@@ -148,23 +491,35 @@ export default function VisaTermsScreen() {
         <TouchableOpacity
           style={[
             styles.continueBtn,
-            { backgroundColor: agreed ? colors.primary : colors.muted },
+            { backgroundColor: agreed && !isPending ? colors.primary : colors.muted },
           ]}
           onPress={handleContinue}
-          disabled={!agreed || acceptMutation.isPending}
+          disabled={!agreed || isPending}
           activeOpacity={0.85}
         >
-          {acceptMutation.isPending ? (
-            <ActivityIndicator color="#fff" />
+          {isPending ? (
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
+              <ActivityIndicator color="#fff" size="small" />
+              <Text style={[styles.continueBtnText, { color: '#fff' }]}>
+                جاري تقديم الطلب...
+              </Text>
+            </View>
           ) : (
-            <Text style={[styles.continueBtnText, { color: agreed ? '#fff' : colors.mutedForeground }]}>
-              متابعة تقديم الطلب
+            <Text
+              style={[
+                styles.continueBtnText,
+                { color: agreed ? '#fff' : colors.mutedForeground },
+              ]}
+            >
+              موافق وتقديم الطلب
             </Text>
           )}
         </TouchableOpacity>
         {!agreed && (
-          <Text style={[styles.disabledHint, { color: colors.mutedForeground }]}>
-            يجب الموافقة على الشروط أولاً لمتابعة التقديم
+          <Text
+            style={[styles.disabledHint, { color: colors.mutedForeground }]}
+          >
+            يجب الموافقة على الشروط أولاً لتقديم الطلب
           </Text>
         )}
       </View>
@@ -172,9 +527,18 @@ export default function VisaTermsScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+    padding: 32,
+  },
+
   header: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -190,6 +554,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Tajawal_700Bold',
     textAlign: 'center',
   },
+
   content: {
     padding: 16,
     gap: 10,
@@ -285,6 +650,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   continueBtnText: {
     fontSize: 16,
@@ -294,5 +660,52 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Tajawal_400Regular',
     textAlign: 'center',
+  },
+
+  // Gate wall styles
+  wallContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  wallCard: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 24,
+    gap: 12,
+  },
+  wallTitle: {
+    fontSize: 20,
+    fontFamily: 'Tajawal_800ExtraBold',
+    textAlign: 'center',
+  },
+  wallSub: {
+    fontSize: 14,
+    fontFamily: 'Tajawal_400Regular',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  missingBox: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    gap: 4,
+  },
+  wallBtn: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 4,
+  },
+  wallBtnText: {
+    color: '#fff',
+    fontFamily: 'Tajawal_700Bold',
+    fontSize: 15,
   },
 });

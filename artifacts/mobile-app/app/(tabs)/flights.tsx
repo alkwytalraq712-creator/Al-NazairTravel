@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Platform,
   ScrollView,
@@ -111,7 +111,7 @@ function Calendar({
 
       {/* Grid */}
       <View style={CAL.row}>
-        {grid.map((d, i) => {
+        {grid.map((d: number | null, i: number) => {
           if (!d) return <View key={`_${i}`} style={CAL.cell} />;
           const iso = toISO(d);
           const isSel = iso === selected;
