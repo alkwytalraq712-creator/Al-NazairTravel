@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -12,9 +12,41 @@ export const usersTable = pgTable("users", {
   role: text("role").notNull().default("customer"), // customer | admin
   language: text("language").notNull().default("ar"),
   currency: text("currency").notNull().default("USD"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+
+  // ── Personal profile ──────────────────────────────────────────────────────
+  firstName: text("first_name"),
+  fatherName: text("father_name"),
+  grandfatherName: text("grandfather_name"),
+  familyName: text("family_name"),
+  englishName: text("english_name"),
+  gender: text("gender"),
+  dob: text("dob"), // YYYY-MM-DD stored as text
+  nationality: text("nationality"),
+  placeOfBirth: text("place_of_birth"),
+  maritalStatus: text("marital_status"),
+  occupation: text("occupation"),
+  whatsapp: text("whatsapp"),
+  address: text("address"),
+
+  // ── Passport ─────────────────────────────────────────────────────────────
+  passportNumber: text("passport_number"),
+  passportIssuingCountry: text("passport_issuing_country"),
+  passportIssuingPlace: text("passport_issuing_place"),
+  passportIssueDate: text("passport_issue_date"), // YYYY-MM-DD
+  passportExpiry: text("passport_expiry"),         // YYYY-MM-DD
+  passportImageUrl: text("passport_image_url"),
+
+  // ── Gulf residence ────────────────────────────────────────────────────────
+  hasGulfResidence: boolean("has_gulf_residence").notNull().default(false),
+  gulfResidenceCountry: text("gulf_residence_country"),
+  gulfResidenceNumber: text("gulf_residence_number"),
+  gulfResidenceExpiry: text("gulf_residence_expiry"),  // YYYY-MM-DD
+  gulfResidenceFrontUrl: text("gulf_residence_front_url"),
+  gulfResidenceBackUrl: text("gulf_residence_back_url"),
+
+  // ── Completion tracking ───────────────────────────────────────────────────
+  profileCompletedAt: timestamp("profile_completed_at", { withTimezone: true }),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

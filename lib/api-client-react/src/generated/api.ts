@@ -59,6 +59,7 @@ import type {
   Payment,
   PaymentInput,
   PaymentUpdate,
+  ProfileCompletion,
   ProfileUpdate,
   ScanPassportOcrBody,
   SearchFlightsParams,
@@ -843,6 +844,83 @@ export function useGetCurrentUser<TData = Awaited<ReturnType<typeof getCurrentUs
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetCurrentUserQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetProfileCompletionUrl = () => {
+
+
+
+
+  return `/api/auth/profile/completion`
+}
+
+/**
+ * @summary Get profile completion percentage and missing fields
+ */
+export const getProfileCompletion = async ( options?: RequestInit): Promise<ProfileCompletion> => {
+
+  return customFetch<ProfileCompletion>(getGetProfileCompletionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProfileCompletionQueryKey = () => {
+    return [
+    `/api/auth/profile/completion`
+    ] as const;
+    }
+
+
+export const getGetProfileCompletionQueryOptions = <TData = Awaited<ReturnType<typeof getProfileCompletion>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProfileCompletion>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProfileCompletionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProfileCompletion>>> = ({ signal }) => getProfileCompletion({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProfileCompletion>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetProfileCompletionQueryResult = NonNullable<Awaited<ReturnType<typeof getProfileCompletion>>>
+export type GetProfileCompletionQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get profile completion percentage and missing fields
+ */
+
+export function useGetProfileCompletion<TData = Awaited<ReturnType<typeof getProfileCompletion>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProfileCompletion>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetProfileCompletionQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

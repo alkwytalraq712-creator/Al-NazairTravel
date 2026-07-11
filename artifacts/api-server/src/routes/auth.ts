@@ -12,7 +12,8 @@ import {
   RequestPasswordResetBody,
   RequestPasswordResetResponse,
 } from "@workspace/api-zod";
-import { hashPassword, verifyPassword, serializeUser, generateToken } from "../lib/auth";
+import { hashPassword, verifyPassword, serializeUser, generateToken, getProfileCompletion } from "../lib/auth";
+import { requireAuth } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -52,13 +53,9 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
 function normalizePhone(raw: string): string[] {
   const digits = raw.replace(/\D/g, "");
   const variants = new Set<string>([raw]);
-  // If starts with 964, try with + prefix
   if (digits.startsWith("964")) variants.add("+" + digits);
-  // If starts with 0, try with +964 replacing the leading 0
   if (digits.startsWith("0") && digits.length > 1) variants.add("+964" + digits.slice(1));
-  // If doesn't start with +, try adding it
   if (!raw.startsWith("+")) variants.add("+" + digits);
-  // bare digits without country code
   if (digits.length === 10 && digits.startsWith("7")) variants.add("+964" + digits);
   return Array.from(variants);
 }
@@ -73,7 +70,6 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   const identifier = parsed.data.identifier;
   const phoneVariants = normalizePhone(identifier);
 
-  // Try each phone variant + email match
   const [user] = await db
     .select()
     .from(usersTable)
@@ -108,6 +104,24 @@ router.get("/auth/me", async (req, res): Promise<void> => {
   res.json(GetCurrentUserResponse.parse(serializeUser(res.locals.currentUser)));
 });
 
+// ── Profile completion ──────────────────────────────────────────────────────
+
+router.get("/auth/profile/completion", requireAuth, async (req, res): Promise<void> => {
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, req.session.userId as number));
+
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  res.json(getProfileCompletion(user));
+});
+
+// ── Profile update ──────────────────────────────────────────────────────────
+
 router.patch("/auth/profile", async (req, res): Promise<void> => {
   if (!req.session.userId) {
     res.status(401).json({ error: "Not authenticated" });
@@ -119,9 +133,29 @@ router.patch("/auth/profile", async (req, res): Promise<void> => {
     return;
   }
 
+  // After saving, compute profileCompletedAt
+  const updateData: Record<string, unknown> = { ...parsed.data };
+
+  // We need to check completion after the potential update — fetch current user first
+  const [current] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId));
+  if (!current) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  // Merge update into current to compute completion
+  const merged = { ...current, ...updateData };
+  const { isComplete } = getProfileCompletion(merged as typeof current);
+
+  if (isComplete && !current.profileCompletedAt) {
+    updateData.profileCompletedAt = new Date();
+  } else if (!isComplete) {
+    updateData.profileCompletedAt = null;
+  }
+
   const [user] = await db
     .update(usersTable)
-    .set(parsed.data)
+    .set(updateData as Parameters<typeof db.update>[0] extends any ? any : never)
     .where(eq(usersTable.id, req.session.userId))
     .returning();
 
@@ -145,10 +179,7 @@ router.post("/auth/change-password", async (req, res): Promise<void> => {
     res.status(400).json({ error: "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل" });
     return;
   }
-  const [user] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.id, req.session.userId));
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId));
   if (!user) {
     res.status(404).json({ error: "User not found" });
     return;
@@ -159,10 +190,7 @@ router.post("/auth/change-password", async (req, res): Promise<void> => {
     return;
   }
   const passwordHash = await hashPassword(newPassword);
-  await db
-    .update(usersTable)
-    .set({ passwordHash })
-    .where(eq(usersTable.id, req.session.userId));
+  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, req.session.userId));
   res.json({ message: "تم تغيير كلمة المرور بنجاح" });
 });
 
@@ -172,20 +200,11 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  // v1: no real OTP/email delivery -- caller proceeds directly to reset-password.
-  res.json(
-    RequestPasswordResetResponse.parse({
-      message: "If an account exists, reset instructions were issued.",
-    }),
-  );
+  res.json(RequestPasswordResetResponse.parse({ message: "If an account exists, reset instructions were issued." }));
 });
 
-// Password reset via unauthenticated identifier is disabled until OTP/token
-// verification is implemented. Use PATCH /auth/profile while authenticated instead.
 router.post("/auth/reset-password", async (_req, res): Promise<void> => {
-  res.status(501).json({
-    error: "Password reset via identifier is not available. Please contact support.",
-  });
+  res.status(501).json({ error: "Password reset via identifier is not available. Please contact support." });
 });
 
 export default router;

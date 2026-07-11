@@ -23,4 +23,12 @@ export interface Visa {
   validity: string;
   isFeatured: boolean;
   createdAt: Date;
+  requiresGulfResidence: boolean;
+  requiresPersonalPhoto: boolean;
+  requiresPassportImage: boolean;
+  requiresBankStatement: boolean;
+  requiresFlightBooking: boolean;
+  requiresHotelBooking: boolean;
+  requiresTravelInsurance: boolean;
+  requiresAdditionalDocs: boolean;
 }

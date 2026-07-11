@@ -5,23 +5,11 @@
  * Qema Al Nathair Travel & Tourism API
  * OpenAPI spec version: 0.1.0
  */
-import type { VisaType } from './visaType';
 
-export interface VisaUpdate {
-  /** @minLength 1 */
-  countryName?: string;
-  countryFlagUrl?: string;
-  countryImageUrl?: string;
-  visaType?: VisaType;
-  processingTime?: string;
-  stayDuration?: string;
-  price?: number;
-  currency?: string;
-  description?: string;
-  requiredDocuments?: string[];
-  entriesAllowed?: string;
-  validity?: string;
-  isFeatured?: boolean;
+/**
+ * Per-country requirement flags configurable from admin dashboard
+ */
+export interface VisaRequirements {
   requiresGulfResidence?: boolean;
   requiresPersonalPhoto?: boolean;
   requiresPassportImage?: boolean;

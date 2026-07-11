@@ -7,7 +7,7 @@ import {
   Visa,
   VisaType
 } from '@workspace/api-client-react';
-import { Loader2, Plus, Edit, Trash2, Globe, Clock, CreditCard, Filter } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Clock, Filter, ShieldCheck } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getListVisasQueryKey } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
@@ -15,16 +15,18 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { VISA_TYPE_ARABIC } from '@/lib/translations';
+
+// ─── Zod schema ──────────────────────────────────────────────────────────────
 
 const visaSchema = z.object({
   countryName: z.string().min(1, 'اسم الدولة مطلوب'),
@@ -40,7 +42,33 @@ const visaSchema = z.object({
   entriesAllowed: z.string().min(1, 'مطلوب'),
   validity: z.string().min(1, 'مطلوب'),
   isFeatured: z.boolean().default(false),
+  // Per-visa requirement flags
+  requiresGulfResidence:   z.boolean().default(false),
+  requiresPersonalPhoto:   z.boolean().default(true),
+  requiresPassportImage:   z.boolean().default(true),
+  requiresBankStatement:   z.boolean().default(false),
+  requiresFlightBooking:   z.boolean().default(false),
+  requiresHotelBooking:    z.boolean().default(false),
+  requiresTravelInsurance: z.boolean().default(false),
+  requiresAdditionalDocs:  z.boolean().default(false),
 });
+
+type VisaFormValues = z.infer<typeof visaSchema>;
+
+// ─── Requirement flag labels ─────────────────────────────────────────────────
+
+const REQUIREMENT_FLAGS: Array<{ field: keyof VisaFormValues; label: string; description: string }> = [
+  { field: 'requiresGulfResidence',   label: 'إقامة خليجية سارية',    description: 'يشترط وجود إقامة سارية في دولة خليجية' },
+  { field: 'requiresPersonalPhoto',   label: 'صورة شخصية',            description: 'صورة شخصية حديثة بخلفية بيضاء' },
+  { field: 'requiresPassportImage',   label: 'صورة الجواز',            description: 'الصفحة الرئيسية من جواز السفر' },
+  { field: 'requiresBankStatement',   label: 'كشف حساب بنكي',         description: '3 أشهر الأخيرة على الأقل' },
+  { field: 'requiresFlightBooking',   label: 'حجز طيران',              description: 'تذكرة طيران مؤكدة أو حجز مؤقت' },
+  { field: 'requiresHotelBooking',    label: 'حجز فندق',               description: 'حجز إقامة مؤكد طوال فترة الرحلة' },
+  { field: 'requiresTravelInsurance', label: 'تأمين سفر',              description: 'بوليصة تأمين سفر سارية' },
+  { field: 'requiresAdditionalDocs',  label: 'مستندات إضافية',         description: 'مستندات خاصة بهذه الوجهة' },
+];
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function Visas() {
   const { data: visas, isLoading } = useListVisas();
@@ -55,7 +83,7 @@ export function Visas() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">عروض التأشيرات</h1>
-          <p className="text-muted-foreground mt-1">إدارة وجهات الدول وأنواع التأشيرات.</p>
+          <p className="text-muted-foreground mt-1">إدارة وجهات الدول وأنواع التأشيرات ومتطلباتها.</p>
         </div>
         <Button onClick={() => { setEditingVisa(null); setIsFormOpen(true); }} className="gap-2">
           <Plus className="w-4 h-4" />
@@ -92,6 +120,7 @@ export function Visas() {
                 <TableHead>النوع</TableHead>
                 <TableHead>المعالجة</TableHead>
                 <TableHead>الصلاحية / الإقامة</TableHead>
+                <TableHead>المتطلبات</TableHead>
                 <TableHead className="text-end">السعر</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
@@ -99,70 +128,83 @@ export function Visas() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center">
+                  <TableCell colSpan={7} className="h-32 text-center">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
                   </TableCell>
                 </TableRow>
               ) : filteredVisas?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                     لم يتم العثور على تأشيرات. قم بإنشاء واحدة للبدء.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredVisas?.map(visa => (
-                  <TableRow key={visa.id} className="group">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={visa.countryFlagUrl} 
-                          alt={visa.countryName} 
-                          className="w-8 h-6 object-cover rounded shadow-sm"
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                        />
-                        <div>
-                          <div className="font-semibold text-foreground flex items-center gap-2">
-                            {visa.countryName}
-                            {visa.isFeatured && <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">مميزة</Badge>}
+                filteredVisas?.map(visa => {
+                  const v = visa as any;
+                  const reqCount = REQUIREMENT_FLAGS.filter(r => v[r.field]).length;
+                  return (
+                    <TableRow key={visa.id} className="group">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={visa.countryFlagUrl} 
+                            alt={visa.countryName} 
+                            className="w-8 h-6 object-cover rounded shadow-sm"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                          <div>
+                            <div className="font-semibold text-foreground flex items-center gap-2">
+                              {visa.countryName}
+                              {visa.isFeatured && <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">مميزة</Badge>}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{visa.entriesAllowed}</p>
                           </div>
-                          <p className="text-xs text-muted-foreground">{visa.entriesAllowed}</p>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {VISA_TYPE_ARABIC[visa.visaType] || visa.visaType}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center text-sm">
-                        <Clock className="w-3.5 h-3.5 me-1.5 text-muted-foreground" />
-                        {visa.processingTime}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <p>{visa.validity}</p>
-                        <p className="text-xs text-muted-foreground">{visa.stayDuration}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-end font-medium">
-                      {visa.price} {visa.currency}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => { setEditingVisa(visa); setIsFormOpen(true); }}
-                        >
-                          <Edit className="w-4 h-4 text-muted-foreground" />
-                        </Button>
-                        <DeleteVisaButton visa={visa} />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {VISA_TYPE_ARABIC[visa.visaType] || visa.visaType}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center text-sm">
+                          <Clock className="w-3.5 h-3.5 me-1.5 text-muted-foreground" />
+                          {visa.processingTime}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <p>{visa.validity}</p>
+                          <p className="text-xs text-muted-foreground">{visa.stayDuration}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>{reqCount} متطلبات</span>
+                          {v.requiresGulfResidence && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-amber-400 text-amber-600">خليجية</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-end font-medium">
+                        {visa.price} {visa.currency}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => { setEditingVisa(visa); setIsFormOpen(true); }}
+                          >
+                            <Edit className="w-4 h-4 text-muted-foreground" />
+                          </Button>
+                          <DeleteVisaButton visa={visa} />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -185,6 +227,8 @@ export function Visas() {
   );
 }
 
+// ─── Delete Button ────────────────────────────────────────────────────────────
+
 function DeleteVisaButton({ visa }: { visa: Visa }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -198,8 +242,8 @@ function DeleteVisaButton({ visa }: { visa: Visa }) {
         queryClient.invalidateQueries({ queryKey: getListVisasQueryKey() });
         setOpen(false);
       },
-      onError: (error) => {
-        toast({ title: "خطأ في حذف التأشيرة", description: error.error, variant: "destructive" });
+      onError: (error: any) => {
+        toast({ title: "خطأ في حذف التأشيرة", description: error?.data?.error ?? error?.message, variant: "destructive" });
       }
     });
   };
@@ -219,7 +263,7 @@ function DeleteVisaButton({ visa }: { visa: Visa }) {
         <DialogFooter className="mt-4 flex-row justify-end space-x-0 gap-2">
           <Button variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
           <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
-            {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin ms-2" /> : <Trash2 className="w-4 h-4 ms-2" />}
+            {deleteMutation.isPending ? <Loader2 className="w-4 h-4 ms-2 animate-spin" /> : <Trash2 className="w-4 h-4 ms-2" />}
             حذف
           </Button>
         </DialogFooter>
@@ -228,17 +272,30 @@ function DeleteVisaButton({ visa }: { visa: Visa }) {
   );
 }
 
-function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null, onSuccess: () => void, onCancel: () => void }) {
+// ─── Visa Form ────────────────────────────────────────────────────────────────
+
+function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null; onSuccess: () => void; onCancel: () => void }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const createMutation = useCreateVisa();
   const updateMutation = useUpdateVisa();
 
-  const form = useForm<z.infer<typeof visaSchema>>({
+  const v = visa as any;
+
+  const form = useForm<VisaFormValues>({
     resolver: zodResolver(visaSchema),
     defaultValues: visa ? {
       ...visa,
-      requiredDocuments: visa.requiredDocuments.join('\n')
+      price: Number(visa.price),
+      requiredDocuments: visa.requiredDocuments.join('\n'),
+      requiresGulfResidence:   v?.requiresGulfResidence   ?? false,
+      requiresPersonalPhoto:   v?.requiresPersonalPhoto   ?? true,
+      requiresPassportImage:   v?.requiresPassportImage   ?? true,
+      requiresBankStatement:   v?.requiresBankStatement   ?? false,
+      requiresFlightBooking:   v?.requiresFlightBooking   ?? false,
+      requiresHotelBooking:    v?.requiresHotelBooking    ?? false,
+      requiresTravelInsurance: v?.requiresTravelInsurance ?? false,
+      requiresAdditionalDocs:  v?.requiresAdditionalDocs  ?? false,
     } : {
       countryName: '',
       countryFlagUrl: '',
@@ -253,10 +310,18 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null, onSuccess:
       entriesAllowed: 'دخول لمرة واحدة',
       validity: '90 يوماً',
       isFeatured: false,
+      requiresGulfResidence:   false,
+      requiresPersonalPhoto:   true,
+      requiresPassportImage:   true,
+      requiresBankStatement:   false,
+      requiresFlightBooking:   false,
+      requiresHotelBooking:    false,
+      requiresTravelInsurance: false,
+      requiresAdditionalDocs:  false,
     }
   });
 
-  const onSubmit = (values: z.infer<typeof visaSchema>) => {
+  const onSubmit = (values: VisaFormValues) => {
     const data = {
       ...values,
       requiredDocuments: values.requiredDocuments.split('\n').map(s => s.trim()).filter(Boolean)
@@ -269,7 +334,7 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null, onSuccess:
           queryClient.invalidateQueries({ queryKey: getListVisasQueryKey() });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: e.error, variant: "destructive" })
+        onError: (e: any) => toast({ title: "خطأ", description: e?.data?.error ?? e?.message, variant: "destructive" })
       });
     } else {
       createMutation.mutate({ data }, {
@@ -278,7 +343,7 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null, onSuccess:
           queryClient.invalidateQueries({ queryKey: getListVisasQueryKey() });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: e.error, variant: "destructive" })
+        onError: (e: any) => toast({ title: "خطأ", description: e?.data?.error ?? e?.message, variant: "destructive" })
       });
     }
   };
@@ -288,6 +353,7 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null, onSuccess:
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Basic fields */}
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="countryName" render={({ field }) => (
             <FormItem><FormLabel>اسم الدولة</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -296,9 +362,7 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null, onSuccess:
             <FormItem>
               <FormLabel>نوع التأشيرة</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger><SelectValue placeholder="اختر النوع" /></SelectTrigger>
-                </FormControl>
+                <FormControl><SelectTrigger><SelectValue placeholder="اختر النوع" /></SelectTrigger></FormControl>
                 <SelectContent>
                   {Object.values(VisaType).map(type => (
                     <SelectItem key={type} value={type}>{VISA_TYPE_ARABIC[type] || type}</SelectItem>
@@ -360,15 +424,48 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null, onSuccess:
 
         <FormField control={form.control} name="isFeatured" render={({ field }) => (
           <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 gap-3">
-            <FormControl>
-              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-            </FormControl>
+            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
             <div className="space-y-1 leading-none">
               <FormLabel>تأشيرة مميزة</FormLabel>
               <p className="text-sm text-muted-foreground mt-1">أظهر هذه التأشيرة بشكل بارز في الصفحة الرئيسية.</p>
             </div>
           </FormItem>
         )} />
+
+        {/* ── Requirement Flags ─────────────────────────────────────────────── */}
+        <div className="rounded-md border p-4 space-y-3">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldCheck className="w-4 h-4 text-primary" />
+            <p className="font-semibold text-sm">متطلبات التأشيرة</p>
+          </div>
+          <p className="text-xs text-muted-foreground -mt-1 mb-3">
+            حدد الوثائق والشروط التي يحتاجها المتقدم لهذه التأشيرة. سيتم عرضها للمستخدم عند التقديم.
+          </p>
+          <div className="grid grid-cols-1 gap-3">
+            {REQUIREMENT_FLAGS.map(({ field, label, description }) => (
+              <FormField
+                key={field}
+                control={form.control}
+                name={field as any}
+                render={({ field: f }) => (
+                  <FormItem className="flex flex-row items-start gap-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={!!f.value}
+                        onCheckedChange={f.onChange}
+                        className="mt-0.5"
+                      />
+                    </FormControl>
+                    <div className="space-y-0.5 leading-none">
+                      <FormLabel className="text-sm font-medium cursor-pointer">{label}</FormLabel>
+                      <p className="text-xs text-muted-foreground">{description}</p>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            ))}
+          </div>
+        </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t">
           <Button type="button" variant="outline" onClick={onCancel}>إلغاء</Button>

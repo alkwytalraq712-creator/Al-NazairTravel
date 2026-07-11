@@ -4,3 +4,4 @@
 - [Generated API error shape](api-error-shape.md) — orval `ApiError` has no `.error` field directly; read `error.data?.error`, not `error.error`, in mutation onError handlers.
 - [Object storage ACL finalize pattern](object-storage-acl-finalize.md) — upload flow needs a POST /finalize call after GCS PUT to set ACL owner; without it canAccessObjectEntity always returns false.
 - [api-zod barrel export name conflicts](api-zod-barrel-conflicts.md) — orval generates same names in api.ts (zod) and types/ (TS interfaces); resolve via explicit export type list + dom lib in tsconfig.
+- [Smart Profile System](smart-profile-system.md) — visa applications auto-fill from user profile; profile must be 100% complete to apply; Gulf residence enforced per-visa.

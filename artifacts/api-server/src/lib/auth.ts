@@ -31,7 +31,96 @@ export function serializeUser(user: User) {
     language: user.language,
     currency: user.currency,
     createdAt: user.createdAt,
+
+    // Profile fields
+    firstName: user.firstName ?? null,
+    fatherName: user.fatherName ?? null,
+    grandfatherName: user.grandfatherName ?? null,
+    familyName: user.familyName ?? null,
+    englishName: user.englishName ?? null,
+    gender: user.gender ?? null,
+    dob: user.dob ?? null,
+    nationality: user.nationality ?? null,
+    placeOfBirth: user.placeOfBirth ?? null,
+    maritalStatus: user.maritalStatus ?? null,
+    occupation: user.occupation ?? null,
+    whatsapp: user.whatsapp ?? null,
+    address: user.address ?? null,
+
+    // Passport
+    passportNumber: user.passportNumber ?? null,
+    passportIssuingCountry: user.passportIssuingCountry ?? null,
+    passportIssuingPlace: user.passportIssuingPlace ?? null,
+    passportIssueDate: user.passportIssueDate ?? null,
+    passportExpiry: user.passportExpiry ?? null,
+    passportImageUrl: user.passportImageUrl ?? null,
+
+    // Gulf residence
+    hasGulfResidence: user.hasGulfResidence,
+    gulfResidenceCountry: user.gulfResidenceCountry ?? null,
+    gulfResidenceNumber: user.gulfResidenceNumber ?? null,
+    gulfResidenceExpiry: user.gulfResidenceExpiry ?? null,
+    gulfResidenceFrontUrl: user.gulfResidenceFrontUrl ?? null,
+    gulfResidenceBackUrl: user.gulfResidenceBackUrl ?? null,
+
+    // Completion
+    profileCompletedAt: user.profileCompletedAt ?? null,
   };
+}
+
+/**
+ * Calculate profile completion percentage for a user.
+ * Returns { percentage, isComplete, missingFields }.
+ */
+export function getProfileCompletion(user: User) {
+  const required: Array<[keyof User, string]> = [
+    ["firstName",             "الاسم الأول"],
+    ["fatherName",            "اسم الأب"],
+    ["grandfatherName",       "اسم الجد"],
+    ["familyName",            "اسم العائلة"],
+    ["englishName",           "الاسم بالإنجليزية"],
+    ["gender",                "الجنس"],
+    ["dob",                   "تاريخ الميلاد"],
+    ["nationality",           "الجنسية"],
+    ["placeOfBirth",          "مكان الميلاد"],
+    ["maritalStatus",         "الحالة الاجتماعية"],
+    ["occupation",            "المهنة"],
+    ["email",                 "البريد الإلكتروني"],
+    ["whatsapp",              "رقم الواتساب"],
+    ["address",               "عنوان السكن"],
+    ["passportNumber",        "رقم الجواز"],
+    ["passportIssuingCountry","دولة إصدار الجواز"],
+    ["passportIssuingPlace",  "مكان إصدار الجواز"],
+    ["passportIssueDate",     "تاريخ إصدار الجواز"],
+    ["passportExpiry",        "تاريخ انتهاء الجواز"],
+    ["passportImageUrl",      "صورة الجواز"],
+  ];
+
+  const gulfRequired: Array<[keyof User, string]> = [
+    ["gulfResidenceCountry",  "دولة الإقامة الخليجية"],
+    ["gulfResidenceNumber",   "رقم الإقامة الخليجية"],
+    ["gulfResidenceExpiry",   "تاريخ انتهاء الإقامة الخليجية"],
+    ["gulfResidenceFrontUrl", "صورة الإقامة (أمامية)"],
+    ["gulfResidenceBackUrl",  "صورة الإقامة (خلفية)"],
+  ];
+
+  const allRequired = user.hasGulfResidence
+    ? [...required, ...gulfRequired]
+    : required;
+
+  const missing = allRequired
+    .filter(([key]) => {
+      const val = user[key];
+      return val === null || val === undefined || val === "";
+    })
+    .map(([, label]) => label);
+
+  const total = allRequired.length;
+  const filled = total - missing.length;
+  const percentage = Math.round((filled / total) * 100);
+  const isComplete = missing.length === 0;
+
+  return { percentage, isComplete, missingFields: missing };
 }
 
 function getJwtSecret(): string {
@@ -67,21 +156,11 @@ export function requireAuth(
   res: Response,
   next: NextFunction,
 ): void {
-  // Accept JWT Bearer token (mobile) OR session cookie (web)
-  const token = extractBearerToken(req);
-  if (token) {
-    const payload = verifyToken(token);
-    if (payload) {
-      req.session.userId = payload.userId; // populate for downstream middleware
-      next();
-      return;
-    }
-  }
-  if (req.session.userId) {
-    next();
+  if (!req.session.userId) {
+    res.status(401).json({ error: "Not authenticated" });
     return;
   }
-  res.status(401).json({ error: "Not authenticated" });
+  next();
 }
 
 export function requireAdmin(
@@ -89,20 +168,9 @@ export function requireAdmin(
   res: Response,
   next: NextFunction,
 ): void {
-  const token = extractBearerToken(req);
-  if (token) {
-    const payload = verifyToken(token);
-    if (payload) {
-      req.session.userId = payload.userId;
-    }
-  }
-  if (!req.session.userId) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
-  const currentUser = res.locals.currentUser as User | undefined;
-  if (!currentUser || currentUser.role !== "admin") {
-    res.status(403).json({ error: "Admin access required" });
+  const user = res.locals.currentUser as User | undefined;
+  if (!user || user.role !== "admin") {
+    res.status(403).json({ error: "Forbidden" });
     return;
   }
   next();

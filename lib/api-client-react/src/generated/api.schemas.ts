@@ -60,6 +60,16 @@ export const UserRole = {
   admin: 'admin',
 } as const;
 
+export interface ProfileCompletion {
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  percentage: number;
+  isComplete: boolean;
+  missingFields: string[];
+}
+
 export interface User {
   id: number;
   fullName: string;
@@ -72,6 +82,57 @@ export interface User {
   language: string;
   currency: string;
   createdAt: string;
+  /** @nullable */
+  firstName?: string | null;
+  /** @nullable */
+  fatherName?: string | null;
+  /** @nullable */
+  grandfatherName?: string | null;
+  /** @nullable */
+  familyName?: string | null;
+  /** @nullable */
+  englishName?: string | null;
+  /** @nullable */
+  gender?: string | null;
+  /** @nullable */
+  dob?: string | null;
+  /** @nullable */
+  nationality?: string | null;
+  /** @nullable */
+  placeOfBirth?: string | null;
+  /** @nullable */
+  maritalStatus?: string | null;
+  /** @nullable */
+  occupation?: string | null;
+  /** @nullable */
+  whatsapp?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  passportNumber?: string | null;
+  /** @nullable */
+  passportIssuingCountry?: string | null;
+  /** @nullable */
+  passportIssuingPlace?: string | null;
+  /** @nullable */
+  passportIssueDate?: string | null;
+  /** @nullable */
+  passportExpiry?: string | null;
+  /** @nullable */
+  passportImageUrl?: string | null;
+  hasGulfResidence: boolean;
+  /** @nullable */
+  gulfResidenceCountry?: string | null;
+  /** @nullable */
+  gulfResidenceNumber?: string | null;
+  /** @nullable */
+  gulfResidenceExpiry?: string | null;
+  /** @nullable */
+  gulfResidenceFrontUrl?: string | null;
+  /** @nullable */
+  gulfResidenceBackUrl?: string | null;
+  /** @nullable */
+  profileCompletedAt?: string | null;
 }
 
 export interface EmployeeInput {
@@ -295,6 +356,31 @@ export interface ProfileUpdate {
   avatarUrl?: string;
   language?: string;
   currency?: string;
+  firstName?: string;
+  fatherName?: string;
+  grandfatherName?: string;
+  familyName?: string;
+  englishName?: string;
+  gender?: string;
+  dob?: string;
+  nationality?: string;
+  placeOfBirth?: string;
+  maritalStatus?: string;
+  occupation?: string;
+  whatsapp?: string;
+  address?: string;
+  passportNumber?: string;
+  passportIssuingCountry?: string;
+  passportIssuingPlace?: string;
+  passportIssueDate?: string;
+  passportExpiry?: string;
+  passportImageUrl?: string;
+  hasGulfResidence?: boolean;
+  gulfResidenceCountry?: string;
+  gulfResidenceNumber?: string;
+  gulfResidenceExpiry?: string;
+  gulfResidenceFrontUrl?: string;
+  gulfResidenceBackUrl?: string;
 }
 
 export interface PasswordResetRequest {
@@ -319,6 +405,20 @@ export const VisaType = {
   investment: 'investment',
 } as const;
 
+/**
+ * Per-country requirement flags configurable from admin dashboard
+ */
+export interface VisaRequirements {
+  requiresGulfResidence?: boolean;
+  requiresPersonalPhoto?: boolean;
+  requiresPassportImage?: boolean;
+  requiresBankStatement?: boolean;
+  requiresFlightBooking?: boolean;
+  requiresHotelBooking?: boolean;
+  requiresTravelInsurance?: boolean;
+  requiresAdditionalDocs?: boolean;
+}
+
 export interface Visa {
   id: number;
   countryName: string;
@@ -335,6 +435,14 @@ export interface Visa {
   validity: string;
   isFeatured: boolean;
   createdAt: string;
+  requiresGulfResidence: boolean;
+  requiresPersonalPhoto: boolean;
+  requiresPassportImage: boolean;
+  requiresBankStatement: boolean;
+  requiresFlightBooking: boolean;
+  requiresHotelBooking: boolean;
+  requiresTravelInsurance: boolean;
+  requiresAdditionalDocs: boolean;
 }
 
 export interface VisaInput {
@@ -352,6 +460,14 @@ export interface VisaInput {
   entriesAllowed: string;
   validity: string;
   isFeatured?: boolean;
+  requiresGulfResidence?: boolean;
+  requiresPersonalPhoto?: boolean;
+  requiresPassportImage?: boolean;
+  requiresBankStatement?: boolean;
+  requiresFlightBooking?: boolean;
+  requiresHotelBooking?: boolean;
+  requiresTravelInsurance?: boolean;
+  requiresAdditionalDocs?: boolean;
 }
 
 export interface VisaUpdate {
@@ -369,6 +485,14 @@ export interface VisaUpdate {
   entriesAllowed?: string;
   validity?: string;
   isFeatured?: boolean;
+  requiresGulfResidence?: boolean;
+  requiresPersonalPhoto?: boolean;
+  requiresPassportImage?: boolean;
+  requiresBankStatement?: boolean;
+  requiresFlightBooking?: boolean;
+  requiresHotelBooking?: boolean;
+  requiresTravelInsurance?: boolean;
+  requiresAdditionalDocs?: boolean;
 }
 
 export type VisaApplicationStatus = typeof VisaApplicationStatus[keyof typeof VisaApplicationStatus];
@@ -456,21 +580,11 @@ export interface PassportOcrResponse {
   meta: PassportOcrResponseMeta;
 }
 
+/**
+ * Submit a visa application. All personal/passport data is auto-filled from the user's completed profile. Only visaId is required.
+ */
 export interface VisaApplicationInput {
   visaId: number;
-  /** @minLength 1 */
-  fullName: string;
-  phone: string;
-  email: string;
-  nationality: string;
-  passportNumber: string;
-  passportExpiry: string;
-  dob: string;
-  gender: string;
-  occupation: string;
-  city: string;
-  passportImageUrl?: string;
-  personalPhotoUrl?: string;
 }
 
 export interface VisaApplicationStatusUpdate {

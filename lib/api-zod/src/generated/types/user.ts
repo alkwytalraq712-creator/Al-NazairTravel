@@ -19,4 +19,55 @@ export interface User {
   language: string;
   currency: string;
   createdAt: Date;
+  /** @nullable */
+  firstName?: string | null;
+  /** @nullable */
+  fatherName?: string | null;
+  /** @nullable */
+  grandfatherName?: string | null;
+  /** @nullable */
+  familyName?: string | null;
+  /** @nullable */
+  englishName?: string | null;
+  /** @nullable */
+  gender?: string | null;
+  /** @nullable */
+  dob?: string | null;
+  /** @nullable */
+  nationality?: string | null;
+  /** @nullable */
+  placeOfBirth?: string | null;
+  /** @nullable */
+  maritalStatus?: string | null;
+  /** @nullable */
+  occupation?: string | null;
+  /** @nullable */
+  whatsapp?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  passportNumber?: string | null;
+  /** @nullable */
+  passportIssuingCountry?: string | null;
+  /** @nullable */
+  passportIssuingPlace?: string | null;
+  /** @nullable */
+  passportIssueDate?: string | null;
+  /** @nullable */
+  passportExpiry?: string | null;
+  /** @nullable */
+  passportImageUrl?: string | null;
+  hasGulfResidence: boolean;
+  /** @nullable */
+  gulfResidenceCountry?: string | null;
+  /** @nullable */
+  gulfResidenceNumber?: string | null;
+  /** @nullable */
+  gulfResidenceExpiry?: string | null;
+  /** @nullable */
+  gulfResidenceFrontUrl?: string | null;
+  /** @nullable */
+  gulfResidenceBackUrl?: string | null;
+  /** @nullable */
+  profileCompletedAt?: Date | null;
 }

@@ -339,6 +339,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/profile/completion:
+    get:
+      operationId: getProfileCompletion
+      tags: [auth]
+      summary: Get profile completion percentage and missing fields
+      responses:
+        "200":
+          description: Profile completion info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileCompletion"
+        "401":
+          description: Not authenticated
+
   /auth/profile:
     patch:
       operationId: updateProfile
@@ -1614,9 +1629,19 @@ components:
       type: string
       enum: [customer, admin]
 
+    ProfileCompletion:
+      type: object
+      required: [percentage, isComplete, missingFields]
+      properties:
+        percentage: { type: integer, minimum: 0, maximum: 100 }
+        isComplete: { type: boolean }
+        missingFields:
+          type: array
+          items: { type: string }
+
     User:
       type: object
-      required: [id, fullName, phone, role, language, currency, createdAt]
+      required: [id, fullName, phone, role, language, currency, createdAt, hasGulfResidence]
       properties:
         id: { type: integer }
         fullName: { type: string }
@@ -1628,6 +1653,35 @@ components:
         language: { type: string }
         currency: { type: string }
         createdAt: { type: string, format: date-time }
+        # Personal profile
+        firstName: { type: ["string", "null"] }
+        fatherName: { type: ["string", "null"] }
+        grandfatherName: { type: ["string", "null"] }
+        familyName: { type: ["string", "null"] }
+        englishName: { type: ["string", "null"] }
+        gender: { type: ["string", "null"] }
+        dob: { type: ["string", "null"] }
+        nationality: { type: ["string", "null"] }
+        placeOfBirth: { type: ["string", "null"] }
+        maritalStatus: { type: ["string", "null"] }
+        occupation: { type: ["string", "null"] }
+        whatsapp: { type: ["string", "null"] }
+        address: { type: ["string", "null"] }
+        # Passport
+        passportNumber: { type: ["string", "null"] }
+        passportIssuingCountry: { type: ["string", "null"] }
+        passportIssuingPlace: { type: ["string", "null"] }
+        passportIssueDate: { type: ["string", "null"] }
+        passportExpiry: { type: ["string", "null"] }
+        passportImageUrl: { type: ["string", "null"] }
+        # Gulf residence
+        hasGulfResidence: { type: boolean }
+        gulfResidenceCountry: { type: ["string", "null"] }
+        gulfResidenceNumber: { type: ["string", "null"] }
+        gulfResidenceExpiry: { type: ["string", "null"] }
+        gulfResidenceFrontUrl: { type: ["string", "null"] }
+        gulfResidenceBackUrl: { type: ["string", "null"] }
+        profileCompletedAt: { type: ["string", "null"], format: date-time }
 
     EmployeeInput:
       type: object
@@ -1846,6 +1900,34 @@ components:
         avatarUrl: { type: string }
         language: { type: string }
         currency: { type: string }
+        # Personal profile
+        firstName: { type: string }
+        fatherName: { type: string }
+        grandfatherName: { type: string }
+        familyName: { type: string }
+        englishName: { type: string }
+        gender: { type: string }
+        dob: { type: string }
+        nationality: { type: string }
+        placeOfBirth: { type: string }
+        maritalStatus: { type: string }
+        occupation: { type: string }
+        whatsapp: { type: string }
+        address: { type: string }
+        # Passport
+        passportNumber: { type: string }
+        passportIssuingCountry: { type: string }
+        passportIssuingPlace: { type: string }
+        passportIssueDate: { type: string }
+        passportExpiry: { type: string }
+        passportImageUrl: { type: string }
+        # Gulf residence
+        hasGulfResidence: { type: boolean }
+        gulfResidenceCountry: { type: string }
+        gulfResidenceNumber: { type: string }
+        gulfResidenceExpiry: { type: string }
+        gulfResidenceFrontUrl: { type: string }
+        gulfResidenceBackUrl: { type: string }
 
     PasswordResetRequest:
       type: object
@@ -1863,6 +1945,19 @@ components:
     VisaType:
       type: string
       enum: [tourism, business, medical, study, visit, investment]
+
+    VisaRequirements:
+      description: Per-country requirement flags configurable from admin dashboard
+      type: object
+      properties:
+        requiresGulfResidence:  { type: boolean }
+        requiresPersonalPhoto:  { type: boolean }
+        requiresPassportImage:  { type: boolean }
+        requiresBankStatement:  { type: boolean }
+        requiresFlightBooking:  { type: boolean }
+        requiresHotelBooking:   { type: boolean }
+        requiresTravelInsurance: { type: boolean }
+        requiresAdditionalDocs: { type: boolean }
 
     Visa:
       type: object
@@ -1883,6 +1978,14 @@ components:
           validity,
           isFeatured,
           createdAt,
+          requiresGulfResidence,
+          requiresPersonalPhoto,
+          requiresPassportImage,
+          requiresBankStatement,
+          requiresFlightBooking,
+          requiresHotelBooking,
+          requiresTravelInsurance,
+          requiresAdditionalDocs,
         ]
       properties:
         id: { type: integer }
@@ -1903,6 +2006,14 @@ components:
         validity: { type: string }
         isFeatured: { type: boolean }
         createdAt: { type: string, format: date-time }
+        requiresGulfResidence:  { type: boolean }
+        requiresPersonalPhoto:  { type: boolean }
+        requiresPassportImage:  { type: boolean }
+        requiresBankStatement:  { type: boolean }
+        requiresFlightBooking:  { type: boolean }
+        requiresHotelBooking:   { type: boolean }
+        requiresTravelInsurance: { type: boolean }
+        requiresAdditionalDocs: { type: boolean }
 
     VisaInput:
       type: object
@@ -1938,6 +2049,14 @@ components:
         entriesAllowed: { type: string }
         validity: { type: string }
         isFeatured: { type: boolean }
+        requiresGulfResidence:  { type: boolean }
+        requiresPersonalPhoto:  { type: boolean }
+        requiresPassportImage:  { type: boolean }
+        requiresBankStatement:  { type: boolean }
+        requiresFlightBooking:  { type: boolean }
+        requiresHotelBooking:   { type: boolean }
+        requiresTravelInsurance: { type: boolean }
+        requiresAdditionalDocs: { type: boolean }
 
     VisaUpdate:
       type: object
@@ -1958,6 +2077,14 @@ components:
         entriesAllowed: { type: string }
         validity: { type: string }
         isFeatured: { type: boolean }
+        requiresGulfResidence:  { type: boolean }
+        requiresPersonalPhoto:  { type: boolean }
+        requiresPassportImage:  { type: boolean }
+        requiresBankStatement:  { type: boolean }
+        requiresFlightBooking:  { type: boolean }
+        requiresHotelBooking:   { type: boolean }
+        requiresTravelInsurance: { type: boolean }
+        requiresAdditionalDocs: { type: boolean }
 
     VisaApplicationStatus:
       type: string
@@ -2064,35 +2191,13 @@ components:
             passportImagePath: { type: ["string", "null"] }
 
     VisaApplicationInput:
+      description: >
+        Submit a visa application. All personal/passport data is auto-filled
+        from the user's completed profile. Only visaId is required.
       type: object
-      required:
-        [
-          visaId,
-          fullName,
-          phone,
-          email,
-          nationality,
-          passportNumber,
-          passportExpiry,
-          dob,
-          gender,
-          occupation,
-          city,
-        ]
+      required: [visaId]
       properties:
         visaId: { type: integer }
-        fullName: { type: string, minLength: 1 }
-        phone: { type: string }
-        email: { type: string }
-        nationality: { type: string }
-        passportNumber: { type: string }
-        passportExpiry: { type: string, format: date }
-        dob: { type: string, format: date }
-        gender: { type: string }
-        occupation: { type: string }
-        city: { type: string }
-        passportImageUrl: { type: string }
-        personalPhotoUrl: { type: string }
 
     VisaApplicationStatusUpdate:
       type: object

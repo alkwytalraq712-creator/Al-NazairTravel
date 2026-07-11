@@ -157,7 +157,33 @@ export const SignupResponse = zod.object({
   "role": zod.enum(['customer', 'admin']),
   "language": zod.string(),
   "currency": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "firstName": zod.string().nullish(),
+  "fatherName": zod.string().nullish(),
+  "grandfatherName": zod.string().nullish(),
+  "familyName": zod.string().nullish(),
+  "englishName": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "maritalStatus": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "passportNumber": zod.string().nullish(),
+  "passportIssuingCountry": zod.string().nullish(),
+  "passportIssuingPlace": zod.string().nullish(),
+  "passportIssueDate": zod.string().nullish(),
+  "passportExpiry": zod.string().nullish(),
+  "passportImageUrl": zod.string().nullish(),
+  "hasGulfResidence": zod.boolean(),
+  "gulfResidenceCountry": zod.string().nullish(),
+  "gulfResidenceNumber": zod.string().nullish(),
+  "gulfResidenceExpiry": zod.string().nullish(),
+  "gulfResidenceFrontUrl": zod.string().nullish(),
+  "gulfResidenceBackUrl": zod.string().nullish(),
+  "profileCompletedAt": zod.coerce.date().nullish()
 })
 
 
@@ -178,7 +204,33 @@ export const LoginResponse = zod.object({
   "role": zod.enum(['customer', 'admin']),
   "language": zod.string(),
   "currency": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "firstName": zod.string().nullish(),
+  "fatherName": zod.string().nullish(),
+  "grandfatherName": zod.string().nullish(),
+  "familyName": zod.string().nullish(),
+  "englishName": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "maritalStatus": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "passportNumber": zod.string().nullish(),
+  "passportIssuingCountry": zod.string().nullish(),
+  "passportIssuingPlace": zod.string().nullish(),
+  "passportIssueDate": zod.string().nullish(),
+  "passportExpiry": zod.string().nullish(),
+  "passportImageUrl": zod.string().nullish(),
+  "hasGulfResidence": zod.boolean(),
+  "gulfResidenceCountry": zod.string().nullish(),
+  "gulfResidenceNumber": zod.string().nullish(),
+  "gulfResidenceExpiry": zod.string().nullish(),
+  "gulfResidenceFrontUrl": zod.string().nullish(),
+  "gulfResidenceBackUrl": zod.string().nullish(),
+  "profileCompletedAt": zod.coerce.date().nullish()
 })
 
 
@@ -200,7 +252,48 @@ export const GetCurrentUserResponse = zod.object({
   "role": zod.enum(['customer', 'admin']),
   "language": zod.string(),
   "currency": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "firstName": zod.string().nullish(),
+  "fatherName": zod.string().nullish(),
+  "grandfatherName": zod.string().nullish(),
+  "familyName": zod.string().nullish(),
+  "englishName": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "maritalStatus": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "passportNumber": zod.string().nullish(),
+  "passportIssuingCountry": zod.string().nullish(),
+  "passportIssuingPlace": zod.string().nullish(),
+  "passportIssueDate": zod.string().nullish(),
+  "passportExpiry": zod.string().nullish(),
+  "passportImageUrl": zod.string().nullish(),
+  "hasGulfResidence": zod.boolean(),
+  "gulfResidenceCountry": zod.string().nullish(),
+  "gulfResidenceNumber": zod.string().nullish(),
+  "gulfResidenceExpiry": zod.string().nullish(),
+  "gulfResidenceFrontUrl": zod.string().nullish(),
+  "gulfResidenceBackUrl": zod.string().nullish(),
+  "profileCompletedAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Get profile completion percentage and missing fields
+ */
+export const getProfileCompletionResponsePercentageMin = 0;
+export const getProfileCompletionResponsePercentageMax = 100;
+
+
+
+export const GetProfileCompletionResponse = zod.object({
+  "percentage": zod.number().min(getProfileCompletionResponsePercentageMin).max(getProfileCompletionResponsePercentageMax),
+  "isComplete": zod.boolean(),
+  "missingFields": zod.array(zod.string())
 })
 
 
@@ -216,7 +309,32 @@ export const UpdateProfileBody = zod.object({
   "phone": zod.string().optional(),
   "avatarUrl": zod.string().optional(),
   "language": zod.string().optional(),
-  "currency": zod.string().optional()
+  "currency": zod.string().optional(),
+  "firstName": zod.string().optional(),
+  "fatherName": zod.string().optional(),
+  "grandfatherName": zod.string().optional(),
+  "familyName": zod.string().optional(),
+  "englishName": zod.string().optional(),
+  "gender": zod.string().optional(),
+  "dob": zod.string().optional(),
+  "nationality": zod.string().optional(),
+  "placeOfBirth": zod.string().optional(),
+  "maritalStatus": zod.string().optional(),
+  "occupation": zod.string().optional(),
+  "whatsapp": zod.string().optional(),
+  "address": zod.string().optional(),
+  "passportNumber": zod.string().optional(),
+  "passportIssuingCountry": zod.string().optional(),
+  "passportIssuingPlace": zod.string().optional(),
+  "passportIssueDate": zod.string().optional(),
+  "passportExpiry": zod.string().optional(),
+  "passportImageUrl": zod.string().optional(),
+  "hasGulfResidence": zod.boolean().optional(),
+  "gulfResidenceCountry": zod.string().optional(),
+  "gulfResidenceNumber": zod.string().optional(),
+  "gulfResidenceExpiry": zod.string().optional(),
+  "gulfResidenceFrontUrl": zod.string().optional(),
+  "gulfResidenceBackUrl": zod.string().optional()
 })
 
 export const UpdateProfileResponse = zod.object({
@@ -228,7 +346,33 @@ export const UpdateProfileResponse = zod.object({
   "role": zod.enum(['customer', 'admin']),
   "language": zod.string(),
   "currency": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "firstName": zod.string().nullish(),
+  "fatherName": zod.string().nullish(),
+  "grandfatherName": zod.string().nullish(),
+  "familyName": zod.string().nullish(),
+  "englishName": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "maritalStatus": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "passportNumber": zod.string().nullish(),
+  "passportIssuingCountry": zod.string().nullish(),
+  "passportIssuingPlace": zod.string().nullish(),
+  "passportIssueDate": zod.string().nullish(),
+  "passportExpiry": zod.string().nullish(),
+  "passportImageUrl": zod.string().nullish(),
+  "hasGulfResidence": zod.boolean(),
+  "gulfResidenceCountry": zod.string().nullish(),
+  "gulfResidenceNumber": zod.string().nullish(),
+  "gulfResidenceExpiry": zod.string().nullish(),
+  "gulfResidenceFrontUrl": zod.string().nullish(),
+  "gulfResidenceBackUrl": zod.string().nullish(),
+  "profileCompletedAt": zod.coerce.date().nullish()
 })
 
 
@@ -284,7 +428,15 @@ export const GetHomeSummaryResponse = zod.object({
   "entriesAllowed": zod.string(),
   "validity": zod.string(),
   "isFeatured": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresPersonalPhoto": zod.boolean(),
+  "requiresPassportImage": zod.boolean(),
+  "requiresBankStatement": zod.boolean(),
+  "requiresFlightBooking": zod.boolean(),
+  "requiresHotelBooking": zod.boolean(),
+  "requiresTravelInsurance": zod.boolean(),
+  "requiresAdditionalDocs": zod.boolean()
 })),
   "popularPackages": zod.array(zod.object({
   "id": zod.number(),
@@ -387,7 +539,15 @@ export const ListVisasResponseItem = zod.object({
   "entriesAllowed": zod.string(),
   "validity": zod.string(),
   "isFeatured": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresPersonalPhoto": zod.boolean(),
+  "requiresPassportImage": zod.boolean(),
+  "requiresBankStatement": zod.boolean(),
+  "requiresFlightBooking": zod.boolean(),
+  "requiresHotelBooking": zod.boolean(),
+  "requiresTravelInsurance": zod.boolean(),
+  "requiresAdditionalDocs": zod.boolean()
 })
 export const ListVisasResponse = zod.array(ListVisasResponseItem)
 
@@ -411,7 +571,15 @@ export const CreateVisaBody = zod.object({
   "requiredDocuments": zod.array(zod.string()),
   "entriesAllowed": zod.string(),
   "validity": zod.string(),
-  "isFeatured": zod.boolean().optional()
+  "isFeatured": zod.boolean().optional(),
+  "requiresGulfResidence": zod.boolean().optional(),
+  "requiresPersonalPhoto": zod.boolean().optional(),
+  "requiresPassportImage": zod.boolean().optional(),
+  "requiresBankStatement": zod.boolean().optional(),
+  "requiresFlightBooking": zod.boolean().optional(),
+  "requiresHotelBooking": zod.boolean().optional(),
+  "requiresTravelInsurance": zod.boolean().optional(),
+  "requiresAdditionalDocs": zod.boolean().optional()
 })
 
 export const CreateVisaResponse = zod.object({
@@ -429,7 +597,15 @@ export const CreateVisaResponse = zod.object({
   "entriesAllowed": zod.string(),
   "validity": zod.string(),
   "isFeatured": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresPersonalPhoto": zod.boolean(),
+  "requiresPassportImage": zod.boolean(),
+  "requiresBankStatement": zod.boolean(),
+  "requiresFlightBooking": zod.boolean(),
+  "requiresHotelBooking": zod.boolean(),
+  "requiresTravelInsurance": zod.boolean(),
+  "requiresAdditionalDocs": zod.boolean()
 })
 
 
@@ -455,7 +631,15 @@ export const GetVisaResponse = zod.object({
   "entriesAllowed": zod.string(),
   "validity": zod.string(),
   "isFeatured": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresPersonalPhoto": zod.boolean(),
+  "requiresPassportImage": zod.boolean(),
+  "requiresBankStatement": zod.boolean(),
+  "requiresFlightBooking": zod.boolean(),
+  "requiresHotelBooking": zod.boolean(),
+  "requiresTravelInsurance": zod.boolean(),
+  "requiresAdditionalDocs": zod.boolean()
 })
 
 
@@ -482,7 +666,15 @@ export const UpdateVisaBody = zod.object({
   "requiredDocuments": zod.array(zod.string()).optional(),
   "entriesAllowed": zod.string().optional(),
   "validity": zod.string().optional(),
-  "isFeatured": zod.boolean().optional()
+  "isFeatured": zod.boolean().optional(),
+  "requiresGulfResidence": zod.boolean().optional(),
+  "requiresPersonalPhoto": zod.boolean().optional(),
+  "requiresPassportImage": zod.boolean().optional(),
+  "requiresBankStatement": zod.boolean().optional(),
+  "requiresFlightBooking": zod.boolean().optional(),
+  "requiresHotelBooking": zod.boolean().optional(),
+  "requiresTravelInsurance": zod.boolean().optional(),
+  "requiresAdditionalDocs": zod.boolean().optional()
 })
 
 export const UpdateVisaResponse = zod.object({
@@ -500,7 +692,15 @@ export const UpdateVisaResponse = zod.object({
   "entriesAllowed": zod.string(),
   "validity": zod.string(),
   "isFeatured": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresPersonalPhoto": zod.boolean(),
+  "requiresPassportImage": zod.boolean(),
+  "requiresBankStatement": zod.boolean(),
+  "requiresFlightBooking": zod.boolean(),
+  "requiresHotelBooking": zod.boolean(),
+  "requiresTravelInsurance": zod.boolean(),
+  "requiresAdditionalDocs": zod.boolean()
 })
 
 
@@ -536,7 +736,15 @@ export const ListMyVisaApplicationsResponseItem = zod.object({
   "entriesAllowed": zod.string(),
   "validity": zod.string(),
   "isFeatured": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresPersonalPhoto": zod.boolean(),
+  "requiresPassportImage": zod.boolean(),
+  "requiresBankStatement": zod.boolean(),
+  "requiresFlightBooking": zod.boolean(),
+  "requiresHotelBooking": zod.boolean(),
+  "requiresTravelInsurance": zod.boolean(),
+  "requiresAdditionalDocs": zod.boolean()
 }),zod.null()]).optional(),
   "referenceNumber": zod.string(),
   "fullName": zod.string(),
@@ -567,24 +775,9 @@ export const ListMyVisaApplicationsResponse = zod.array(ListMyVisaApplicationsRe
 /**
  * @summary Submit a visa application
  */
-
-
-
 export const CreateVisaApplicationBody = zod.object({
-  "visaId": zod.number(),
-  "fullName": zod.string().min(1),
-  "phone": zod.string(),
-  "email": zod.string(),
-  "nationality": zod.string(),
-  "passportNumber": zod.string(),
-  "passportExpiry": zod.coerce.date(),
-  "dob": zod.coerce.date(),
-  "gender": zod.string(),
-  "occupation": zod.string(),
-  "city": zod.string(),
-  "passportImageUrl": zod.string().optional(),
-  "personalPhotoUrl": zod.string().optional()
-})
+  "visaId": zod.number()
+}).describe('Submit a visa application. All personal\/passport data is auto-filled from the user\'s completed profile. Only visaId is required.\n')
 
 export const CreateVisaApplicationResponse = zod.object({
   "id": zod.number(),
@@ -605,7 +798,15 @@ export const CreateVisaApplicationResponse = zod.object({
   "entriesAllowed": zod.string(),
   "validity": zod.string(),
   "isFeatured": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresPersonalPhoto": zod.boolean(),
+  "requiresPassportImage": zod.boolean(),
+  "requiresBankStatement": zod.boolean(),
+  "requiresFlightBooking": zod.boolean(),
+  "requiresHotelBooking": zod.boolean(),
+  "requiresTravelInsurance": zod.boolean(),
+  "requiresAdditionalDocs": zod.boolean()
 }),zod.null()]).optional(),
   "referenceNumber": zod.string(),
   "fullName": zod.string(),
@@ -658,7 +859,15 @@ export const GetVisaApplicationResponse = zod.object({
   "entriesAllowed": zod.string(),
   "validity": zod.string(),
   "isFeatured": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresPersonalPhoto": zod.boolean(),
+  "requiresPassportImage": zod.boolean(),
+  "requiresBankStatement": zod.boolean(),
+  "requiresFlightBooking": zod.boolean(),
+  "requiresHotelBooking": zod.boolean(),
+  "requiresTravelInsurance": zod.boolean(),
+  "requiresAdditionalDocs": zod.boolean()
 }),zod.null()]).optional(),
   "referenceNumber": zod.string(),
   "fullName": zod.string(),
@@ -711,7 +920,15 @@ export const ListAllVisaApplicationsResponseItem = zod.object({
   "entriesAllowed": zod.string(),
   "validity": zod.string(),
   "isFeatured": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresPersonalPhoto": zod.boolean(),
+  "requiresPassportImage": zod.boolean(),
+  "requiresBankStatement": zod.boolean(),
+  "requiresFlightBooking": zod.boolean(),
+  "requiresHotelBooking": zod.boolean(),
+  "requiresTravelInsurance": zod.boolean(),
+  "requiresAdditionalDocs": zod.boolean()
 }),zod.null()]).optional(),
   "referenceNumber": zod.string(),
   "fullName": zod.string(),
@@ -769,7 +986,15 @@ export const UpdateVisaApplicationStatusResponse = zod.object({
   "entriesAllowed": zod.string(),
   "validity": zod.string(),
   "isFeatured": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresPersonalPhoto": zod.boolean(),
+  "requiresPassportImage": zod.boolean(),
+  "requiresBankStatement": zod.boolean(),
+  "requiresFlightBooking": zod.boolean(),
+  "requiresHotelBooking": zod.boolean(),
+  "requiresTravelInsurance": zod.boolean(),
+  "requiresAdditionalDocs": zod.boolean()
 }),zod.null()]).optional(),
   "referenceNumber": zod.string(),
   "fullName": zod.string(),
@@ -1840,7 +2065,33 @@ export const ListCustomersResponseItem = zod.object({
   "role": zod.enum(['customer', 'admin']),
   "language": zod.string(),
   "currency": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "firstName": zod.string().nullish(),
+  "fatherName": zod.string().nullish(),
+  "grandfatherName": zod.string().nullish(),
+  "familyName": zod.string().nullish(),
+  "englishName": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "maritalStatus": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "passportNumber": zod.string().nullish(),
+  "passportIssuingCountry": zod.string().nullish(),
+  "passportIssuingPlace": zod.string().nullish(),
+  "passportIssueDate": zod.string().nullish(),
+  "passportExpiry": zod.string().nullish(),
+  "passportImageUrl": zod.string().nullish(),
+  "hasGulfResidence": zod.boolean(),
+  "gulfResidenceCountry": zod.string().nullish(),
+  "gulfResidenceNumber": zod.string().nullish(),
+  "gulfResidenceExpiry": zod.string().nullish(),
+  "gulfResidenceFrontUrl": zod.string().nullish(),
+  "gulfResidenceBackUrl": zod.string().nullish(),
+  "profileCompletedAt": zod.coerce.date().nullish()
 })
 export const ListCustomersResponse = zod.array(ListCustomersResponseItem)
 
@@ -1861,7 +2112,33 @@ export const GetCustomerResponse = zod.object({
   "role": zod.enum(['customer', 'admin']),
   "language": zod.string(),
   "currency": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "firstName": zod.string().nullish(),
+  "fatherName": zod.string().nullish(),
+  "grandfatherName": zod.string().nullish(),
+  "familyName": zod.string().nullish(),
+  "englishName": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "maritalStatus": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "passportNumber": zod.string().nullish(),
+  "passportIssuingCountry": zod.string().nullish(),
+  "passportIssuingPlace": zod.string().nullish(),
+  "passportIssueDate": zod.string().nullish(),
+  "passportExpiry": zod.string().nullish(),
+  "passportImageUrl": zod.string().nullish(),
+  "hasGulfResidence": zod.boolean(),
+  "gulfResidenceCountry": zod.string().nullish(),
+  "gulfResidenceNumber": zod.string().nullish(),
+  "gulfResidenceExpiry": zod.string().nullish(),
+  "gulfResidenceFrontUrl": zod.string().nullish(),
+  "gulfResidenceBackUrl": zod.string().nullish(),
+  "profileCompletedAt": zod.coerce.date().nullish()
 })
 
 
@@ -1877,7 +2154,33 @@ export const ListEmployeesResponseItem = zod.object({
   "role": zod.enum(['customer', 'admin']),
   "language": zod.string(),
   "currency": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "firstName": zod.string().nullish(),
+  "fatherName": zod.string().nullish(),
+  "grandfatherName": zod.string().nullish(),
+  "familyName": zod.string().nullish(),
+  "englishName": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "maritalStatus": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "passportNumber": zod.string().nullish(),
+  "passportIssuingCountry": zod.string().nullish(),
+  "passportIssuingPlace": zod.string().nullish(),
+  "passportIssueDate": zod.string().nullish(),
+  "passportExpiry": zod.string().nullish(),
+  "passportImageUrl": zod.string().nullish(),
+  "hasGulfResidence": zod.boolean(),
+  "gulfResidenceCountry": zod.string().nullish(),
+  "gulfResidenceNumber": zod.string().nullish(),
+  "gulfResidenceExpiry": zod.string().nullish(),
+  "gulfResidenceFrontUrl": zod.string().nullish(),
+  "gulfResidenceBackUrl": zod.string().nullish(),
+  "profileCompletedAt": zod.coerce.date().nullish()
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
 
@@ -1908,7 +2211,33 @@ export const CreateEmployeeResponse = zod.object({
   "role": zod.enum(['customer', 'admin']),
   "language": zod.string(),
   "currency": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "firstName": zod.string().nullish(),
+  "fatherName": zod.string().nullish(),
+  "grandfatherName": zod.string().nullish(),
+  "familyName": zod.string().nullish(),
+  "englishName": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "maritalStatus": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "passportNumber": zod.string().nullish(),
+  "passportIssuingCountry": zod.string().nullish(),
+  "passportIssuingPlace": zod.string().nullish(),
+  "passportIssueDate": zod.string().nullish(),
+  "passportExpiry": zod.string().nullish(),
+  "passportImageUrl": zod.string().nullish(),
+  "hasGulfResidence": zod.boolean(),
+  "gulfResidenceCountry": zod.string().nullish(),
+  "gulfResidenceNumber": zod.string().nullish(),
+  "gulfResidenceExpiry": zod.string().nullish(),
+  "gulfResidenceFrontUrl": zod.string().nullish(),
+  "gulfResidenceBackUrl": zod.string().nullish(),
+  "profileCompletedAt": zod.coerce.date().nullish()
 })
 
 
@@ -1942,7 +2271,33 @@ export const UpdateEmployeeResponse = zod.object({
   "role": zod.enum(['customer', 'admin']),
   "language": zod.string(),
   "currency": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "firstName": zod.string().nullish(),
+  "fatherName": zod.string().nullish(),
+  "grandfatherName": zod.string().nullish(),
+  "familyName": zod.string().nullish(),
+  "englishName": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "placeOfBirth": zod.string().nullish(),
+  "maritalStatus": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "passportNumber": zod.string().nullish(),
+  "passportIssuingCountry": zod.string().nullish(),
+  "passportIssuingPlace": zod.string().nullish(),
+  "passportIssueDate": zod.string().nullish(),
+  "passportExpiry": zod.string().nullish(),
+  "passportImageUrl": zod.string().nullish(),
+  "hasGulfResidence": zod.boolean(),
+  "gulfResidenceCountry": zod.string().nullish(),
+  "gulfResidenceNumber": zod.string().nullish(),
+  "gulfResidenceExpiry": zod.string().nullish(),
+  "gulfResidenceFrontUrl": zod.string().nullish(),
+  "gulfResidenceBackUrl": zod.string().nullish(),
+  "profileCompletedAt": zod.coerce.date().nullish()
 })
 
 

@@ -24,9 +24,17 @@ export const visasTable = pgTable("visas", {
   entriesAllowed: text("entries_allowed").notNull(),
   validity: text("validity").notNull(),
   isFeatured: boolean("is_featured").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+
+  // ── Per-country requirements (configurable from admin) ────────────────────
+  requiresGulfResidence:  boolean("requires_gulf_residence").notNull().default(false),
+  requiresPersonalPhoto:  boolean("requires_personal_photo").notNull().default(true),
+  requiresPassportImage:  boolean("requires_passport_image").notNull().default(true),
+  requiresBankStatement:  boolean("requires_bank_statement").notNull().default(false),
+  requiresFlightBooking:  boolean("requires_flight_booking").notNull().default(false),
+  requiresHotelBooking:   boolean("requires_hotel_booking").notNull().default(false),
+  requiresTravelInsurance:boolean("requires_travel_insurance").notNull().default(false),
+  requiresAdditionalDocs: boolean("requires_additional_docs").notNull().default(false),
 });
 
 export const insertVisaSchema = createInsertSchema(visasTable).omit({

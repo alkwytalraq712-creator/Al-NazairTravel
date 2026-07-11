@@ -51,6 +51,7 @@ export type {
   PaymentStatus,
   Payment,
   PaymentUpdate,
+  ProfileCompletion,
   ProfileUpdate,
   RecentActivity,
   SearchFlightsParams,
@@ -69,6 +70,7 @@ export type {
   VisaApplicationStatus,
   VisaApplicationStatusUpdate,
   VisaInput,
+  VisaRequirements,
   VisaType,
   VisaUpdate,
 } from "./generated/types";

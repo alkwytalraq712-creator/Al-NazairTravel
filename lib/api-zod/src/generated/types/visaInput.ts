@@ -22,4 +22,12 @@ export interface VisaInput {
   entriesAllowed: string;
   validity: string;
   isFeatured?: boolean;
+  requiresGulfResidence?: boolean;
+  requiresPersonalPhoto?: boolean;
+  requiresPassportImage?: boolean;
+  requiresBankStatement?: boolean;
+  requiresFlightBooking?: boolean;
+  requiresHotelBooking?: boolean;
+  requiresTravelInsurance?: boolean;
+  requiresAdditionalDocs?: boolean;
 }
