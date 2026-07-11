@@ -60,6 +60,8 @@ export * from './testimonial';
 export * from './testimonialInput';
 export * from './testimonialUpdate';
 export * from './tripType';
+export * from './uploadUrlRequest';
+export * from './uploadUrlResponse';
 export * from './user';
 export * from './userRole';
 export * from './visa';

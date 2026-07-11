@@ -15,6 +15,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { setBaseUrl } from '@workspace/api-client-react';
 import { AuthProvider } from '@/context/AuthContext';
+import { FlightBookingProvider } from '@/context/FlightBookingContext';
 
 // Set base URL at module level so all hooks reach the correct server
 if (process.env.EXPO_PUBLIC_DOMAIN) {
@@ -40,6 +41,11 @@ function RootLayoutNav() {
       <Stack.Screen name="package/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="book-package/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="flight-results" options={{ headerShown: false }} />
+      <Stack.Screen name="flight-details" options={{ headerShown: false }} />
+      <Stack.Screen name="flight-seats" options={{ headerShown: false }} />
+      <Stack.Screen name="flight-travelers" options={{ headerShown: false }} />
+      <Stack.Screen name="flight-review" options={{ headerShown: false }} />
+      <Stack.Screen name="flight-success" options={{ headerShown: false }} />
       <Stack.Screen name="book-flight" options={{ headerShown: false }} />
       <Stack.Screen name="bookings" options={{ headerShown: false }} />
       <Stack.Screen name="notifications" options={{ headerShown: false }} />
@@ -70,11 +76,13 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
+            <FlightBookingProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <RootLayoutNav />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </FlightBookingProvider>
           </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>
