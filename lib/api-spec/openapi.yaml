@@ -577,6 +577,198 @@ paths:
         "404":
           description: Visa not found
 
+  /visas/{id}/rules:
+    get:
+      operationId: listVisaEligibilityRules
+      tags: [visas]
+      summary: List all eligibility rules for a visa (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Rules list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VisaEligibilityRule"
+    post:
+      operationId: createVisaEligibilityRule
+      tags: [visas]
+      summary: Create an eligibility rule for a visa (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisaEligibilityRuleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisaEligibilityRule"
+
+  /visas/{id}/rules/{ruleId}:
+    put:
+      operationId: updateVisaEligibilityRule
+      tags: [visas]
+      summary: Update an eligibility rule (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisaEligibilityRuleInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisaEligibilityRule"
+    delete:
+      operationId: deleteVisaEligibilityRule
+      tags: [visas]
+      summary: Delete an eligibility rule (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /settings/company:
+    get:
+      operationId: getCompanySettings
+      tags: [admin]
+      summary: Get company settings (public)
+      responses:
+        "200":
+          description: Company settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySettings"
+    patch:
+      operationId: updateCompanySettings
+      tags: [admin]
+      summary: Update company settings (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanySettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySettings"
+
+  /settings/branches:
+    get:
+      operationId: listBranches
+      tags: [admin]
+      summary: List all branches (public)
+      responses:
+        "200":
+          description: Branches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Branch"
+    post:
+      operationId: createBranch
+      tags: [admin]
+      summary: Create a branch (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+
+  /settings/branches/{id}:
+    put:
+      operationId: updateBranch
+      tags: [admin]
+      summary: Update a branch (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+    delete:
+      operationId: deleteBranch
+      tags: [admin]
+      summary: Delete a branch (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
   /visa-applications:
     get:
       operationId: listMyVisaApplications
@@ -1728,6 +1920,141 @@ components:
       required: [visaId]
       properties:
         visaId: { type: integer }
+
+    VisaEligibilityRule:
+      type: object
+      required: [id, visaId, name, isDefault, nationalities, allowDirect, requiresGulfResidence, requiresValidVisaCountries, requiresInvitationLetter, sortOrder, createdAt]
+      properties:
+        id: { type: integer }
+        visaId: { type: integer }
+        name: { type: string }
+        isDefault: { type: boolean }
+        nationalities:
+          type: array
+          items: { type: string }
+        allowDirect: { type: boolean }
+        requiresGulfResidence: { type: boolean }
+        requiresValidVisaCountries:
+          type: array
+          items: { type: string }
+        requiresInvitationLetter: { type: boolean }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    VisaEligibilityRuleInput:
+      type: object
+      required: [name, isDefault, nationalities, allowDirect, requiresGulfResidence, requiresValidVisaCountries, requiresInvitationLetter, sortOrder]
+      properties:
+        name: { type: string }
+        isDefault: { type: boolean }
+        nationalities:
+          type: array
+          items: { type: string }
+        allowDirect: { type: boolean }
+        requiresGulfResidence: { type: boolean }
+        requiresValidVisaCountries:
+          type: array
+          items: { type: string }
+        requiresInvitationLetter: { type: boolean }
+        sortOrder: { type: integer }
+
+    CompanySettings:
+      type: object
+      properties:
+        id: { type: integer }
+        companyName: { type: string }
+        logoUrl: { type: ["string", "null"] }
+        about: { type: ["string", "null"] }
+        address: { type: ["string", "null"] }
+        websiteUrl: { type: ["string", "null"] }
+        googleMapsUrl: { type: ["string", "null"] }
+        phonePrimary: { type: ["string", "null"] }
+        phoneSecondary: { type: ["string", "null"] }
+        whatsapp: { type: ["string", "null"] }
+        emailSupport: { type: ["string", "null"] }
+        emailOfficial: { type: ["string", "null"] }
+        instagram: { type: ["string", "null"] }
+        tiktok: { type: ["string", "null"] }
+        facebook: { type: ["string", "null"] }
+        twitter: { type: ["string", "null"] }
+        snapchat: { type: ["string", "null"] }
+        youtube: { type: ["string", "null"] }
+        linkedin: { type: ["string", "null"] }
+        telegram: { type: ["string", "null"] }
+        workDays: { type: ["string", "null"] }
+        workHours: { type: ["string", "null"] }
+        weeklyOff: { type: ["string", "null"] }
+        extraSocials: {}
+        updatedAt: { type: string, format: date-time }
+
+    CompanySettingsUpdate:
+      type: object
+      properties:
+        companyName: { type: string }
+        logoUrl: { type: string }
+        about: { type: string }
+        address: { type: string }
+        websiteUrl: { type: string }
+        googleMapsUrl: { type: string }
+        phonePrimary: { type: string }
+        phoneSecondary: { type: string }
+        whatsapp: { type: string }
+        emailSupport: { type: string }
+        emailOfficial: { type: string }
+        instagram: { type: string }
+        tiktok: { type: string }
+        facebook: { type: string }
+        twitter: { type: string }
+        snapchat: { type: string }
+        youtube: { type: string }
+        linkedin: { type: string }
+        telegram: { type: string }
+        workDays: { type: string }
+        workHours: { type: string }
+        weeklyOff: { type: string }
+        extraSocials: {}
+
+    Branch:
+      type: object
+      required: [id, name, country, city, address, status, isVisible, isMain, sortOrder, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        country: { type: string }
+        city: { type: string }
+        address: { type: string }
+        googleMapsUrl: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        whatsapp: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        workHours: { type: ["string", "null"] }
+        workDays: { type: ["string", "null"] }
+        imageUrl: { type: ["string", "null"] }
+        status: { type: string }
+        isVisible: { type: boolean }
+        isMain: { type: boolean }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    BranchInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        country: { type: string }
+        city: { type: string }
+        address: { type: string }
+        googleMapsUrl: { type: string }
+        phone: { type: string }
+        whatsapp: { type: string }
+        email: { type: string }
+        workHours: { type: string }
+        workDays: { type: string }
+        imageUrl: { type: string }
+        status: { type: string }
+        isVisible: { type: boolean }
+        isMain: { type: boolean }
+        sortOrder: { type: integer }
 
     User:
       type: object

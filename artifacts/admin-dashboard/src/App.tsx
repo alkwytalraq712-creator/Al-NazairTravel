@@ -22,6 +22,7 @@ import { Invoices } from '@/pages/invoices';
 import { Notifications } from '@/pages/notifications';
 import { Banners } from '@/pages/banners';
 import { Testimonials } from '@/pages/testimonials';
+import { CompanySettings } from '@/pages/company-settings';
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ function AppRouter() {
             <Route path="/notifications" component={Notifications} />
             <Route path="/banners" component={Banners} />
             <Route path="/testimonials" component={Testimonials} />
+            <Route path="/company-settings" component={CompanySettings} />
             <Route component={NotFound} />
           </Switch>
         </MainLayout>

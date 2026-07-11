@@ -21,6 +21,7 @@ const MENU_ITEMS = [
   { icon: 'notifications-outline', label: 'الإشعارات', route: '/notifications' },
   { icon: 'person-outline', label: 'تعديل الملف الشخصي', route: '/profile-edit' },
   { icon: 'shield-checkmark-outline', label: 'الأمان والخصوصية', route: '/security' },
+  { icon: 'call-outline', label: 'اتصل بنا', route: '/contact' },
   { icon: 'help-circle-outline', label: 'المساعدة والدعم', route: '/help' },
 ] as const;
 

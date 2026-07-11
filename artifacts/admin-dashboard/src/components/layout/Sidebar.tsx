@@ -14,7 +14,8 @@ import {
   LogOut,
   UserCog,
   Wallet,
-  Receipt
+  Receipt,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLogout } from '@workspace/api-client-react';
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { icon: Bell, label: 'الإشعارات', path: '/notifications' },
   { icon: ImageIcon, label: 'اللافتات الترويجية', path: '/banners' },
   { icon: MessageSquare, label: 'الآراء والتقييمات', path: '/testimonials' },
+  { icon: Building2, label: 'إعدادات التواصل', path: '/company-settings' },
 ];
 
 export function Sidebar() {

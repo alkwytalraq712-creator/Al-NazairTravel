@@ -854,6 +854,320 @@ export const GetVisaEligibilityResponse = zod.object({
 
 
 /**
+ * @summary List all eligibility rules for a visa (admin)
+ */
+export const ListVisaEligibilityRulesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListVisaEligibilityRulesResponseItem = zod.object({
+  "id": zod.number(),
+  "visaId": zod.number(),
+  "name": zod.string(),
+  "isDefault": zod.boolean(),
+  "nationalities": zod.array(zod.string()),
+  "allowDirect": zod.boolean(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresValidVisaCountries": zod.array(zod.string()),
+  "requiresInvitationLetter": zod.boolean(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+export const ListVisaEligibilityRulesResponse = zod.array(ListVisaEligibilityRulesResponseItem)
+
+
+/**
+ * @summary Create an eligibility rule for a visa (admin)
+ */
+export const CreateVisaEligibilityRuleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateVisaEligibilityRuleBody = zod.object({
+  "name": zod.string(),
+  "isDefault": zod.boolean(),
+  "nationalities": zod.array(zod.string()),
+  "allowDirect": zod.boolean(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresValidVisaCountries": zod.array(zod.string()),
+  "requiresInvitationLetter": zod.boolean(),
+  "sortOrder": zod.number()
+})
+
+export const CreateVisaEligibilityRuleResponse = zod.object({
+  "id": zod.number(),
+  "visaId": zod.number(),
+  "name": zod.string(),
+  "isDefault": zod.boolean(),
+  "nationalities": zod.array(zod.string()),
+  "allowDirect": zod.boolean(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresValidVisaCountries": zod.array(zod.string()),
+  "requiresInvitationLetter": zod.boolean(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update an eligibility rule (admin)
+ */
+export const UpdateVisaEligibilityRuleParams = zod.object({
+  "id": zod.coerce.number(),
+  "ruleId": zod.coerce.number()
+})
+
+export const UpdateVisaEligibilityRuleBody = zod.object({
+  "name": zod.string(),
+  "isDefault": zod.boolean(),
+  "nationalities": zod.array(zod.string()),
+  "allowDirect": zod.boolean(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresValidVisaCountries": zod.array(zod.string()),
+  "requiresInvitationLetter": zod.boolean(),
+  "sortOrder": zod.number()
+})
+
+export const UpdateVisaEligibilityRuleResponse = zod.object({
+  "id": zod.number(),
+  "visaId": zod.number(),
+  "name": zod.string(),
+  "isDefault": zod.boolean(),
+  "nationalities": zod.array(zod.string()),
+  "allowDirect": zod.boolean(),
+  "requiresGulfResidence": zod.boolean(),
+  "requiresValidVisaCountries": zod.array(zod.string()),
+  "requiresInvitationLetter": zod.boolean(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete an eligibility rule (admin)
+ */
+export const DeleteVisaEligibilityRuleParams = zod.object({
+  "id": zod.coerce.number(),
+  "ruleId": zod.coerce.number()
+})
+
+export const DeleteVisaEligibilityRuleResponse = zod.void()
+
+
+/**
+ * @summary Get company settings (public)
+ */
+export const GetCompanySettingsResponse = zod.object({
+  "id": zod.number().optional(),
+  "companyName": zod.string().optional(),
+  "logoUrl": zod.string().nullish(),
+  "about": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "websiteUrl": zod.string().nullish(),
+  "googleMapsUrl": zod.string().nullish(),
+  "phonePrimary": zod.string().nullish(),
+  "phoneSecondary": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "emailSupport": zod.string().nullish(),
+  "emailOfficial": zod.string().nullish(),
+  "instagram": zod.string().nullish(),
+  "tiktok": zod.string().nullish(),
+  "facebook": zod.string().nullish(),
+  "twitter": zod.string().nullish(),
+  "snapchat": zod.string().nullish(),
+  "youtube": zod.string().nullish(),
+  "linkedin": zod.string().nullish(),
+  "telegram": zod.string().nullish(),
+  "workDays": zod.string().nullish(),
+  "workHours": zod.string().nullish(),
+  "weeklyOff": zod.string().nullish(),
+  "extraSocials": zod.unknown().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Update company settings (admin)
+ */
+export const UpdateCompanySettingsBody = zod.object({
+  "companyName": zod.string().optional(),
+  "logoUrl": zod.string().optional(),
+  "about": zod.string().optional(),
+  "address": zod.string().optional(),
+  "websiteUrl": zod.string().optional(),
+  "googleMapsUrl": zod.string().optional(),
+  "phonePrimary": zod.string().optional(),
+  "phoneSecondary": zod.string().optional(),
+  "whatsapp": zod.string().optional(),
+  "emailSupport": zod.string().optional(),
+  "emailOfficial": zod.string().optional(),
+  "instagram": zod.string().optional(),
+  "tiktok": zod.string().optional(),
+  "facebook": zod.string().optional(),
+  "twitter": zod.string().optional(),
+  "snapchat": zod.string().optional(),
+  "youtube": zod.string().optional(),
+  "linkedin": zod.string().optional(),
+  "telegram": zod.string().optional(),
+  "workDays": zod.string().optional(),
+  "workHours": zod.string().optional(),
+  "weeklyOff": zod.string().optional(),
+  "extraSocials": zod.unknown().optional()
+})
+
+export const UpdateCompanySettingsResponse = zod.object({
+  "id": zod.number().optional(),
+  "companyName": zod.string().optional(),
+  "logoUrl": zod.string().nullish(),
+  "about": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "websiteUrl": zod.string().nullish(),
+  "googleMapsUrl": zod.string().nullish(),
+  "phonePrimary": zod.string().nullish(),
+  "phoneSecondary": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "emailSupport": zod.string().nullish(),
+  "emailOfficial": zod.string().nullish(),
+  "instagram": zod.string().nullish(),
+  "tiktok": zod.string().nullish(),
+  "facebook": zod.string().nullish(),
+  "twitter": zod.string().nullish(),
+  "snapchat": zod.string().nullish(),
+  "youtube": zod.string().nullish(),
+  "linkedin": zod.string().nullish(),
+  "telegram": zod.string().nullish(),
+  "workDays": zod.string().nullish(),
+  "workHours": zod.string().nullish(),
+  "weeklyOff": zod.string().nullish(),
+  "extraSocials": zod.unknown().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary List all branches (public)
+ */
+export const ListBranchesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "country": zod.string(),
+  "city": zod.string(),
+  "address": zod.string(),
+  "googleMapsUrl": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "workHours": zod.string().nullish(),
+  "workDays": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "isVisible": zod.boolean(),
+  "isMain": zod.boolean(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+export const ListBranchesResponse = zod.array(ListBranchesResponseItem)
+
+
+/**
+ * @summary Create a branch (admin)
+ */
+export const CreateBranchBody = zod.object({
+  "name": zod.string(),
+  "country": zod.string().optional(),
+  "city": zod.string().optional(),
+  "address": zod.string().optional(),
+  "googleMapsUrl": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "whatsapp": zod.string().optional(),
+  "email": zod.string().optional(),
+  "workHours": zod.string().optional(),
+  "workDays": zod.string().optional(),
+  "imageUrl": zod.string().optional(),
+  "status": zod.string().optional(),
+  "isVisible": zod.boolean().optional(),
+  "isMain": zod.boolean().optional(),
+  "sortOrder": zod.number().optional()
+})
+
+export const CreateBranchResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "country": zod.string(),
+  "city": zod.string(),
+  "address": zod.string(),
+  "googleMapsUrl": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "workHours": zod.string().nullish(),
+  "workDays": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "isVisible": zod.boolean(),
+  "isMain": zod.boolean(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a branch (admin)
+ */
+export const UpdateBranchParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateBranchBody = zod.object({
+  "name": zod.string(),
+  "country": zod.string().optional(),
+  "city": zod.string().optional(),
+  "address": zod.string().optional(),
+  "googleMapsUrl": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "whatsapp": zod.string().optional(),
+  "email": zod.string().optional(),
+  "workHours": zod.string().optional(),
+  "workDays": zod.string().optional(),
+  "imageUrl": zod.string().optional(),
+  "status": zod.string().optional(),
+  "isVisible": zod.boolean().optional(),
+  "isMain": zod.boolean().optional(),
+  "sortOrder": zod.number().optional()
+})
+
+export const UpdateBranchResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "country": zod.string(),
+  "city": zod.string(),
+  "address": zod.string(),
+  "googleMapsUrl": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "workHours": zod.string().nullish(),
+  "workDays": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "isVisible": zod.boolean(),
+  "isMain": zod.boolean(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a branch (admin)
+ */
+export const DeleteBranchParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteBranchResponse = zod.void()
+
+
+/**
  * @summary List current user's visa applications
  */
 export const ListMyVisaApplicationsResponseItem = zod.object({

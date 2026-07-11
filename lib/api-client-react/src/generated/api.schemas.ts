@@ -104,6 +104,151 @@ export interface AcceptVisaTermsBody {
   visaId: number;
 }
 
+export interface VisaEligibilityRule {
+  id: number;
+  visaId: number;
+  name: string;
+  isDefault: boolean;
+  nationalities: string[];
+  allowDirect: boolean;
+  requiresGulfResidence: boolean;
+  requiresValidVisaCountries: string[];
+  requiresInvitationLetter: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface VisaEligibilityRuleInput {
+  name: string;
+  isDefault: boolean;
+  nationalities: string[];
+  allowDirect: boolean;
+  requiresGulfResidence: boolean;
+  requiresValidVisaCountries: string[];
+  requiresInvitationLetter: boolean;
+  sortOrder: number;
+}
+
+export interface CompanySettings {
+  id?: number;
+  companyName?: string;
+  /** @nullable */
+  logoUrl?: string | null;
+  /** @nullable */
+  about?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  websiteUrl?: string | null;
+  /** @nullable */
+  googleMapsUrl?: string | null;
+  /** @nullable */
+  phonePrimary?: string | null;
+  /** @nullable */
+  phoneSecondary?: string | null;
+  /** @nullable */
+  whatsapp?: string | null;
+  /** @nullable */
+  emailSupport?: string | null;
+  /** @nullable */
+  emailOfficial?: string | null;
+  /** @nullable */
+  instagram?: string | null;
+  /** @nullable */
+  tiktok?: string | null;
+  /** @nullable */
+  facebook?: string | null;
+  /** @nullable */
+  twitter?: string | null;
+  /** @nullable */
+  snapchat?: string | null;
+  /** @nullable */
+  youtube?: string | null;
+  /** @nullable */
+  linkedin?: string | null;
+  /** @nullable */
+  telegram?: string | null;
+  /** @nullable */
+  workDays?: string | null;
+  /** @nullable */
+  workHours?: string | null;
+  /** @nullable */
+  weeklyOff?: string | null;
+  extraSocials?: unknown;
+  updatedAt?: string;
+}
+
+export interface CompanySettingsUpdate {
+  companyName?: string;
+  logoUrl?: string;
+  about?: string;
+  address?: string;
+  websiteUrl?: string;
+  googleMapsUrl?: string;
+  phonePrimary?: string;
+  phoneSecondary?: string;
+  whatsapp?: string;
+  emailSupport?: string;
+  emailOfficial?: string;
+  instagram?: string;
+  tiktok?: string;
+  facebook?: string;
+  twitter?: string;
+  snapchat?: string;
+  youtube?: string;
+  linkedin?: string;
+  telegram?: string;
+  workDays?: string;
+  workHours?: string;
+  weeklyOff?: string;
+  extraSocials?: unknown;
+}
+
+export interface Branch {
+  id: number;
+  name: string;
+  country: string;
+  city: string;
+  address: string;
+  /** @nullable */
+  googleMapsUrl?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  whatsapp?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  workHours?: string | null;
+  /** @nullable */
+  workDays?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
+  status: string;
+  isVisible: boolean;
+  isMain: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface BranchInput {
+  name: string;
+  country?: string;
+  city?: string;
+  address?: string;
+  googleMapsUrl?: string;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
+  workHours?: string;
+  workDays?: string;
+  imageUrl?: string;
+  status?: string;
+  isVisible?: boolean;
+  isMain?: boolean;
+  sortOrder?: number;
+}
+
 export interface User {
   id: number;
   fullName: string;

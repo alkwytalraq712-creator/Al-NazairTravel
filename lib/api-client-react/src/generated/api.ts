@@ -26,6 +26,10 @@ import type {
   Banner,
   BannerInput,
   BannerUpdate,
+  Branch,
+  BranchInput,
+  CompanySettings,
+  CompanySettingsUpdate,
   EmployeeInput,
   EmployeeUpdate,
   ErrorResponse,
@@ -77,6 +81,8 @@ import type {
   VisaApplicationInput,
   VisaApplicationStatusUpdate,
   VisaEligibilityResult,
+  VisaEligibilityRule,
+  VisaEligibilityRuleInput,
   VisaInput,
   VisaUpdate
 } from './api.schemas';
@@ -1748,6 +1754,741 @@ export function useGetVisaEligibility<TData = Awaited<ReturnType<typeof getVisaE
 
 
 
+
+export const getListVisaEligibilityRulesUrl = (id: number,) => {
+
+
+
+
+  return `/api/visas/${id}/rules`
+}
+
+/**
+ * @summary List all eligibility rules for a visa (admin)
+ */
+export const listVisaEligibilityRules = async (id: number, options?: RequestInit): Promise<VisaEligibilityRule[]> => {
+
+  return customFetch<VisaEligibilityRule[]>(getListVisaEligibilityRulesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVisaEligibilityRulesQueryKey = (id: number,) => {
+    return [
+    `/api/visas/${id}/rules`
+    ] as const;
+    }
+
+
+export const getListVisaEligibilityRulesQueryOptions = <TData = Awaited<ReturnType<typeof listVisaEligibilityRules>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVisaEligibilityRules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVisaEligibilityRulesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVisaEligibilityRules>>> = ({ signal }) => listVisaEligibilityRules(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVisaEligibilityRules>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVisaEligibilityRulesQueryResult = NonNullable<Awaited<ReturnType<typeof listVisaEligibilityRules>>>
+export type ListVisaEligibilityRulesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all eligibility rules for a visa (admin)
+ */
+
+export function useListVisaEligibilityRules<TData = Awaited<ReturnType<typeof listVisaEligibilityRules>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVisaEligibilityRules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVisaEligibilityRulesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateVisaEligibilityRuleUrl = (id: number,) => {
+
+
+
+
+  return `/api/visas/${id}/rules`
+}
+
+/**
+ * @summary Create an eligibility rule for a visa (admin)
+ */
+export const createVisaEligibilityRule = async (id: number,
+    visaEligibilityRuleInput: VisaEligibilityRuleInput, options?: RequestInit): Promise<VisaEligibilityRule> => {
+
+  return customFetch<VisaEligibilityRule>(getCreateVisaEligibilityRuleUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(visaEligibilityRuleInput)
+  }
+);}
+
+
+
+
+
+export const getCreateVisaEligibilityRuleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVisaEligibilityRule>>, TError,{id: number;data: BodyType<VisaEligibilityRuleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createVisaEligibilityRule>>, TError,{id: number;data: BodyType<VisaEligibilityRuleInput>}, TContext> => {
+
+const mutationKey = ['createVisaEligibilityRule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVisaEligibilityRule>>, {id: number;data: BodyType<VisaEligibilityRuleInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createVisaEligibilityRule(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateVisaEligibilityRuleMutationResult = NonNullable<Awaited<ReturnType<typeof createVisaEligibilityRule>>>
+    export type CreateVisaEligibilityRuleMutationBody = BodyType<VisaEligibilityRuleInput>
+    export type CreateVisaEligibilityRuleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create an eligibility rule for a visa (admin)
+ */
+export const useCreateVisaEligibilityRule = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVisaEligibilityRule>>, TError,{id: number;data: BodyType<VisaEligibilityRuleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createVisaEligibilityRule>>,
+        TError,
+        {id: number;data: BodyType<VisaEligibilityRuleInput>},
+        TContext
+      > => {
+      return useMutation(getCreateVisaEligibilityRuleMutationOptions(options));
+    }
+
+export const getUpdateVisaEligibilityRuleUrl = (id: number,
+    ruleId: number,) => {
+
+
+
+
+  return `/api/visas/${id}/rules/${ruleId}`
+}
+
+/**
+ * @summary Update an eligibility rule (admin)
+ */
+export const updateVisaEligibilityRule = async (id: number,
+    ruleId: number,
+    visaEligibilityRuleInput: VisaEligibilityRuleInput, options?: RequestInit): Promise<VisaEligibilityRule> => {
+
+  return customFetch<VisaEligibilityRule>(getUpdateVisaEligibilityRuleUrl(id,ruleId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(visaEligibilityRuleInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateVisaEligibilityRuleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVisaEligibilityRule>>, TError,{id: number;ruleId: number;data: BodyType<VisaEligibilityRuleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateVisaEligibilityRule>>, TError,{id: number;ruleId: number;data: BodyType<VisaEligibilityRuleInput>}, TContext> => {
+
+const mutationKey = ['updateVisaEligibilityRule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateVisaEligibilityRule>>, {id: number;ruleId: number;data: BodyType<VisaEligibilityRuleInput>}> = (props) => {
+          const {id,ruleId,data} = props ?? {};
+
+          return  updateVisaEligibilityRule(id,ruleId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateVisaEligibilityRuleMutationResult = NonNullable<Awaited<ReturnType<typeof updateVisaEligibilityRule>>>
+    export type UpdateVisaEligibilityRuleMutationBody = BodyType<VisaEligibilityRuleInput>
+    export type UpdateVisaEligibilityRuleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update an eligibility rule (admin)
+ */
+export const useUpdateVisaEligibilityRule = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVisaEligibilityRule>>, TError,{id: number;ruleId: number;data: BodyType<VisaEligibilityRuleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateVisaEligibilityRule>>,
+        TError,
+        {id: number;ruleId: number;data: BodyType<VisaEligibilityRuleInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateVisaEligibilityRuleMutationOptions(options));
+    }
+
+export const getDeleteVisaEligibilityRuleUrl = (id: number,
+    ruleId: number,) => {
+
+
+
+
+  return `/api/visas/${id}/rules/${ruleId}`
+}
+
+/**
+ * @summary Delete an eligibility rule (admin)
+ */
+export const deleteVisaEligibilityRule = async (id: number,
+    ruleId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVisaEligibilityRuleUrl(id,ruleId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteVisaEligibilityRuleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVisaEligibilityRule>>, TError,{id: number;ruleId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVisaEligibilityRule>>, TError,{id: number;ruleId: number}, TContext> => {
+
+const mutationKey = ['deleteVisaEligibilityRule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVisaEligibilityRule>>, {id: number;ruleId: number}> = (props) => {
+          const {id,ruleId} = props ?? {};
+
+          return  deleteVisaEligibilityRule(id,ruleId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVisaEligibilityRuleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVisaEligibilityRule>>>
+
+    export type DeleteVisaEligibilityRuleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete an eligibility rule (admin)
+ */
+export const useDeleteVisaEligibilityRule = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVisaEligibilityRule>>, TError,{id: number;ruleId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVisaEligibilityRule>>,
+        TError,
+        {id: number;ruleId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVisaEligibilityRuleMutationOptions(options));
+    }
+
+export const getGetCompanySettingsUrl = () => {
+
+
+
+
+  return `/api/settings/company`
+}
+
+/**
+ * @summary Get company settings (public)
+ */
+export const getCompanySettings = async ( options?: RequestInit): Promise<CompanySettings> => {
+
+  return customFetch<CompanySettings>(getGetCompanySettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCompanySettingsQueryKey = () => {
+    return [
+    `/api/settings/company`
+    ] as const;
+    }
+
+
+export const getGetCompanySettingsQueryOptions = <TData = Awaited<ReturnType<typeof getCompanySettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanySettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCompanySettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompanySettings>>> = ({ signal }) => getCompanySettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCompanySettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCompanySettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getCompanySettings>>>
+export type GetCompanySettingsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get company settings (public)
+ */
+
+export function useGetCompanySettings<TData = Awaited<ReturnType<typeof getCompanySettings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanySettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCompanySettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateCompanySettingsUrl = () => {
+
+
+
+
+  return `/api/settings/company`
+}
+
+/**
+ * @summary Update company settings (admin)
+ */
+export const updateCompanySettings = async (companySettingsUpdate: CompanySettingsUpdate, options?: RequestInit): Promise<CompanySettings> => {
+
+  return customFetch<CompanySettings>(getUpdateCompanySettingsUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(companySettingsUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateCompanySettingsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCompanySettings>>, TError,{data: BodyType<CompanySettingsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCompanySettings>>, TError,{data: BodyType<CompanySettingsUpdate>}, TContext> => {
+
+const mutationKey = ['updateCompanySettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCompanySettings>>, {data: BodyType<CompanySettingsUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateCompanySettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCompanySettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateCompanySettings>>>
+    export type UpdateCompanySettingsMutationBody = BodyType<CompanySettingsUpdate>
+    export type UpdateCompanySettingsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update company settings (admin)
+ */
+export const useUpdateCompanySettings = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCompanySettings>>, TError,{data: BodyType<CompanySettingsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCompanySettings>>,
+        TError,
+        {data: BodyType<CompanySettingsUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateCompanySettingsMutationOptions(options));
+    }
+
+export const getListBranchesUrl = () => {
+
+
+
+
+  return `/api/settings/branches`
+}
+
+/**
+ * @summary List all branches (public)
+ */
+export const listBranches = async ( options?: RequestInit): Promise<Branch[]> => {
+
+  return customFetch<Branch[]>(getListBranchesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBranchesQueryKey = () => {
+    return [
+    `/api/settings/branches`
+    ] as const;
+    }
+
+
+export const getListBranchesQueryOptions = <TData = Awaited<ReturnType<typeof listBranches>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBranches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBranchesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBranches>>> = ({ signal }) => listBranches({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBranches>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBranchesQueryResult = NonNullable<Awaited<ReturnType<typeof listBranches>>>
+export type ListBranchesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all branches (public)
+ */
+
+export function useListBranches<TData = Awaited<ReturnType<typeof listBranches>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBranches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBranchesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateBranchUrl = () => {
+
+
+
+
+  return `/api/settings/branches`
+}
+
+/**
+ * @summary Create a branch (admin)
+ */
+export const createBranch = async (branchInput: BranchInput, options?: RequestInit): Promise<Branch> => {
+
+  return customFetch<Branch>(getCreateBranchUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(branchInput)
+  }
+);}
+
+
+
+
+
+export const getCreateBranchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBranch>>, TError,{data: BodyType<BranchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBranch>>, TError,{data: BodyType<BranchInput>}, TContext> => {
+
+const mutationKey = ['createBranch'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBranch>>, {data: BodyType<BranchInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBranch(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBranchMutationResult = NonNullable<Awaited<ReturnType<typeof createBranch>>>
+    export type CreateBranchMutationBody = BodyType<BranchInput>
+    export type CreateBranchMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a branch (admin)
+ */
+export const useCreateBranch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBranch>>, TError,{data: BodyType<BranchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBranch>>,
+        TError,
+        {data: BodyType<BranchInput>},
+        TContext
+      > => {
+      return useMutation(getCreateBranchMutationOptions(options));
+    }
+
+export const getUpdateBranchUrl = (id: number,) => {
+
+
+
+
+  return `/api/settings/branches/${id}`
+}
+
+/**
+ * @summary Update a branch (admin)
+ */
+export const updateBranch = async (id: number,
+    branchInput: BranchInput, options?: RequestInit): Promise<Branch> => {
+
+  return customFetch<Branch>(getUpdateBranchUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(branchInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateBranchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBranch>>, TError,{id: number;data: BodyType<BranchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateBranch>>, TError,{id: number;data: BodyType<BranchInput>}, TContext> => {
+
+const mutationKey = ['updateBranch'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateBranch>>, {id: number;data: BodyType<BranchInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateBranch(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateBranchMutationResult = NonNullable<Awaited<ReturnType<typeof updateBranch>>>
+    export type UpdateBranchMutationBody = BodyType<BranchInput>
+    export type UpdateBranchMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a branch (admin)
+ */
+export const useUpdateBranch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBranch>>, TError,{id: number;data: BodyType<BranchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateBranch>>,
+        TError,
+        {id: number;data: BodyType<BranchInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateBranchMutationOptions(options));
+    }
+
+export const getDeleteBranchUrl = (id: number,) => {
+
+
+
+
+  return `/api/settings/branches/${id}`
+}
+
+/**
+ * @summary Delete a branch (admin)
+ */
+export const deleteBranch = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteBranchUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteBranchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBranch>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteBranch>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteBranch'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteBranch>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteBranch(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteBranchMutationResult = NonNullable<Awaited<ReturnType<typeof deleteBranch>>>
+
+    export type DeleteBranchMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a branch (admin)
+ */
+export const useDeleteBranch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBranch>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteBranch>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteBranchMutationOptions(options));
+    }
 
 export const getListMyVisaApplicationsUrl = () => {
 

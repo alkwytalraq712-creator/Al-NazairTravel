@@ -4,10 +4,16 @@ import {
   useCreateVisa, 
   useUpdateVisa, 
   useDeleteVisa,
+  useListVisaEligibilityRules,
+  useCreateVisaEligibilityRule,
+  useUpdateVisaEligibilityRule,
+  useDeleteVisaEligibilityRule,
+  getListVisaEligibilityRulesQueryKey,
   Visa,
-  VisaType
+  VisaType,
+  type VisaEligibilityRule,
 } from '@workspace/api-client-react';
-import { Loader2, Plus, Edit, Trash2, Clock, Filter, ShieldCheck } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Clock, Filter, ShieldCheck, Users, Globe, CheckCircle2, XCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getListVisasQueryKey } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
@@ -42,7 +48,6 @@ const visaSchema = z.object({
   entriesAllowed: z.string().min(1, 'مطلوب'),
   validity: z.string().min(1, 'مطلوب'),
   isFeatured: z.boolean().default(false),
-  // Per-visa requirement flags
   requiresGulfResidence:   z.boolean().default(false),
   requiresPersonalPhoto:   z.boolean().default(true),
   requiresPassportImage:   z.boolean().default(true),
@@ -52,11 +57,6 @@ const visaSchema = z.object({
   requiresTravelInsurance: z.boolean().default(false),
   requiresAdditionalDocs:  z.boolean().default(false),
   requiresInvitationLetter:z.boolean().default(false),
-  // Eligibility rules
-  allowedNationalities:    z.string().default(''),  // comma-separated
-  blockedNationalities:    z.string().default(''),  // comma-separated
-  requiresGulfResidenceCountry: z.string().default(''),
-  requiresValidVisaCountries:   z.string().default(''),  // comma-separated
 });
 
 type VisaFormValues = z.infer<typeof visaSchema>;
@@ -74,6 +74,288 @@ const REQUIREMENT_FLAGS: Array<{ field: keyof VisaFormValues; label: string; des
   { field: 'requiresAdditionalDocs',   label: 'مستندات إضافية',         description: 'مستندات خاصة بهذه الوجهة' },
   { field: 'requiresInvitationLetter', label: 'خطاب تعريف',             description: 'خطاب تعريف من جهة العمل أو الجهة الداعية' },
 ];
+
+// ─── Visa Rules Manager ───────────────────────────────────────────────────────
+
+const VALID_VISA_OPTIONS = [
+  { value: 'schengen', label: 'دول الشنغن' },
+  { value: 'uk',       label: 'المملكة المتحدة' },
+  { value: 'us',       label: 'الولايات المتحدة' },
+  { value: 'canada',   label: 'كندا' },
+  { value: 'australia',label: 'أستراليا' },
+  { value: 'japan',    label: 'اليابان' },
+  { value: 'newzealand',  label: 'نيوزيلندا' },
+  { value: 'southkorea',  label: 'كوريا الجنوبية' },
+];
+
+const EMPTY_RULE = {
+  name: '',
+  isDefault: false,
+  nationalities: '',     // one per line textarea
+  allowDirect: false,
+  requiresGulfResidence: false,
+  requiresValidVisaCountries: [] as string[],
+  requiresInvitationLetter: false,
+  sortOrder: 0,
+};
+
+function RuleDialog({
+  open, onClose, rule, visaId,
+}: { open: boolean; onClose: () => void; rule: VisaEligibilityRule | null; visaId: number }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const createMutation = useCreateVisaEligibilityRule();
+  const updateMutation = useUpdateVisaEligibilityRule();
+
+  const [form, setForm] = useState<typeof EMPTY_RULE>(
+    rule ? {
+      name: rule.name,
+      isDefault: rule.isDefault,
+      nationalities: rule.nationalities.join('\n'),
+      allowDirect: rule.allowDirect,
+      requiresGulfResidence: rule.requiresGulfResidence,
+      requiresValidVisaCountries: [...rule.requiresValidVisaCountries],
+      requiresInvitationLetter: rule.requiresInvitationLetter,
+      sortOrder: rule.sortOrder,
+    } : EMPTY_RULE
+  );
+
+  const set = (key: keyof typeof EMPTY_RULE) => (val: any) => setForm(f => ({ ...f, [key]: val }));
+
+  const toggleCountry = (c: string) => setForm(f => ({
+    ...f,
+    requiresValidVisaCountries: f.requiresValidVisaCountries.includes(c)
+      ? f.requiresValidVisaCountries.filter(x => x !== c)
+      : [...f.requiresValidVisaCountries, c],
+  }));
+
+  const handleSave = () => {
+    const data = {
+      ...form,
+      nationalities: form.isDefault ? [] : form.nationalities.split('\n').map(s => s.trim()).filter(Boolean),
+    };
+    const opts = {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListVisaEligibilityRulesQueryKey(visaId) });
+        toast({ title: rule ? 'تم تحديث القاعدة' : 'تم إنشاء القاعدة' });
+        onClose();
+      },
+      onError: (e: any) => toast({ title: 'خطأ', description: e?.data?.error ?? e?.message, variant: 'destructive' }),
+    };
+    if (rule) {
+      updateMutation.mutate({ id: visaId, ruleId: rule.id, data: data as any }, opts);
+    } else {
+      createMutation.mutate({ id: visaId, data: data as any }, opts);
+    }
+  };
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
+
+  return (
+    <Dialog open={open} onOpenChange={o => !o && onClose()}>
+      <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{rule ? 'تعديل القاعدة' : 'إضافة قاعدة أهلية'}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">اسم القاعدة</label>
+            <Input value={form.name} onChange={e => set('name')(e.target.value)} placeholder="مثال: قاعدة اليمن والهند" />
+          </div>
+
+          {/* Default rule toggle */}
+          <div className="flex items-center gap-3 p-3 rounded-md border bg-muted/30">
+            <Checkbox id="isDefault" checked={form.isDefault} onCheckedChange={v => set('isDefault')(v)} />
+            <div>
+              <label htmlFor="isDefault" className="text-sm font-medium cursor-pointer">قاعدة افتراضية</label>
+              <p className="text-xs text-muted-foreground">تطبق على جميع الجنسيات غير المذكورة في قواعد أخرى</p>
+            </div>
+          </div>
+
+          {/* Nationalities */}
+          {!form.isDefault && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">الجنسيات (جنسية واحدة في كل سطر)</label>
+              <Textarea
+                rows={4} className="resize-none font-mono text-sm"
+                value={form.nationalities}
+                onChange={e => set('nationalities')(e.target.value)}
+                placeholder={'Yemeni\nIndian\nPakistani\nBangladeshi'}
+              />
+              <p className="text-xs text-muted-foreground">استخدم الاسم الإنجليزي للجنسية كما يدخله المستخدم في ملفه الشخصي</p>
+            </div>
+          )}
+
+          {/* Allow direct */}
+          <div className="flex items-center gap-3 p-3 rounded-md border bg-green-50 dark:bg-green-950">
+            <Checkbox id="allowDirect" checked={form.allowDirect} onCheckedChange={v => set('allowDirect')(v)} />
+            <div>
+              <label htmlFor="allowDirect" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                يسمح بالتقديم مباشرة (بدون شروط)
+              </label>
+              <p className="text-xs text-muted-foreground">المستخدمون الذين تنطبق عليهم هذه القاعدة مؤهلون تلقائياً</p>
+            </div>
+          </div>
+
+          {!form.allowDirect && (
+            <>
+              {/* OR conditions */}
+              <div className="space-y-2 p-3 rounded-md border">
+                <p className="text-sm font-medium">شروط الأهلية (يكفي استيفاء شرط واحد)</p>
+
+                <div className="flex items-center gap-3">
+                  <Checkbox id="gulf" checked={form.requiresGulfResidence} onCheckedChange={v => set('requiresGulfResidence')(v)} />
+                  <label htmlFor="gulf" className="text-sm cursor-pointer">إقامة سارية في إحدى دول مجلس التعاون الخليجي</label>
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="text-xs text-muted-foreground font-medium">أو: تأشيرة سارية لإحدى الدول التالية</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {VALID_VISA_OPTIONS.map(({ value, label }) => (
+                      <div key={value} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`vvc-${value}`}
+                          checked={form.requiresValidVisaCountries.includes(value)}
+                          onCheckedChange={() => toggleCountry(value)}
+                        />
+                        <label htmlFor={`vvc-${value}`} className="text-sm cursor-pointer">{label}</label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* AND conditions */}
+              <div className="flex items-center gap-3">
+                <Checkbox id="invite" checked={form.requiresInvitationLetter} onCheckedChange={v => set('requiresInvitationLetter')(v)} />
+                <label htmlFor="invite" className="text-sm cursor-pointer">يشترط خطاب تعريف (إضافي)</label>
+              </div>
+            </>
+          )}
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">ترتيب العرض</label>
+            <Input type="number" value={form.sortOrder} onChange={e => set('sortOrder')(Number(e.target.value))} className="w-24" dir="ltr" />
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose}>إلغاء</Button>
+          <Button onClick={handleSave} disabled={isPending}>
+            {isPending && <Loader2 className="w-4 h-4 ms-2 animate-spin" />}
+            {rule ? 'تحديث' : 'إنشاء'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function VisaRulesManager({ visaId }: { visaId: number }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: rules = [], isLoading } = useListVisaEligibilityRules(visaId);
+  const deleteMutation = useDeleteVisaEligibilityRule();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<VisaEligibilityRule | null>(null);
+
+  const handleDelete = (rule: VisaEligibilityRule) => {
+    if (!confirm(`حذف القاعدة "${rule.name}"؟`)) return;
+    deleteMutation.mutate({ id: visaId, ruleId: rule.id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListVisaEligibilityRulesQueryKey(visaId) });
+        toast({ title: 'تم حذف القاعدة' });
+      },
+      onError: (e: any) => toast({ title: 'خطأ', description: e?.data?.error ?? e?.message, variant: 'destructive' }),
+    });
+  };
+
+  const ruleList = rules as VisaEligibilityRule[];
+
+  const getRuleSummary = (rule: VisaEligibilityRule) => {
+    if (rule.allowDirect) return 'يسمح بالتقديم مباشرة';
+    const parts: string[] = [];
+    if (rule.requiresGulfResidence) parts.push('إقامة خليجية');
+    if (rule.requiresValidVisaCountries.length > 0) {
+      const labels = rule.requiresValidVisaCountries.map(c => VALID_VISA_OPTIONS.find(x => x.value === c)?.label ?? c).join(' / ');
+      parts.push(`تأشيرة: ${labels}`);
+    }
+    if (rule.requiresInvitationLetter) parts.push('خطاب تعريف');
+    return parts.length > 0 ? parts.join(' أو ') : 'لا شروط محددة';
+  };
+
+  return (
+    <div className="rounded-md border p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-primary" />
+          <p className="font-semibold text-sm">قواعد الأهلية حسب الجنسية</p>
+        </div>
+        <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+          <Plus className="w-3.5 h-3.5" />
+          إضافة قاعدة
+        </Button>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        حدد شروطاً مختلفة لكل جنسية أو مجموعة جنسيات. يبحث النظام عن القاعدة المطابقة لجنسية العميل وإلا يطبق القاعدة الافتراضية.
+      </p>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center h-12">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+        </div>
+      ) : ruleList.length === 0 ? (
+        <div className="text-center py-4 text-sm text-muted-foreground border border-dashed rounded-md">
+          لا توجد قواعد مضافة — جميع الجنسيات مقبولة بدون قيود
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {ruleList.map(rule => (
+            <div key={rule.id} className="flex items-start gap-3 p-3 rounded-md border bg-muted/20 group">
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium text-sm">{rule.name || '(بدون اسم)'}</span>
+                  {rule.isDefault && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5">افتراضية</Badge>
+                  )}
+                  {rule.allowDirect && (
+                    <Badge className="text-[10px] px-1.5 bg-green-100 text-green-800 border-green-300">
+                      <CheckCircle2 className="w-2.5 h-2.5 me-1" /> مباشر
+                    </Badge>
+                  )}
+                </div>
+                {!rule.isDefault && rule.nationalities.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {rule.nationalities.slice(0, 5).map(n => (
+                      <span key={n} className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5">{n}</span>
+                    ))}
+                    {rule.nationalities.length > 5 && (
+                      <span className="text-[10px] text-muted-foreground">+{rule.nationalities.length - 5} أخرى</span>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">{getRuleSummary(rule)}</p>
+              </div>
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditing(rule); setDialogOpen(true); }}>
+                  <Edit className="w-3.5 h-3.5" />
+                </Button>
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(rule)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <RuleDialog open={dialogOpen} onClose={() => setDialogOpen(false)} rule={editing} visaId={visaId} />
+    </div>
+  );
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -304,10 +586,6 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null; onSuccess:
       requiresTravelInsurance:  v?.requiresTravelInsurance  ?? false,
       requiresAdditionalDocs:   v?.requiresAdditionalDocs   ?? false,
       requiresInvitationLetter: v?.requiresInvitationLetter ?? false,
-      allowedNationalities:    (v?.allowedNationalities    ?? []).join(', '),
-      blockedNationalities:    (v?.blockedNationalities    ?? []).join(', '),
-      requiresGulfResidenceCountry: v?.requiresGulfResidenceCountry ?? '',
-      requiresValidVisaCountries:  (v?.requiresValidVisaCountries  ?? []).join(', '),
     } : {
       countryName: '',
       countryFlagUrl: '',
@@ -331,23 +609,13 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null; onSuccess:
       requiresTravelInsurance:  false,
       requiresAdditionalDocs:   false,
       requiresInvitationLetter: false,
-      allowedNationalities: '',
-      blockedNationalities: '',
-      requiresGulfResidenceCountry: '',
-      requiresValidVisaCountries: '',
     }
   });
-
-  const splitCSV = (s: string) => s.split(',').map(x => x.trim()).filter(Boolean);
 
   const onSubmit = (values: VisaFormValues) => {
     const data = {
       ...values,
       requiredDocuments: values.requiredDocuments.split('\n').map(s => s.trim()).filter(Boolean),
-      allowedNationalities: splitCSV(values.allowedNationalities as string),
-      blockedNationalities: splitCSV(values.blockedNationalities as string),
-      requiresGulfResidenceCountry: (values.requiresGulfResidenceCountry as string).trim() || null,
-      requiresValidVisaCountries: splitCSV(values.requiresValidVisaCountries as string),
     };
 
     if (visa) {
@@ -491,44 +759,14 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null; onSuccess:
         </div>
 
         {/* ── Eligibility Rules ──────────────────────────────────────────────── */}
-        <div className="rounded-md border p-4 space-y-3">
-          <p className="font-semibold text-sm">شروط الأهلية</p>
-          <p className="text-xs text-muted-foreground">
-            حدد الجنسيات المسموح بها أو المحظورة، وشروط الإقامة الخليجية والتأشيرات السارية المطلوبة.
-            اترك الحقل فارغاً لعدم تطبيق الشرط.
-          </p>
-          <FormField control={form.control} name="allowedNationalities" render={({ field }) => (
-            <FormItem>
-              <FormLabel>الجنسيات المسموح لها (مفصولة بفاصلة)</FormLabel>
-              <FormControl><Input placeholder="مثال: Iraqi, Yemeni, Jordanian" {...field} /></FormControl>
-              <p className="text-xs text-muted-foreground">فارغ = جميع الجنسيات مسموح لها</p>
-              <FormMessage />
-            </FormItem>
-          )} />
-          <FormField control={form.control} name="blockedNationalities" render={({ field }) => (
-            <FormItem>
-              <FormLabel>الجنسيات المحظورة (مفصولة بفاصلة)</FormLabel>
-              <FormControl><Input placeholder="مثال: Israeli" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
-          <FormField control={form.control} name="requiresGulfResidenceCountry" render={({ field }) => (
-            <FormItem>
-              <FormLabel>دولة الإقامة الخليجية المحددة (اختياري)</FormLabel>
-              <FormControl><Input placeholder="مثال: Saudi Arabia — فارغ = أي دولة خليجية" {...field} /></FormControl>
-              <p className="text-xs text-muted-foreground">يُستخدم فقط عند تفعيل شرط الإقامة الخليجية</p>
-              <FormMessage />
-            </FormItem>
-          )} />
-          <FormField control={form.control} name="requiresValidVisaCountries" render={({ field }) => (
-            <FormItem>
-              <FormLabel>يشترط تأشيرة سارية لـ (مفصولة بفاصلة)</FormLabel>
-              <FormControl><Input placeholder="مثال: schengen, uk, us, canada, australia, japan" {...field} /></FormControl>
-              <p className="text-xs text-muted-foreground">فارغ = لا يشترط تأشيرة سابقة</p>
-              <FormMessage />
-            </FormItem>
-          )} />
-        </div>
+        {visa ? (
+          <VisaRulesManager visaId={visa.id} />
+        ) : (
+          <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+            <Users className="w-5 h-5 mx-auto mb-2 opacity-50" />
+            احفظ التأشيرة أولاً لإضافة قواعد الأهلية حسب الجنسية
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-4 border-t">
           <Button type="button" variant="outline" onClick={onCancel}>إلغاء</Button>
