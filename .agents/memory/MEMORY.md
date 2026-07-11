@@ -11,3 +11,4 @@
 - [Mobile tabs web render loop](mobile-tabs-web-loop.md) — all (tabs)/* routes crash on web preview with useSyncExternalStore loop; native app works fine; cause is react-native-safe-area-context on web with React Compiler.
 - [apply-visa hook call signatures](apply-visa-hook-signatures.md) — useGetVisa and useGetVisaEligibility take id:number as FIRST arg, not an object; wrong calls cause [object Object] in URLs.
 - [EligibilityBlockWall undefined blockers crash](eligibility-block-wall-crash.md) — blockers from stale HTTP 304 cache can be undefined; guard every array prop with Array.isArray() ?? [] at both call site and component level.
+- [Storage URL /api prefix gap](storage-url-prefix.md) — storageRouter is under /api in Express; publicUrl was built without /api → images 404. Fix: mount storageRouter ALSO at /storage in app.ts.

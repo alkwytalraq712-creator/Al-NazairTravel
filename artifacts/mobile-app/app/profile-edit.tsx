@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -414,52 +415,113 @@ function useImageUpload() {
 
 // ─── Step header ──────────────────────────────────────────────────────────────
 
-function StepHeader({ step, completionPct }: { step: number; completionPct: number }) {
+function StepHeader({ step, completionPct, userName, avatarUrl, onAvatarPress, uploading }: {
+  step: number;
+  completionPct: number;
+  userName?: string;
+  avatarUrl?: string;
+  onAvatarPress?: () => void;
+  uploading?: boolean;
+}) {
   const colors = useColors();
-  const barColor = completionPct === 100 ? '#22c55e' : colors.primary;
+  const isDone = completionPct === 100;
+  const barColor = isDone ? '#22c55e' : '#1a56db';
+
   return (
-    <View style={{ backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 18, paddingVertical: 14 }}>
-      {/* Steps */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+    <LinearGradient colors={['#0D1526', '#152040']} style={{ paddingBottom: 0 }}>
+      {/* Profile hero */}
+      <View style={{ alignItems: 'center', paddingTop: 18, paddingBottom: 20, paddingHorizontal: 20 }}>
+        {/* Avatar with ring */}
+        <TouchableOpacity onPress={onAvatarPress} activeOpacity={0.85} style={{ marginBottom: 12 }}>
+          <View style={{
+            width: 92, height: 92, borderRadius: 46,
+            borderWidth: 3,
+            borderColor: isDone ? '#22c55e' : '#1a56db',
+            padding: 3,
+            backgroundColor: 'rgba(255,255,255,0.08)',
+          }}>
+            <View style={{ flex: 1, borderRadius: 43, overflow: 'hidden', backgroundColor: '#1e2d4a' }}>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+              ) : (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="person" size={38} color="rgba(255,255,255,0.4)" />
+                </View>
+              )}
+            </View>
+          </View>
+          {/* Camera badge */}
+          <View style={{ position: 'absolute', bottom: 2, right: 2, width: 26, height: 26, borderRadius: 13, backgroundColor: '#1a56db', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#0D1526' }}>
+            {uploading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="camera" size={13} color="#fff" />
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Name */}
+        {userName ? (
+          <Text style={{ color: '#fff', fontFamily: 'Tajawal_700Bold', fontSize: 16, textAlign: 'center', marginBottom: 4 }} numberOfLines={1}>
+            {userName}
+          </Text>
+        ) : (
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Tajawal_400Regular', fontSize: 13, textAlign: 'center', marginBottom: 4 }}>
+            لم يتم إدخال الاسم بعد
+          </Text>
+        )}
+
+        {/* Completion pill */}
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, backgroundColor: isDone ? 'rgba(34,197,94,0.15)' : 'rgba(26,86,219,0.2)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: isDone ? 'rgba(34,197,94,0.3)' : 'rgba(26,86,219,0.3)' }}>
+          <Ionicons name={isDone ? 'checkmark-circle' : 'stats-chart-outline'} size={14} color={isDone ? '#22c55e' : '#60a5fa'} />
+          <Text style={{ color: isDone ? '#22c55e' : '#60a5fa', fontFamily: 'Tajawal_700Bold', fontSize: 12 }}>
+            {isDone ? 'الملف مكتمل ✓' : `${completionPct}% مكتمل`}
+          </Text>
+        </View>
+      </View>
+
+      {/* Progress bar */}
+      <View style={{ height: 3, backgroundColor: 'rgba(255,255,255,0.08)' }}>
+        <View style={{ width: `${completionPct}%`, height: '100%', backgroundColor: barColor }} />
+      </View>
+
+      {/* Step tabs */}
+      <View style={{ flexDirection: 'row-reverse', backgroundColor: 'rgba(0,0,0,0.25)' }}>
         {STEPS.map((st, i) => {
           const done = i < step;
           const active = i === step;
           return (
-            <React.Fragment key={i}>
-              {i > 0 && <View style={{ flex: 1, height: 2, backgroundColor: done ? colors.primary : colors.border, marginHorizontal: 4 }} />}
-              <View style={{ alignItems: 'center', gap: 4 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: (done || active) ? colors.primary : colors.muted, borderWidth: 1.5, borderColor: (done || active) ? colors.primary : colors.border, alignItems: 'center', justifyContent: 'center' }}>
-                  {done ? (
-                    <Ionicons name="checkmark" size={16} color="#fff" />
-                  ) : (
-                    <Ionicons name={st.icon as any} size={16} color={active ? '#fff' : colors.mutedForeground} />
-                  )}
-                </View>
-                <Text style={{ color: active ? colors.primary : done ? colors.primary : colors.mutedForeground, fontSize: 10, fontFamily: 'Tajawal_500Medium', textAlign: 'center' }} numberOfLines={2}>
-                  {st.label}
-                </Text>
+            <View
+              key={i}
+              style={{
+                flex: 1, alignItems: 'center', paddingVertical: 12, gap: 4,
+                borderBottomWidth: 2.5,
+                borderBottomColor: active ? '#1a56db' : done ? '#22c55e' : 'transparent',
+              }}
+            >
+              <View style={{
+                width: 32, height: 32, borderRadius: 16,
+                backgroundColor: active ? '#1a56db' : done ? '#22c55e' : 'rgba(255,255,255,0.08)',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                {done ? (
+                  <Ionicons name="checkmark" size={15} color="#fff" />
+                ) : (
+                  <Ionicons name={st.icon as any} size={15} color={active ? '#fff' : 'rgba(255,255,255,0.45)'} />
+                )}
               </View>
-            </React.Fragment>
+              <Text style={{
+                color: active ? '#fff' : done ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)',
+                fontSize: 10, fontFamily: active ? 'Tajawal_700Bold' : 'Tajawal_400Regular',
+                textAlign: 'center',
+              }} numberOfLines={2}>
+                {st.label}
+              </Text>
+            </View>
           );
         })}
       </View>
-
-      {/* Progress bar */}
-      {completionPct === 100 ? (
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          <Ionicons name="checkmark-circle" size={18} color="#22c55e" />
-          <Text style={{ color: '#22c55e', fontFamily: 'Tajawal_700Bold', fontSize: 14 }}>✔ تم إكمال الملف الشخصي</Text>
-        </View>
-      ) : (
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
-          <Text style={{ color: barColor, fontFamily: 'Tajawal_700Bold', fontSize: 13, minWidth: 36, textAlign: 'right' }}>{completionPct}%</Text>
-          <View style={{ flex: 1, height: 6, backgroundColor: colors.muted, borderRadius: 3, overflow: 'hidden' }}>
-            <View style={{ width: `${completionPct}%`, height: '100%', backgroundColor: barColor, borderRadius: 3 }} />
-          </View>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Tajawal_400Regular' }}>اكتمال الملف</Text>
-        </View>
-      )}
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -597,40 +659,8 @@ export default function ProfileEditScreen() {
     if (step === 0) {
       return (
         <>
-          {/* Avatar */}
-          <CardSection title="الصورة الشخصية" icon="camera-outline">
-            <View style={{ alignItems: 'center', marginBottom: 8 }}>
-              <View style={{ position: 'relative' }}>
-                <View style={{ width: 100, height: 100, borderRadius: 50, overflow: 'hidden', backgroundColor: colors.muted, borderWidth: 2, borderColor: colors.border }}>
-                  {form.avatarUrl ? (
-                    <Image source={{ uri: form.avatarUrl }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
-                  ) : (
-                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                      <Ionicons name="person" size={44} color={colors.mutedForeground} />
-                    </View>
-                  )}
-                </View>
-                <TouchableOpacity
-                  onPress={() => handleUpload('avatarUrl', 'avatar')}
-                  disabled={uploading === 'avatar'}
-                  style={{ position: 'absolute', bottom: 0, right: 0, width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.card }}
-                  activeOpacity={0.85}
-                >
-                  {uploading === 'avatar' ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Ionicons name="camera" size={16} color="#fff" />
-                  )}
-                </TouchableOpacity>
-              </View>
-              <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 8, fontFamily: 'Tajawal_400Regular' }}>
-                اضغط على الكاميرا لتغيير الصورة
-              </Text>
-            </View>
-          </CardSection>
-
           {/* Core info */}
-          <CardSection title="بيانات الجواز" icon="card-outline">
+          <CardSection title="البيانات الأساسية" icon="person-outline">
             <Field
               label="الاسم الكامل كما هو في جواز السفر"
               value={form.fullName}
@@ -759,64 +789,79 @@ export default function ProfileEditScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Success banner */}
       {successVisible && (
-        <View style={{ position: 'absolute', top: paddingTop + 60, left: 16, right: 16, zIndex: 999, backgroundColor: '#22c55e', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row-reverse', alignItems: 'center', gap: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 8 }}>
-          <Ionicons name="checkmark-circle" size={24} color="#fff" />
+        <View style={{ position: 'absolute', top: paddingTop + 80, left: 16, right: 16, zIndex: 999, backgroundColor: '#22c55e', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row-reverse', alignItems: 'center', gap: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 10 }}>
+          <Ionicons name="checkmark-circle" size={26} color="#fff" />
           <Text style={{ color: '#fff', fontFamily: 'Tajawal_700Bold', fontSize: 16, flex: 1, textAlign: 'right' }}>
-            ✅ تم تحديث الملف الشخصي بنجاح
+            تم تحديث الملف الشخصي بنجاح ✅
           </Text>
         </View>
       )}
-      {/* Header */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.card }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 8 }}>
-          <Ionicons name="chevron-forward" size={24} color={colors.foreground} />
+
+      {/* Gradient nav bar */}
+      <LinearGradient colors={['#0D1526', '#152040']} style={{ paddingTop, flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 14 }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="chevron-forward" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={{ flex: 1, textAlign: 'center', fontSize: 18, fontFamily: 'Tajawal_700Bold', color: colors.foreground }}>
+        <Text style={{ flex: 1, textAlign: 'center', fontSize: 18, fontFamily: 'Tajawal_700Bold', color: '#fff' }}>
           تعديل الملف الشخصي
         </Text>
-        <View style={{ width: 32 }} />
-      </View>
+        <View style={{ width: 38 }} />
+      </LinearGradient>
 
-      {/* Step indicator + progress */}
-      <StepHeader step={step} completionPct={completionPct} />
+      {/* Step indicator + profile hero */}
+      <StepHeader
+        step={step}
+        completionPct={completionPct}
+        userName={form.fullName || u?.fullName}
+        avatarUrl={form.avatarUrl}
+        onAvatarPress={() => handleUpload('avatarUrl', 'avatar')}
+        uploading={uploading === 'avatar'}
+      />
 
       {/* Content */}
-      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16, paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
         {renderStep()}
       </ScrollView>
 
       {/* Bottom nav */}
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row-reverse', padding: 16, gap: 12, paddingBottom: Math.max(insets.bottom, 16) }}>
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row-reverse', padding: 16, gap: 10, paddingBottom: Math.max(insets.bottom + 8, 20), backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border }}>
         {step > 0 && (
           <TouchableOpacity
             onPress={handleBack}
             disabled={loading}
-            style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1.5, borderColor: colors.border, borderRadius: 12, paddingVertical: 14 }}
+            style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, paddingVertical: 15, backgroundColor: colors.background }}
             activeOpacity={0.8}
           >
-            <Ionicons name="chevron-forward" size={18} color={colors.foreground} />
-            <Text style={{ color: colors.foreground, fontFamily: 'Tajawal_600SemiBold', fontSize: 15 }}>السابق</Text>
+            <Ionicons name="chevron-forward" size={17} color={colors.mutedForeground} />
+            <Text style={{ color: colors.foreground, fontFamily: 'Tajawal_600SemiBold', fontSize: 14 }}>السابق</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
           onPress={handleNext}
           disabled={loading}
-          style={{ flex: 2, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 14, opacity: loading ? 0.7 : 1 }}
           activeOpacity={0.85}
+          style={{ flex: 2 }}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Text style={{ color: '#fff', fontFamily: 'Tajawal_700Bold', fontSize: 15 }}>
-                {step < STEPS.length - 1 ? 'التالي' : 'إكمال الملف الشخصي'}
-              </Text>
-              {step < STEPS.length - 1 && <Ionicons name="chevron-back" size={18} color="#fff" />}
-            </>
-          )}
+          <LinearGradient
+            colors={loading ? ['#94a3b8', '#94a3b8'] : ['#1a56db', '#1d4ed8']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={{ borderRadius: 14, paddingVertical: 15, alignItems: 'center', justifyContent: 'center', flexDirection: 'row-reverse', gap: 8 }}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Text style={{ color: '#fff', fontFamily: 'Tajawal_700Bold', fontSize: 15 }}>
+                  {step < STEPS.length - 1 ? 'التالي' : 'حفظ وإكمال الملف'}
+                </Text>
+                {step < STEPS.length - 1 && <Ionicons name="chevron-back" size={17} color="#fff" />}
+                {step === STEPS.length - 1 && <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />}
+              </>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>

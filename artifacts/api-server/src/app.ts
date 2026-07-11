@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import router from "./routes";
+import storageRouter from "./routes/storage";
 import { logger } from "./lib/logger";
 import { loadCurrentUser } from "./lib/loadUser";
 import { pool } from "@workspace/db";
@@ -63,6 +64,11 @@ app.use(
   }),
 );
 app.use(loadCurrentUser);
+
+// Mount storage router ALSO at /storage (without /api prefix) so that
+// image URLs constructed by the finalize endpoint (e.g. /storage/objects/…)
+// resolve correctly when loaded directly in a browser or <img> tag.
+app.use("/storage", storageRouter);
 
 app.use("/api", router);
 

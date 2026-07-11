@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -9,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +21,7 @@ import {
   useCreateVisaApplication,
   useGetProfileCompletion,
   useGetVisaEligibility,
+  useGetVisa,
   getListMyVisaApplicationsQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -291,12 +294,14 @@ export default function VisaTermsScreen() {
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   const [agreed, setAgreed] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const visaId = Number(id);
 
   // ── Preflight checks
   const { data: completion, isLoading: compLoading } = useGetProfileCompletion();
   const { data: eligibility, isLoading: eligLoading } = useGetVisaEligibility(visaId);
+  const { data: visa } = useGetVisa(visaId);
 
   // ── Mutations
   const acceptMutation = useAcceptVisaTerms();
@@ -361,9 +366,15 @@ export default function VisaTermsScreen() {
     );
   }
 
-  // ── Submit handler: accept terms + create application
+  // ── Submit handler: show confirmation modal first
   const handleContinue = () => {
     if (!agreed || isPending) return;
+    setShowConfirmModal(true);
+  };
+
+  // ── Confirmed submit: accept terms + create application
+  const confirmSubmit = () => {
+    setShowConfirmModal(false);
 
     // Record consent (best-effort audit log — fire and forget)
     acceptMutation.mutate({ data: { visaId } });
@@ -374,31 +385,17 @@ export default function VisaTermsScreen() {
       {
         onSuccess: (app) => {
           const appId = (app as any).id;
-          const refNum = (app as any).referenceNumber ?? '—';
           queryClient.invalidateQueries({ queryKey: getListMyVisaApplicationsQueryKey() });
-          // Navigate to tracking page
           router.replace(`/visa-application/${appId}` as any);
-          // Brief confirmation toast via alert (fires after navigation)
-          setTimeout(() => {
-            Alert.alert(
-              '✅ تم تقديم الطلب بنجاح',
-              `رقم طلبك: ${refNum}\nسيتم التواصل معك قريباً لمتابعة الإجراءات.`,
-              [{ text: 'حسناً' }],
-            );
-          }, 500);
         },
         onError: (e: any) => {
           const code = e?.data?.code ?? '';
           const msg =
             e?.data?.error ?? e?.message ?? 'فشل تقديم الطلب، حاول مجدداً';
-
           if (code === 'PROFILE_INCOMPLETE') {
             Alert.alert('الملف الشخصي غير مكتمل', msg, [
               { text: 'لاحقاً', style: 'cancel' },
-              {
-                text: 'أكمل ملفك الآن',
-                onPress: () => router.push('/profile-edit' as any),
-              },
+              { text: 'أكمل ملفك الآن', onPress: () => router.push('/profile-edit' as any) },
             ]);
           } else {
             Alert.alert('خطأ في تقديم الطلب', msg, [{ text: 'حسناً' }]);
@@ -524,13 +521,79 @@ export default function VisaTermsScreen() {
           )}
         </TouchableOpacity>
         {!agreed && (
-          <Text
-            style={[styles.disabledHint, { color: colors.mutedForeground }]}
-          >
+          <Text style={[styles.disabledHint, { color: colors.mutedForeground }]}>
             يجب الموافقة على الشروط أولاً لتقديم الطلب
           </Text>
         )}
       </View>
+
+      {/* ── Confirmation Modal ─────────────────────────────────────────────── */}
+      <Modal visible={showConfirmModal} transparent animationType="slide" onRequestClose={() => setShowConfirmModal(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' }}>
+          <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: Math.max(insets.bottom, 24) }}>
+            {/* Handle bar */}
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12, marginBottom: 20 }} />
+
+            {/* Visa summary */}
+            <LinearGradient
+              colors={['#0D1526', '#1a2744']}
+              style={{ marginHorizontal: 16, borderRadius: 16, padding: 20, marginBottom: 20, flexDirection: 'row-reverse', alignItems: 'center', gap: 14 }}
+            >
+              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="document-text-outline" size={26} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.65)', fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'right', marginBottom: 4 }}>
+                  طلب تأشيرة جديد
+                </Text>
+                <Text style={{ color: '#fff', fontFamily: 'Tajawal_700Bold', fontSize: 18, textAlign: 'right', marginBottom: 2 }}>
+                  {(visa as any)?.destination ?? ''} – {(visa as any)?.type === 'tourism' ? 'سياحية' : (visa as any)?.type === 'business' ? 'عمل' : (visa as any)?.type ?? ''}
+                </Text>
+                <Text style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'right' }}>
+                  {(visa as any)?.duration ? `مدة التأشيرة: ${(visa as any).duration} يوم` : ''}
+                </Text>
+              </View>
+            </LinearGradient>
+
+            {/* Confirmation note */}
+            <View style={{ marginHorizontal: 16, backgroundColor: '#fef9e7', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#f59e0b', marginBottom: 20, flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 }}>
+              <Ionicons name="information-circle-outline" size={20} color="#d97706" style={{ marginTop: 1 }} />
+              <Text style={{ flex: 1, color: '#92400e', fontFamily: 'Tajawal_400Regular', fontSize: 13, textAlign: 'right', lineHeight: 20 }}>
+                بعد إرسال الطلب، سيتم مراجعته من قِبَل فريقنا وستصلك إشعارات بتحديثات الحالة في أقرب وقت ممكن.
+              </Text>
+            </View>
+
+            {/* Actions */}
+            <View style={{ flexDirection: 'row-reverse', gap: 12, marginHorizontal: 16 }}>
+              <TouchableOpacity
+                onPress={confirmSubmit}
+                disabled={isPending}
+                activeOpacity={0.85}
+                style={{ flex: 2 }}
+              >
+                <LinearGradient
+                  colors={['#1a56db', '#1d4ed8']}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={{ borderRadius: 14, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Text style={{ color: '#fff', fontFamily: 'Tajawal_700Bold', fontSize: 16 }}>
+                    تأكيد وإرسال الطلب
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowConfirmModal(false)}
+                activeOpacity={0.8}
+                style={{ flex: 1, borderRadius: 14, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.border }}
+              >
+                <Text style={{ color: colors.foreground, fontFamily: 'Tajawal_600SemiBold', fontSize: 15 }}>
+                  إلغاء
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
