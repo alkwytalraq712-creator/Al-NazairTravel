@@ -103,9 +103,12 @@ The reason must be a short sentence in Arabic.`,
       const match = text.match(/\{[\s\S]*?\}/);
       if (match) {
         const parsed = JSON.parse(match[0]);
+        // Strict fail-closed: only a real boolean `true` accepts. Strings like
+        // "false"/"no" or numbers must NOT wave the image through.
+        const isValid = parsed.valid === true;
         res.json({
-          valid: !!parsed.valid,
-          reason: String(parsed.reason ?? (parsed.valid ? 'تم التحقق من الوجه' : 'لم يتم التعرف على وجه واضح')),
+          valid: isValid,
+          reason: String(parsed.reason ?? (isValid ? 'تم التحقق من الوجه' : 'لم يتم التعرف على وجه واضح')),
         });
       } else {
         req.log?.warn({ text }, 'Face validation: unexpected model response');

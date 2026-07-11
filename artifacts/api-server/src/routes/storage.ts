@@ -102,6 +102,24 @@ router.post(
 );
 
 /**
+ * Content types a browser will execute/render as active content on our origin.
+ * Since users can upload arbitrary files (and some are public), serving these
+ * inline would be a stored-XSS vector — so we neutralize them by forcing a
+ * download and stripping the executable content-type. Images/PDF stay inline.
+ */
+const ACTIVE_CONTENT_TYPE_RE =
+  /^(text\/html|application\/xhtml\+xml|image\/svg\+xml|application\/(x-)?javascript|text\/javascript)/i;
+
+function applySafeServingHeaders(res: Response): void {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  const contentType = String(res.getHeader('Content-Type') ?? '');
+  if (ACTIVE_CONTENT_TYPE_RE.test(contentType)) {
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment');
+  }
+}
+
+/**
  * GET /storage/public-objects/*
  *
  * Serve public assets from PUBLIC_OBJECT_SEARCH_PATHS.
@@ -124,6 +142,7 @@ router.get(
 
       res.status(response.status);
       response.headers.forEach((value, key) => res.setHeader(key, value));
+      applySafeServingHeaders(res);
 
       if (response.body) {
         const nodeStream = Readable.fromWeb(
@@ -191,6 +210,7 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
 
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
+    applySafeServingHeaders(res);
 
     if (response.body) {
       const nodeStream = Readable.fromWeb(

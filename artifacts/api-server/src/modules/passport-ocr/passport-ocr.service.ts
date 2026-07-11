@@ -185,14 +185,35 @@ export class PassportOcrService {
     // 1. Preprocess image
     const processed = await preprocessPassportImage(rawImageBuffer);
 
-    // 2. Run OCR
+    // 2a. Preferred: vision-LLM structured extraction. Reads the printed fields
+    //     and MRZ semantically — reliable, unlike transcribing a perfect MRZ.
+    if (this.provider.extractStructured) {
+      const s = await this.provider.extractStructured(processed.buffer);
+      if (!s) {
+        throw Object.assign(
+          new Error('Passport validation failed: no readable passport detected'),
+          { code: 'PASSPORT_INVALID', details: ['لم يتم التعرف على جواز سفر واضح في الصورة'] },
+        );
+      }
+      const fullName = [s.givenNames, s.surname].filter(Boolean).join(' ').trim();
+      return this.buildResult(
+        { ...s, fullName, mrzRaw: '' },
+        {
+          provider: this.provider.name,
+          ocrConfidence: 92,
+          mrzFound: false,
+          mrzChecksumValid: false,
+          trustSource: true, // LLM read the fields directly; gaps are user-editable
+          totalStart,
+        },
+      );
+    }
+
+    // 2b. Fallback: raw-text OCR (Google/Azure/Tesseract) + MRZ/freetext parsing.
     const ocrResult = await this.provider.extractText(processed.buffer);
     const rawText = ocrResult.rawText;
-
-    // 3. Parse MRZ (preferred over freetext)
     const mrz = parseMrz(rawText);
 
-    // 4. Extract fields — prefer MRZ values over OCR text
     const surname = mrz?.surname ?? extractField(rawText, ['surname', 'last name', 'family name']);
     const givenNames = mrz?.givenNames ?? extractField(rawText, ['given names', 'first name', 'forename', 'given name']);
     const passportNumber = mrz?.documentNumber ?? extractPassportNumber(rawText);
@@ -213,64 +234,116 @@ export class PassportOcrService {
     const passportType = mrz?.type ?? 'P';
     const fullName = [givenNames, surname].filter(Boolean).join(' ').trim()
       || extractField(rawText, ['name', 'full name', 'holder']);
-    const issuingCountryName = countryName(issuingCountry || nationality);
 
-    // 5. Validate
+    return this.buildResult(
+      {
+        passportType,
+        passportNumber,
+        surname,
+        givenNames,
+        fullName,
+        nationality,
+        issuingCountry,
+        gender,
+        dateOfBirth,
+        passportIssueDate,
+        passportExpiry,
+        placeOfBirth,
+        mrzRaw: mrz?.raw ?? '',
+      },
+      {
+        provider: ocrResult.provider,
+        ocrConfidence: ocrResult.confidence,
+        mrzFound: !!mrz,
+        mrzChecksumValid: mrz?.checksumValid ?? false,
+        trustSource: !!mrz, // MRZ is trusted; freetext-only must pass validation
+        totalStart,
+      },
+    );
+  }
+
+  /** Validate, score confidence, and assemble the final result from extracted fields. */
+  private buildResult(
+    fields: {
+      passportType: string;
+      passportNumber: string;
+      surname: string;
+      givenNames: string;
+      fullName: string;
+      nationality: string;
+      issuingCountry: string;
+      gender: string;
+      dateOfBirth: string;
+      passportIssueDate: string;
+      passportExpiry: string;
+      placeOfBirth: string;
+      mrzRaw: string;
+    },
+    meta: {
+      provider: string;
+      ocrConfidence: number;
+      mrzFound: boolean;
+      mrzChecksumValid: boolean;
+      trustSource: boolean;
+      totalStart: number;
+    },
+  ): PassportOcrResult {
     const validationErrors = validatePassportData({
-      passportNumber,
-      passportExpiry,
-      passportIssueDate,
-      dateOfBirth,
-      nationality,
+      passportNumber: fields.passportNumber,
+      passportExpiry: fields.passportExpiry,
+      passportIssueDate: fields.passportIssueDate,
+      dateOfBirth: fields.dateOfBirth,
+      nationality: fields.nationality,
     });
 
-    if (validationErrors.length > 0 && !mrz) {
-      // If validation fails and no MRZ, likely not a passport
+    // Hard-fail only without a trusted source (no MRZ, no structured LLM read):
+    // that likely means the image isn't a passport. A trusted source may have
+    // small gaps the user can correct in the review screen.
+    if (validationErrors.length > 0 && !meta.trustSource) {
       throw Object.assign(new Error(`Passport validation failed: ${validationErrors.join('; ')}`), {
         code: 'PASSPORT_INVALID',
         details: validationErrors,
       });
     }
 
-    // 6. Confidence
     const extractedFields = [
-      passportNumber && 'passportNumber',
-      surname && 'surname',
-      givenNames && 'givenNames',
-      dateOfBirth && 'dateOfBirth',
-      passportExpiry && 'passportExpiry',
+      fields.passportNumber && 'passportNumber',
+      fields.surname && 'surname',
+      fields.givenNames && 'givenNames',
+      fields.dateOfBirth && 'dateOfBirth',
+      fields.passportExpiry && 'passportExpiry',
     ].filter(Boolean) as string[];
 
     const confidence = calculateConfidence({
-      ocrConfidence: ocrResult.confidence,
-      mrzFound: !!mrz,
-      mrzChecksumValid: mrz?.checksumValid ?? false,
+      ocrConfidence: meta.ocrConfidence,
+      mrzFound: meta.mrzFound,
+      mrzChecksumValid: meta.mrzChecksumValid,
       fieldsExtracted: extractedFields,
       validationErrors,
     });
 
     const passport: PassportData = {
-      passportType,
-      passportNumber,
-      surname,
-      givenNames,
-      fullName,
-      nationality,
-      issuingCountry: issuingCountryName,
-      gender,
-      dateOfBirth,
-      passportIssueDate,
-      passportExpiry,
-      placeOfBirth,
-      mrz: mrz?.raw ?? '',
+      passportType: fields.passportType,
+      passportNumber: fields.passportNumber,
+      surname: fields.surname,
+      givenNames: fields.givenNames,
+      fullName: fields.fullName,
+      nationality: fields.nationality,
+      issuingCountry: countryName(fields.issuingCountry || fields.nationality),
+      gender: fields.gender,
+      dateOfBirth: fields.dateOfBirth,
+      passportIssueDate: fields.passportIssueDate,
+      passportExpiry: fields.passportExpiry,
+      placeOfBirth: fields.placeOfBirth,
+      mrz: fields.mrzRaw,
       confidence,
     };
 
     return {
       success: true,
       passport,
-      provider: ocrResult.provider,
-      durationMs: Date.now() - totalStart,
+      provider: meta.provider,
+      durationMs: Date.now() - meta.totalStart,
     };
   }
 }

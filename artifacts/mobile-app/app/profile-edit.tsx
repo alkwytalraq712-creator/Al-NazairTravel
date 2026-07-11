@@ -396,66 +396,70 @@ export default function ProfileEditScreen() {
       const blob = await blobFromUri(asset.uri);
       const blobAsFile = new File([blob], 'passport.jpg', { type: blob.type || 'image/jpeg' });
 
-      // Call OCR — the hook sends multipart/form-data automatically
-      await ocrMutation.mutateAsync(
-        { data: { passportImage: blobAsFile } },
-        {
-          onSuccess: async (res: any) => {
-            const p = res?.passport ?? res?.data?.passport;
-            if (!p || p.confidence < 30) {
-              setOcrError(
-                'لم تتمكن من قراءة بيانات الجواز بوضوح. يرجى التقاط صورة أوضح مع إضاءة جيدة وتجنب الانعكاسات.',
-              );
-              return;
-            }
+      // Call OCR — the hook sends multipart/form-data automatically.
+      // mutateAsync throws on failure, so success + error are both handled here
+      // (a separate onError callback would be overwritten by this try/catch).
+      const res: any = await ocrMutation.mutateAsync({ data: { passportImage: blobAsFile } });
 
-            const extracted: ExtractedPassport = {
-              fullName: p.fullName ?? `${p.givenNames ?? ''} ${p.surname ?? ''}`.trim(),
-              nationality: p.nationality ?? '',
-              passportNumber: p.passportNumber ?? '',
-              dob: p.dateOfBirth ?? '',
-              passportIssueDate: p.passportIssueDate ?? '',
-              passportExpiry: p.passportExpiry ?? '',
-              issuingCountry: p.issuingCountry ?? '',
-              gender: p.gender ?? '',
-              placeOfBirth: p.placeOfBirth ?? '',
-              confidence: p.confidence,
-            };
+      const p = res?.passport ?? res?.data?.passport;
+      if (!p || p.confidence < 30) {
+        setOcrError(
+          'لم نتمكن من قراءة بيانات الجواز بوضوح. يرجى التقاط صورة أوضح مع إضاءة جيدة وتجنب الانعكاسات.',
+        );
+        return;
+      }
 
-            // Upload passport image to object storage for display
-            try {
-              const imgUrl = await uploadToStorage(blob, 'passport.jpg');
-              setPassportImageUrl(imgUrl);
-            } catch {
-              // Non-fatal — passport data is still valid
-            }
+      const extracted: ExtractedPassport = {
+        fullName: p.fullName ?? `${p.givenNames ?? ''} ${p.surname ?? ''}`.trim(),
+        nationality: p.nationality ?? '',
+        passportNumber: p.passportNumber ?? '',
+        dob: p.dateOfBirth ?? '',
+        passportIssueDate: p.passportIssueDate ?? '',
+        passportExpiry: p.passportExpiry ?? '',
+        issuingCountry: p.issuingCountry ?? '',
+        gender: p.gender ?? '',
+        placeOfBirth: p.placeOfBirth ?? '',
+        confidence: p.confidence,
+      };
 
-            setPassportData(extracted);
-            // Pre-fill the editable copy so the user can correct OCR errors
-            setEditedPassport({
-              fullName: extracted.fullName,
-              nationality: extracted.nationality,
-              passportNumber: extracted.passportNumber,
-              dob: extracted.dob,
-              passportIssueDate: extracted.passportIssueDate,
-              passportExpiry: extracted.passportExpiry,
-              issuingCountry: extracted.issuingCountry,
-              gender: extracted.gender,
-              placeOfBirth: extracted.placeOfBirth,
-            });
-          },
-          onError: (err: any) => {
-            const msg = err?.data?.error || err?.message || '';
-            if (msg.toLowerCase().includes('not detected') || msg.toLowerCase().includes('invalid')) {
-              setOcrError('لم يتم التعرف على الجواز. يرجى التحقق من أن الصورة واضحة وتظهر صفحة الجواز كاملة.');
-            } else {
-              setOcrError('حدث خطأ أثناء قراءة الجواز. يرجى المحاولة مجدداً.');
-            }
-          },
-        },
-      );
+      // Upload passport image to object storage for display (non-fatal)
+      try {
+        const imgUrl = await uploadToStorage(blob, 'passport.jpg');
+        setPassportImageUrl(imgUrl);
+      } catch {
+        // Non-fatal — passport data is still valid
+      }
+
+      setPassportData(extracted);
+      // Pre-fill the editable copy so the user can correct OCR errors
+      setEditedPassport({
+        fullName: extracted.fullName,
+        nationality: extracted.nationality,
+        passportNumber: extracted.passportNumber,
+        dob: extracted.dob,
+        passportIssueDate: extracted.passportIssueDate,
+        passportExpiry: extracted.passportExpiry,
+        issuingCountry: extracted.issuingCountry,
+        gender: extracted.gender,
+        placeOfBirth: extracted.placeOfBirth,
+      });
     } catch (err: any) {
-      setOcrError('حدث خطأ غير متوقع. يرجى المحاولة مجدداً.');
+      const data = err?.data ?? {};
+      const code = String(data.error ?? '');
+      const haystack = `${code} ${err?.message ?? ''}`.toLowerCase();
+      if (code === 'image_quality_low') {
+        setOcrError(data.message || 'جودة الصورة منخفضة. يرجى إعادة تصوير الجواز بإضاءة جيدة.');
+      } else if (
+        haystack.includes('not detected') ||
+        haystack.includes('invalid') ||
+        haystack.includes('passport')
+      ) {
+        setOcrError(
+          'لم يتم التعرف على الجواز. تأكد من أن الصورة واضحة وتظهر صفحة بيانات الجواز كاملة مع السطرين في الأسفل.',
+        );
+      } else {
+        setOcrError('حدث خطأ أثناء قراءة الجواز. يرجى المحاولة مجدداً.');
+      }
     } finally {
       setOcrLoading(false);
     }

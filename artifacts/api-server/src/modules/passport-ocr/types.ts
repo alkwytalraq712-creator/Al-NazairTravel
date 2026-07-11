@@ -53,10 +53,35 @@ export interface OcrResult {
   durationMs: number;
 }
 
+/**
+ * Structured passport fields read directly by a vision LLM.
+ * Preferred over raw-text + MRZ regex parsing: vision models read the printed
+ * fields reliably but cannot reproduce a character-perfect 44-char MRZ line.
+ * All dates normalized to YYYY-MM-DD; empty string for unreadable fields.
+ */
+export interface StructuredPassport {
+  passportType: string;
+  passportNumber: string;
+  surname: string;
+  givenNames: string;
+  nationality: string;
+  issuingCountry: string;
+  gender: string;
+  dateOfBirth: string;
+  passportIssueDate: string;
+  passportExpiry: string;
+  placeOfBirth: string;
+}
+
 /** Provider abstraction — all providers implement this */
 export interface OcrProvider {
   readonly name: string;
   extractText(image: Buffer): Promise<OcrResult>;
+  /**
+   * Optional: extract structured fields directly (vision LLMs).
+   * Returns null when the image is not a readable passport.
+   */
+  extractStructured?(image: Buffer): Promise<StructuredPassport | null>;
   isAvailable(): boolean;
 }
 
