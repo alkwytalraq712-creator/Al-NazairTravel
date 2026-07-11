@@ -221,6 +221,14 @@ export function selectOcrProvider(): OcrProvider {
   return PROVIDERS_IN_PRIORITY.find(p => p.isAvailable())!;
 }
 
+/**
+ * Returns ALL available providers in priority order.
+ * Use this for sequential fallback: try each until one succeeds.
+ */
+export function getAvailableProviders(): OcrProvider[] {
+  return PROVIDERS_IN_PRIORITY.filter(p => p.isAvailable());
+}
+
 export {
   GoogleVisionProvider,
   AzureProvider,

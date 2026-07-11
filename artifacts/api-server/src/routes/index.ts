@@ -14,6 +14,7 @@ import adminRouter from "./admin";
 import visasScanRouter from "./visas-scan";
 import storageRouter from "./storage";
 import passportOcrRouter from "../modules/passport-ocr/passport-ocr.controller";
+import validateFaceRouter from "./validateFace";
 import settingsRouter from "./settings";
 
 const router: IRouter = Router();
@@ -33,6 +34,7 @@ router.use(adminRouter);
 router.use(visasScanRouter);
 router.use(storageRouter);
 router.use(passportOcrRouter);
+router.use(validateFaceRouter);
 router.use(settingsRouter);
 
 export default router;

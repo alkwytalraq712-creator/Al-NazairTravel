@@ -12,7 +12,7 @@ import { Router, type IRouter, type Request, type Response } from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { requireAuth } from '../../lib/auth.js';
-import { selectOcrProvider } from './ocr.provider.js';
+import { getAvailableProviders } from './ocr.provider.js';
 import { PassportOcrService } from './passport-ocr.service.js';
 import { validateImageBuffer, MAX_FILE_SIZE_BYTES } from './image.service.js';
 import { ObjectStorageService } from '../../lib/objectStorage.js';
@@ -125,60 +125,87 @@ router.post(
     }
 
     const userId = (req as any).session?.userId as number;
-    const provider = selectOcrProvider();
-    const service = new PassportOcrService(provider);
+    const providers = getAvailableProviders(); // all providers in priority order
     const start = Date.now();
 
+    // Try each provider in sequence — fall back on transient errors (rate-limit, quota, network)
+    let result: Awaited<ReturnType<PassportOcrService['process']>> | null = null;
+    let lastErr: unknown = null;
+
+    for (const provider of providers) {
+      req.log?.info({
+        event: 'ocr.start',
+        provider: provider.name,
+        imageSize: file.buffer.length,
+        userId,
+      });
+
+      try {
+        const service = new PassportOcrService(provider);
+        result = await service.process(file.buffer);
+        break; // success — stop trying further providers
+      } catch (err: any) {
+        lastErr = err;
+        const isTransient =
+          err?.status === 429 || // rate limit / quota
+          err?.status === 503 || // service unavailable
+          err?.code === 'insufficient_quota' ||
+          err?.code === 'ECONNRESET';
+
+        req.log?.warn({
+          event: 'ocr.provider_failed',
+          provider: provider.name,
+          error: err?.message,
+          isTransient,
+        });
+
+        if (err.code === 'PASSPORT_INVALID') {
+          // Not a transient error — don't bother trying other providers
+          res.status(422).json({
+            error: 'Passport not detected or data invalid.',
+            details: err.details ?? [],
+          });
+          return;
+        }
+
+        if (!isTransient) break; // non-retriable — stop trying
+        // Otherwise: continue to next provider in the chain
+      }
+    }
+
+    if (!result) {
+      const durationMs = Date.now() - start;
+      req.log?.error({ err: lastErr, event: 'ocr.all_providers_failed', durationMs });
+      res.status(500).json({ error: 'OCR processing failed. Please try again.' });
+      return;
+    }
+
+    // Store passport image asynchronously (don't block response)
+    let passportImagePath: string | null = null;
+    try {
+      passportImagePath = await storePassportImage(file.buffer, userId, file.mimetype);
+    } catch (storageErr) {
+      req.log?.warn({ err: storageErr }, 'Passport image storage failed (non-fatal)');
+    }
+
+    const durationMs = Date.now() - start;
     req.log?.info({
-      event: 'ocr.start',
-      provider: provider.name,
-      imageSize: file.buffer.length,
-      userId,
+      event: 'ocr.complete',
+      provider: result.provider,
+      confidence: result.passport.confidence,
+      mrzDetected: !!result.passport.mrz,
+      durationMs,
     });
 
-    try {
-      const result = await service.process(file.buffer);
-
-      // Store passport image asynchronously (don't block response)
-      let passportImagePath: string | null = null;
-      try {
-        passportImagePath = await storePassportImage(file.buffer, userId, file.mimetype);
-      } catch (storageErr) {
-        req.log?.warn({ err: storageErr }, 'Passport image storage failed (non-fatal)');
-      }
-
-      const durationMs = Date.now() - start;
-      req.log?.info({
-        event: 'ocr.complete',
+    res.json({
+      success: true,
+      passport: result.passport,
+      meta: {
         provider: result.provider,
-        confidence: result.passport.confidence,
-        mrzDetected: !!result.passport.mrz,
         durationMs,
-      });
-
-      res.json({
-        success: true,
-        passport: result.passport,
-        meta: {
-          provider: result.provider,
-          durationMs,
-          passportImagePath,
-        },
-      });
-    } catch (err: any) {
-      const durationMs = Date.now() - start;
-      req.log?.error({ err, event: 'ocr.error', provider: provider.name, durationMs });
-
-      if (err.code === 'PASSPORT_INVALID') {
-        res.status(422).json({
-          error: 'Passport not detected or data invalid.',
-          details: err.details ?? [],
-        });
-        return;
-      }
-
-      res.status(500).json({ error: 'OCR processing failed. Please try again.' });
-    }
+        passportImagePath,
+      },
+    });
   },
 );
 
