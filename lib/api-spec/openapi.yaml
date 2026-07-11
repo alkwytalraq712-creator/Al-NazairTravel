@@ -1454,6 +1454,10 @@ components:
     PaymentUpdate:
       type: object
       properties:
+        bookingType: { type: string }
+        flightBookingId: { type: ["integer", "null"] }
+        packageBookingId: { type: ["integer", "null"] }
+        visaApplicationId: { type: ["integer", "null"] }
         customerName: { type: string, minLength: 1 }
         customerPhone: { type: string, minLength: 3 }
         amount: { type: string }

@@ -200,7 +200,7 @@ function DeleteInvoiceButton({ invoice }: { invoice: Invoice }) {
         setOpen(false);
       },
       onError: (error) => {
-        toast({ title: "خطأ في حذف الفاتورة", description: error.error, variant: "destructive" });
+        toast({ title: "خطأ في حذف الفاتورة", description: (error as any)?.data?.error, variant: "destructive" });
       }
     });
   };
@@ -289,7 +289,7 @@ function InvoiceForm({ invoice, onSuccess, onCancel }: { invoice: Invoice | null
           queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: e.error, variant: "destructive" }),
+        onError: (e) => toast({ title: "خطأ", description: (e as any)?.data?.error, variant: "destructive" }),
       });
     } else {
       createMutation.mutate({ data }, {
@@ -298,7 +298,7 @@ function InvoiceForm({ invoice, onSuccess, onCancel }: { invoice: Invoice | null
           queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: e.error, variant: "destructive" }),
+        onError: (e) => toast({ title: "خطأ", description: (e as any)?.data?.error, variant: "destructive" }),
       });
     }
   };

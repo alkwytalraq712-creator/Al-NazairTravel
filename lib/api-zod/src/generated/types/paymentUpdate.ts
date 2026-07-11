@@ -9,6 +9,13 @@ import type { PaymentMethod } from './paymentMethod';
 import type { PaymentStatus } from './paymentStatus';
 
 export interface PaymentUpdate {
+  bookingType?: string;
+  /** @nullable */
+  flightBookingId?: number | null;
+  /** @nullable */
+  packageBookingId?: number | null;
+  /** @nullable */
+  visaApplicationId?: number | null;
   /** @minLength 1 */
   customerName?: string;
   /** @minLength 3 */

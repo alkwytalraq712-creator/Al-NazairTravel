@@ -218,7 +218,7 @@ function DeletePaymentButton({ payment }: { payment: Payment }) {
         setOpen(false);
       },
       onError: (error) => {
-        toast({ title: "خطأ في حذف الدفعة", description: error.error, variant: "destructive" });
+        toast({ title: "خطأ في حذف الدفعة", description: (error as any)?.data?.error, variant: "destructive" });
       }
     });
   };
@@ -299,7 +299,7 @@ function PaymentForm({ payment, onSuccess, onCancel }: { payment: Payment | null
           queryClient.invalidateQueries({ queryKey: getListPaymentsQueryKey() });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: e.error, variant: "destructive" }),
+        onError: (e) => toast({ title: "خطأ", description: (e as any)?.data?.error, variant: "destructive" }),
       });
     } else {
       createMutation.mutate({ data }, {
@@ -308,7 +308,7 @@ function PaymentForm({ payment, onSuccess, onCancel }: { payment: Payment | null
           queryClient.invalidateQueries({ queryKey: getListPaymentsQueryKey() });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: e.error, variant: "destructive" }),
+        onError: (e) => toast({ title: "خطأ", description: (e as any)?.data?.error, variant: "destructive" }),
       });
     }
   };

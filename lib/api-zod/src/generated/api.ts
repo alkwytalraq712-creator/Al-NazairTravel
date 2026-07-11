@@ -1907,6 +1907,10 @@ export const updatePaymentBodyCustomerPhoneMin = 3;
 
 
 export const UpdatePaymentBody = zod.object({
+  "bookingType": zod.string().optional(),
+  "flightBookingId": zod.number().nullish(),
+  "packageBookingId": zod.number().nullish(),
+  "visaApplicationId": zod.number().nullish(),
   "customerName": zod.string().min(1).optional(),
   "customerPhone": zod.string().min(updatePaymentBodyCustomerPhoneMin).optional(),
   "amount": zod.string().optional(),

@@ -20,7 +20,6 @@ export const STATUS_ARABIC: Record<string, string> = {
   refunded: "مُرجعة",
   failed: "فشلت",
   draft: "مسودة",
-  issued: "صادرة",
 };
 
 export const PAYMENT_METHOD_ARABIC: Record<string, string> = {
