@@ -1,5 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,7 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { CabinClass } from '@workspace/api-client-react';
-import { AIRPORT_MAP } from '../../lib/airports';
+import { AIRPORT_DB, AIRPORT_MAP, searchAirports } from '../../lib/airports';
+import type { Airport } from '../../lib/airports';
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const DARK = '#0B1628';
@@ -154,34 +158,255 @@ const CAL = StyleSheet.create({
   pastNum: { color: 'rgba(255,255,255,0.2)' },
 });
 
-// ─── Airport card (TextInput-based, no hooks) ────────────────────────────────────
-function AirportCard({
-  label, code, iconName, onChange,
-}: { label: string; code: string; iconName: string; onChange: (v: string) => void }) {
-  const airport = AIRPORT_MAP.get(code.toUpperCase());
-  const name = airport ? `${airport.city} — ${airport.arabic}` : (code.length === 3 ? '—' : '');
+// ─── Airport Picker Modal ────────────────────────────────────────────────────────
+function AirportPickerModal({
+  visible, title, onClose, onSelect,
+}: {
+  visible: boolean;
+  title: string;
+  onClose: () => void;
+  onSelect: (iata: string) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [query, setQuery] = useState('');
+  const inputRef = useRef<TextInput>(null);
+
+  // Reset query and focus input when modal opens
+  useEffect(() => {
+    if (visible) {
+      setQuery('');
+      const t = setTimeout(() => inputRef.current?.focus(), 150);
+      return () => clearTimeout(t);
+    }
+  }, [visible]);
+
+  // Search results — when empty query show all airports grouped by country
+  const grouped = useMemo<[string, Airport[]][]>(() => {
+    const list = query.trim() ? searchAirports(query, 120) : AIRPORT_DB;
+    const map = new Map<string, Airport[]>();
+    for (const a of list) {
+      if (!map.has(a.country)) map.set(a.country, []);
+      map.get(a.country)!.push(a);
+    }
+    return Array.from(map.entries());
+  }, [query]);
+
+  // Flatten for FlatList — mix country headers and airport rows
+  type Row =
+    | { kind: 'header'; key: string; country: string; countryEn: string }
+    | { kind: 'airport'; key: string; airport: Airport };
+
+  const rows = useMemo<Row[]>(() => {
+    const out: Row[] = [];
+    for (const [country, airports] of grouped) {
+      out.push({ kind: 'header', key: `h_${country}`, country, countryEn: airports[0]?.countryEn ?? '' });
+      for (const a of airports) {
+        out.push({ kind: 'airport', key: a.iata, airport: a });
+      }
+    }
+    return out;
+  }, [grouped]);
+
   return (
-    <View style={AP.row}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: DARK }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        {/* ── Header ── */}
+        <View style={[PM.header, { paddingTop: insets.top + 12 }]}>
+          <TouchableOpacity onPress={onClose} style={PM.closeBtn} activeOpacity={0.7}>
+            <Ionicons name="close" size={22} color={WHITE} />
+          </TouchableOpacity>
+          <Text style={PM.headerTitle}>{title}</Text>
+          <View style={{ width: 38 }} />
+        </View>
+
+        {/* ── Search box ── */}
+        <View style={PM.searchWrap}>
+          <View style={PM.searchBox}>
+            <Ionicons name="search-outline" size={18} color={MUTED} style={{ marginLeft: 4 }} />
+            <TextInput
+              ref={inputRef}
+              style={PM.searchInput}
+              value={query}
+              onChangeText={setQuery}
+              placeholder="ابحث بالدولة أو المدينة أو رمز IATA"
+              placeholderTextColor={MUTED}
+              returnKeyType="search"
+              selectionColor={GOLD}
+              textAlign="right"
+            />
+            {query.length > 0 && (
+              <TouchableOpacity onPress={() => setQuery('')} activeOpacity={0.7}>
+                <Ionicons name="close-circle" size={18} color={MUTED} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* ── Results ── */}
+        {rows.length === 0 ? (
+          <View style={PM.empty}>
+            <Ionicons name="search-outline" size={44} color={MUTED} />
+            <Text style={PM.emptyText}>لا توجد نتائج</Text>
+            <Text style={PM.emptyHint}>جرّب البحث بالدولة، المدينة، أو رمز IATA</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={rows}
+            keyExtractor={r => r.key}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+            renderItem={({ item: row }) => {
+              if (row.kind === 'header') {
+                return (
+                  <View style={PM.countryHeader}>
+                    <Text style={PM.countryEn}>{row.countryEn}</Text>
+                    <Text style={PM.countryAr}>{row.country}</Text>
+                  </View>
+                );
+              }
+              const { airport } = row;
+              return (
+                <TouchableOpacity
+                  style={PM.airportRow}
+                  onPress={() => { onSelect(airport.iata); onClose(); }}
+                  activeOpacity={0.7}
+                >
+                  {/* IATA badge */}
+                  <View style={PM.iataBadge}>
+                    <Text style={PM.iataText}>{airport.iata}</Text>
+                  </View>
+                  {/* Info */}
+                  <View style={PM.airportInfo}>
+                    <Text style={PM.airportName} numberOfLines={1}>{airport.arabic}</Text>
+                    <Text style={PM.airportMeta}>{airport.city} · {airport.country}</Text>
+                  </View>
+                  <Ionicons name="chevron-back" size={16} color={MUTED} />
+                </TouchableOpacity>
+              );
+            }}
+          />
+        )}
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+const PM = StyleSheet.create({
+  header: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
+  },
+  closeBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: CARD_BG,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: BORDER,
+  },
+  headerTitle: {
+    flex: 1, textAlign: 'center',
+    color: WHITE, fontSize: 17, fontFamily: 'Tajawal_700Bold',
+  },
+
+  searchWrap: { paddingHorizontal: 14, paddingVertical: 12 },
+  searchBox: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: DARK2,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BORDER,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: WHITE,
+    fontFamily: 'Tajawal_400Regular',
+    fontSize: 15,
+    padding: 0,
+    margin: 0,
+  },
+
+  countryHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 6,
+  },
+  countryAr: {
+    color: GOLD, fontSize: 14, fontFamily: 'Tajawal_700Bold',
+  },
+  countryEn: {
+    color: MUTED, fontSize: 11, fontFamily: 'Tajawal_400Regular',
+  },
+
+  airportRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    gap: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.04)',
+  },
+  iataBadge: {
+    width: 52, height: 36,
+    borderRadius: 10,
+    backgroundColor: GOLD_BG,
+    borderWidth: 1,
+    borderColor: GOLD + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iataText: { color: GOLD, fontSize: 13, fontFamily: 'Tajawal_800ExtraBold', letterSpacing: 0.5 },
+  airportInfo: { flex: 1, alignItems: 'flex-end', gap: 3 },
+  airportName: { color: WHITE, fontSize: 14, fontFamily: 'Tajawal_700Bold', textAlign: 'right' },
+  airportMeta: { color: MUTED, fontSize: 11, fontFamily: 'Tajawal_400Regular' },
+
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingTop: 80 },
+  emptyText: { color: WHITE, fontFamily: 'Tajawal_700Bold', fontSize: 16 },
+  emptyHint: { color: MUTED, fontFamily: 'Tajawal_400Regular', fontSize: 13, textAlign: 'center', paddingHorizontal: 32 },
+});
+
+// ─── Airport card (tap to open picker) ──────────────────────────────────────────
+function AirportCard({
+  label, code, iconName, onPress,
+}: { label: string; code: string; iconName: string; onPress: () => void }) {
+  const airport = AIRPORT_MAP.get(code.toUpperCase());
+  return (
+    <TouchableOpacity style={AP.row} onPress={onPress} activeOpacity={0.75}>
       <View style={AP.iconWrap}>
         <Ionicons name={iconName as any} size={22} color={GOLD} />
       </View>
       <View style={AP.body}>
         <Text style={AP.label}>{label}</Text>
-        <TextInput
-          style={AP.code}
-          value={code}
-          onChangeText={v => onChange(v.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3))}
-          placeholder="---"
-          placeholderTextColor={MUTED}
-          autoCapitalize="characters"
-          maxLength={3}
-          selectionColor={GOLD}
-        />
-        {name ? <Text style={AP.name} numberOfLines={1}>{name}</Text> : null}
-        {airport && <Text style={AP.country}>{airport.country}</Text>}
+        {airport ? (
+          <>
+            <Text style={AP.code}>{airport.iata}</Text>
+            <Text style={AP.name} numberOfLines={1}>{airport.city} — {airport.arabic}</Text>
+            <Text style={AP.country}>{airport.country}</Text>
+          </>
+        ) : (
+          <Text style={AP.placeholder}>اضغط لاختيار المطار</Text>
+        )}
       </View>
       <Ionicons name="chevron-down" size={16} color={MUTED} />
-    </View>
+    </TouchableOpacity>
   );
 }
 const AP = StyleSheet.create({
@@ -189,9 +414,10 @@ const AP = StyleSheet.create({
   iconWrap: { width: 38, height: 38, borderRadius: 19, backgroundColor: GOLD_BG, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, alignItems: 'flex-end' },
   label: { color: MUTED, fontSize: 11, fontFamily: 'Tajawal_400Regular', marginBottom: 1 },
-  code: { color: WHITE, fontSize: 28, fontFamily: 'Tajawal_800ExtraBold', textAlign: 'right', padding: 0, margin: 0 },
+  code: { color: WHITE, fontSize: 28, fontFamily: 'Tajawal_800ExtraBold', textAlign: 'right', lineHeight: 34 },
   name: { color: GOLD, fontSize: 11, fontFamily: 'Tajawal_500Medium', marginTop: 1 },
   country: { color: MUTED, fontSize: 10, fontFamily: 'Tajawal_400Regular', marginTop: 1 },
+  placeholder: { color: 'rgba(255,255,255,0.3)', fontSize: 14, fontFamily: 'Tajawal_500Medium', marginTop: 2 },
 });
 
 // ─── Date card ──────────────────────────────────────────────────────────────────
@@ -232,6 +458,7 @@ const DC = StyleSheet.create({
 
 // ─── Main screen ────────────────────────────────────────────────────────────────
 type ActiveDate = 'depart' | 'return' | null;
+type ActiveAirport = 'from' | 'to' | null;
 
 export default function FlightsScreen() {
   const insets = useSafeAreaInsets();
@@ -248,6 +475,7 @@ export default function FlightsScreen() {
   const [cabinClass, setCabinClass] = useState<CabinClass>('economy');
   const [showCabin, setShowCabin] = useState(false);
   const [activeDate, setActiveDate] = useState<ActiveDate>(null);
+  const [activeAirport, setActiveAirport] = useState<ActiveAirport>(null);
 
   function swapAirports() { const t = from; setFrom(to); setTo(t); }
 
@@ -323,13 +551,23 @@ export default function FlightsScreen() {
 
           {/* ── Airport card ── */}
           <View style={S.card}>
-            <AirportCard label="من (المغادرة)" code={from} iconName="airplane" onChange={setFrom} />
+            <AirportCard
+              label="من (المغادرة)"
+              code={from}
+              iconName="airplane"
+              onPress={() => { setActiveDate(null); setActiveAirport('from'); }}
+            />
             <View style={[S.divider, { backgroundColor: BORDER }]} />
             {/* Swap button */}
             <TouchableOpacity style={S.swapBtn} onPress={swapAirports} activeOpacity={0.8}>
               <Ionicons name="swap-vertical" size={20} color={DARK} />
             </TouchableOpacity>
-            <AirportCard label="إلى (الوصول)" code={to} iconName="airplane-outline" onChange={setTo} />
+            <AirportCard
+              label="إلى (الوصول)"
+              code={to}
+              iconName="airplane-outline"
+              onPress={() => { setActiveDate(null); setActiveAirport('to'); }}
+            />
           </View>
 
           {/* ── Dates ── */}
@@ -459,6 +697,18 @@ export default function FlightsScreen() {
 
         </View>
       </ScrollView>
+
+      {/* ── Airport Picker Modal ── */}
+      <AirportPickerModal
+        visible={activeAirport !== null}
+        title={activeAirport === 'from' ? 'اختر مطار المغادرة' : 'اختر مطار الوصول'}
+        onClose={() => setActiveAirport(null)}
+        onSelect={(iata) => {
+          if (activeAirport === 'from') setFrom(iata);
+          else setTo(iata);
+          setActiveAirport(null);
+        }}
+      />
     </View>
   );
 }
