@@ -30,4 +30,10 @@ export interface VisaInput {
   requiresHotelBooking?: boolean;
   requiresTravelInsurance?: boolean;
   requiresAdditionalDocs?: boolean;
+  requiresInvitationLetter?: boolean;
+  allowedNationalities?: string[];
+  blockedNationalities?: string[];
+  /** @nullable */
+  requiresGulfResidenceCountry?: string | null;
+  requiresValidVisaCountries?: string[];
 }

@@ -63,6 +63,12 @@ export function serializeUser(user: User) {
     gulfResidenceFrontUrl: user.gulfResidenceFrontUrl ?? null,
     gulfResidenceBackUrl: user.gulfResidenceBackUrl ?? null,
 
+    // Active foreign visas & travel history
+    hasActiveForeignVisa: user.hasActiveForeignVisa,
+    activeVisas: user.activeVisas ?? [],
+    hasTravelHistory: user.hasTravelHistory,
+    travelHistory: user.travelHistory ?? [],
+
     // Completion
     profileCompletedAt: user.profileCompletedAt ?? null,
   };

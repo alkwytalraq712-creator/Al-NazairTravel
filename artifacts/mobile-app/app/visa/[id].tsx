@@ -123,7 +123,7 @@ export default function VisaDetailScreen() {
         </View>
         <TouchableOpacity
           style={[styles.applyBtn, { backgroundColor: colors.primary }]}
-          onPress={() => router.push(`/apply-visa/${visa.id}` as any)}
+          onPress={() => router.push(`/apply-visa/terms/${visa.id}` as any)}
           activeOpacity={0.85}
         >
           <Text style={styles.applyBtnText}>قدّم طلبك الآن</Text>

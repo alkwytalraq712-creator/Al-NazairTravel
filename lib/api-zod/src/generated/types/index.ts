@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './acceptVisaTerms200';
+export * from './acceptVisaTermsBody';
+export * from './activeVisa';
 export * from './adminDashboardSummary';
 export * from './banner';
 export * from './bannerInput';
@@ -66,6 +69,7 @@ export * from './signupInput';
 export * from './testimonial';
 export * from './testimonialInput';
 export * from './testimonialUpdate';
+export * from './travelTrip';
 export * from './tripType';
 export * from './uploadUrlRequest';
 export * from './uploadUrlResponse';
@@ -76,6 +80,8 @@ export * from './visaApplication';
 export * from './visaApplicationInput';
 export * from './visaApplicationStatus';
 export * from './visaApplicationStatusUpdate';
+export * from './visaEligibilityBlocker';
+export * from './visaEligibilityResult';
 export * from './visaInput';
 export * from './visaRequirements';
 export * from './visaType';

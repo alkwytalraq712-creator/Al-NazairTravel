@@ -339,6 +339,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/accept-visa-terms:
+    post:
+      operationId: acceptVisaTerms
+      tags: [auth]
+      summary: Record user's consent to visa application terms
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptVisaTermsBody"
+      responses:
+        "200":
+          description: Consent recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [acceptedAt]
+                properties:
+                  acceptedAt: { type: string, format: date-time }
+        "401":
+          description: Not authenticated
+
   /auth/profile/completion:
     get:
       operationId: getProfileCompletion
@@ -529,6 +553,29 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /visas/{id}/eligibility:
+    get:
+      operationId: getVisaEligibility
+      tags: [visas]
+      summary: Check current user eligibility for this visa
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Eligibility result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisaEligibilityResult"
+        "401":
+          description: Not authenticated
+        "404":
+          description: Visa not found
 
   /visa-applications:
     get:
@@ -1639,6 +1686,49 @@ components:
           type: array
           items: { type: string }
 
+    ActiveVisa:
+      type: object
+      required: [country, visaType, expiryDate]
+      properties:
+        country: { type: string }
+        visaType: { type: string }
+        visaNumber: { type: ["string", "null"] }
+        issueDate: { type: ["string", "null"] }
+        expiryDate: { type: string }
+        imageUrl: { type: ["string", "null"] }
+
+    TravelTrip:
+      type: object
+      required: [country, entryDate, exitDate]
+      properties:
+        country: { type: string }
+        entryDate: { type: string }
+        exitDate: { type: string }
+
+    VisaEligibilityBlocker:
+      type: object
+      required: [type, message]
+      properties:
+        type: { type: string }
+        message: { type: string }
+        actionRoute: { type: ["string", "null"] }
+
+    VisaEligibilityResult:
+      type: object
+      required: [eligible, blockers]
+      properties:
+        eligible: { type: boolean }
+        blockers:
+          type: array
+          items:
+            $ref: "#/components/schemas/VisaEligibilityBlocker"
+
+    AcceptVisaTermsBody:
+      type: object
+      required: [visaId]
+      properties:
+        visaId: { type: integer }
+
     User:
       type: object
       required: [id, fullName, phone, role, language, currency, createdAt, hasGulfResidence]
@@ -1682,6 +1772,17 @@ components:
         gulfResidenceFrontUrl: { type: ["string", "null"] }
         gulfResidenceBackUrl: { type: ["string", "null"] }
         profileCompletedAt: { type: ["string", "null"], format: date-time }
+        # Current foreign visas & travel history
+        hasActiveForeignVisa: { type: boolean }
+        activeVisas:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveVisa"
+        hasTravelHistory: { type: boolean }
+        travelHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/TravelTrip"
 
     EmployeeInput:
       type: object
@@ -1928,6 +2029,16 @@ components:
         gulfResidenceExpiry: { type: string }
         gulfResidenceFrontUrl: { type: string }
         gulfResidenceBackUrl: { type: string }
+        hasActiveForeignVisa: { type: boolean }
+        activeVisas:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveVisa"
+        hasTravelHistory: { type: boolean }
+        travelHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/TravelTrip"
 
     PasswordResetRequest:
       type: object
@@ -2006,14 +2117,25 @@ components:
         validity: { type: string }
         isFeatured: { type: boolean }
         createdAt: { type: string, format: date-time }
-        requiresGulfResidence:  { type: boolean }
-        requiresPersonalPhoto:  { type: boolean }
-        requiresPassportImage:  { type: boolean }
-        requiresBankStatement:  { type: boolean }
-        requiresFlightBooking:  { type: boolean }
-        requiresHotelBooking:   { type: boolean }
+        requiresGulfResidence:   { type: boolean }
+        requiresPersonalPhoto:   { type: boolean }
+        requiresPassportImage:   { type: boolean }
+        requiresBankStatement:   { type: boolean }
+        requiresFlightBooking:   { type: boolean }
+        requiresHotelBooking:    { type: boolean }
         requiresTravelInsurance: { type: boolean }
-        requiresAdditionalDocs: { type: boolean }
+        requiresAdditionalDocs:  { type: boolean }
+        requiresInvitationLetter: { type: boolean }
+        allowedNationalities:
+          type: array
+          items: { type: string }
+        blockedNationalities:
+          type: array
+          items: { type: string }
+        requiresGulfResidenceCountry: { type: ["string", "null"] }
+        requiresValidVisaCountries:
+          type: array
+          items: { type: string }
 
     VisaInput:
       type: object
@@ -2049,14 +2171,25 @@ components:
         entriesAllowed: { type: string }
         validity: { type: string }
         isFeatured: { type: boolean }
-        requiresGulfResidence:  { type: boolean }
-        requiresPersonalPhoto:  { type: boolean }
-        requiresPassportImage:  { type: boolean }
-        requiresBankStatement:  { type: boolean }
-        requiresFlightBooking:  { type: boolean }
-        requiresHotelBooking:   { type: boolean }
+        requiresGulfResidence:   { type: boolean }
+        requiresPersonalPhoto:   { type: boolean }
+        requiresPassportImage:   { type: boolean }
+        requiresBankStatement:   { type: boolean }
+        requiresFlightBooking:   { type: boolean }
+        requiresHotelBooking:    { type: boolean }
         requiresTravelInsurance: { type: boolean }
-        requiresAdditionalDocs: { type: boolean }
+        requiresAdditionalDocs:  { type: boolean }
+        requiresInvitationLetter: { type: boolean }
+        allowedNationalities:
+          type: array
+          items: { type: string }
+        blockedNationalities:
+          type: array
+          items: { type: string }
+        requiresGulfResidenceCountry: { type: ["string", "null"] }
+        requiresValidVisaCountries:
+          type: array
+          items: { type: string }
 
     VisaUpdate:
       type: object
@@ -2077,14 +2210,25 @@ components:
         entriesAllowed: { type: string }
         validity: { type: string }
         isFeatured: { type: boolean }
-        requiresGulfResidence:  { type: boolean }
-        requiresPersonalPhoto:  { type: boolean }
-        requiresPassportImage:  { type: boolean }
-        requiresBankStatement:  { type: boolean }
-        requiresFlightBooking:  { type: boolean }
-        requiresHotelBooking:   { type: boolean }
+        requiresGulfResidence:   { type: boolean }
+        requiresPersonalPhoto:   { type: boolean }
+        requiresPassportImage:   { type: boolean }
+        requiresBankStatement:   { type: boolean }
+        requiresFlightBooking:   { type: boolean }
+        requiresHotelBooking:    { type: boolean }
         requiresTravelInsurance: { type: boolean }
-        requiresAdditionalDocs: { type: boolean }
+        requiresAdditionalDocs:  { type: boolean }
+        requiresInvitationLetter: { type: boolean }
+        allowedNationalities:
+          type: array
+          items: { type: string }
+        blockedNationalities:
+          type: array
+          items: { type: string }
+        requiresGulfResidenceCountry: { type: ["string", "null"] }
+        requiresValidVisaCountries:
+          type: array
+          items: { type: string }
 
     VisaApplicationStatus:
       type: string

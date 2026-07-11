@@ -19,6 +19,7 @@ import {
   useGetVisa,
   useCreateVisaApplication,
   useGetProfileCompletion,
+  useGetVisaEligibility,
   getListMyVisaApplicationsQueryKey,
 } from '@workspace/api-client-react';
 import type { Visa } from '@workspace/api-client-react';
@@ -99,30 +100,43 @@ function ProfileIncompleteWall({ pct, missing }: { pct: number; missing: string[
   );
 }
 
-// ─── Gulf Residence Blocked ──────────────────────────────────────────────────
+// ─── Eligibility Blocked Wall ─────────────────────────────────────────────────
 
-function GulfResidenceBlock({ visaName }: { visaName: string }) {
+function EligibilityBlockWall({ blockers }: { blockers: Array<{ type: string; message: string; actionRoute: string | null }> }) {
   const colors = useColors();
   return (
     <View style={[styles.wallContainer, { backgroundColor: colors.background }]}>
       <View style={[styles.wallCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Ionicons name="ban-outline" size={64} color="#ef4444" style={{ alignSelf: 'center' }} />
-        <Text style={[styles.wallTitle, { color: colors.foreground }]}>غير مؤهل للتقديم</Text>
+        <Text style={[styles.wallTitle, { color: colors.foreground }]}>غير مؤهل حالياً</Text>
         <Text style={[styles.wallSub, { color: colors.mutedForeground }]}>
-          عذراً، تأشيرة {visaName} تشترط وجود إقامة سارية في إحدى دول مجلس التعاون الخليجي.
+          لا تستوفي المتطلبات اللازمة للتقديم على هذه التأشيرة في الوقت الحالي.
         </Text>
+
         <View style={[styles.missingBox, { backgroundColor: '#fef2f2', borderColor: '#fca5a5' }]}>
-          <Text style={{ color: '#7f1d1d', fontSize: 13, textAlign: 'right', lineHeight: 22 }}>
-            إذا كان لديك إقامة خليجية، يمكنك إضافتها من ملفك الشخصي وإعادة المحاولة.
-          </Text>
+          {blockers.map((b, i) => (
+            <View key={i} style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Ionicons name="close-circle" size={14} color="#ef4444" />
+              <Text style={{ color: '#7f1d1d', fontSize: 13, textAlign: 'right', flex: 1 }}>{b.message}</Text>
+            </View>
+          ))}
         </View>
-        <TouchableOpacity
-          style={[styles.goProfileBtn, { backgroundColor: colors.primary }]}
-          onPress={() => router.replace('/profile-edit')}
-          activeOpacity={0.85}
-        >
-          <Text style={{ color: '#fff', fontWeight: '700' }}>تحديث الملف الشخصي</Text>
-        </TouchableOpacity>
+
+        {/* استكمال المتطلبات button — goes to profile if any blocker has actionRoute */}
+        {blockers.some(b => b.actionRoute) && (
+          <TouchableOpacity
+            style={[styles.goProfileBtn, { backgroundColor: '#f59e0b' }]}
+            onPress={() => {
+              const route = blockers.find(b => b.actionRoute)?.actionRoute ?? '/profile-edit';
+              router.push(route as any);
+            }}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="create-outline" size={16} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '700', marginRight: 6 }}>استكمال المتطلبات</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 12, alignSelf: 'center' }}>
           <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>رجوع</Text>
         </TouchableOpacity>
@@ -144,6 +158,7 @@ export default function ApplyVisaScreen() {
   const visaId = Number(id);
   const { data: visa, isLoading: visaLoading } = useGetVisa({ id: visaId });
   const { data: completion, isLoading: compLoading } = useGetProfileCompletion();
+  const { data: eligibility, isLoading: eligLoading } = useGetVisaEligibility({ id: visaId });
   const submitMutation = useCreateVisaApplication();
 
   // ── Auth gate
@@ -159,7 +174,7 @@ export default function ApplyVisaScreen() {
   }
 
   // ── Loading
-  if (visaLoading || compLoading) {
+  if (visaLoading || compLoading || eligLoading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -191,7 +206,6 @@ export default function ApplyVisaScreen() {
     );
   }
 
-  // ── Gulf residence gate
   const v = visa as Visa & {
     requiresGulfResidence?: boolean;
     requiresPersonalPhoto?: boolean;
@@ -201,9 +215,11 @@ export default function ApplyVisaScreen() {
     requiresHotelBooking?: boolean;
     requiresTravelInsurance?: boolean;
     requiresAdditionalDocs?: boolean;
+    requiresInvitationLetter?: boolean;
   };
 
-  if (v.requiresGulfResidence && !(user as any)?.hasGulfResidence) {
+  // ── Eligibility gate
+  if (eligibility && !eligibility.eligible) {
     return (
       <>
         <View style={[{ backgroundColor: '#0D1526', paddingTop: paddingTop + 12, paddingBottom: 14, paddingHorizontal: 16, flexDirection: 'row-reverse', alignItems: 'center' }]}>
@@ -213,7 +229,7 @@ export default function ApplyVisaScreen() {
           <Text style={{ flex: 1, color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center' }}>التقديم على التأشيرة</Text>
           <View style={{ width: 24 }} />
         </View>
-        <GulfResidenceBlock visaName={visa.countryName} />
+        <EligibilityBlockWall blockers={eligibility.blockers as any} />
       </>
     );
   }

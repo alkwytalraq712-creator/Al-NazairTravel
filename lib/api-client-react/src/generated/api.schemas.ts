@@ -70,6 +70,40 @@ export interface ProfileCompletion {
   missingFields: string[];
 }
 
+export interface ActiveVisa {
+  country: string;
+  visaType: string;
+  /** @nullable */
+  visaNumber?: string | null;
+  /** @nullable */
+  issueDate?: string | null;
+  expiryDate: string;
+  /** @nullable */
+  imageUrl?: string | null;
+}
+
+export interface TravelTrip {
+  country: string;
+  entryDate: string;
+  exitDate: string;
+}
+
+export interface VisaEligibilityBlocker {
+  type: string;
+  message: string;
+  /** @nullable */
+  actionRoute?: string | null;
+}
+
+export interface VisaEligibilityResult {
+  eligible: boolean;
+  blockers: VisaEligibilityBlocker[];
+}
+
+export interface AcceptVisaTermsBody {
+  visaId: number;
+}
+
 export interface User {
   id: number;
   fullName: string;
@@ -133,6 +167,10 @@ export interface User {
   gulfResidenceBackUrl?: string | null;
   /** @nullable */
   profileCompletedAt?: string | null;
+  hasActiveForeignVisa?: boolean;
+  activeVisas?: ActiveVisa[];
+  hasTravelHistory?: boolean;
+  travelHistory?: TravelTrip[];
 }
 
 export interface EmployeeInput {
@@ -381,6 +419,10 @@ export interface ProfileUpdate {
   gulfResidenceExpiry?: string;
   gulfResidenceFrontUrl?: string;
   gulfResidenceBackUrl?: string;
+  hasActiveForeignVisa?: boolean;
+  activeVisas?: ActiveVisa[];
+  hasTravelHistory?: boolean;
+  travelHistory?: TravelTrip[];
 }
 
 export interface PasswordResetRequest {
@@ -443,6 +485,12 @@ export interface Visa {
   requiresHotelBooking: boolean;
   requiresTravelInsurance: boolean;
   requiresAdditionalDocs: boolean;
+  requiresInvitationLetter?: boolean;
+  allowedNationalities?: string[];
+  blockedNationalities?: string[];
+  /** @nullable */
+  requiresGulfResidenceCountry?: string | null;
+  requiresValidVisaCountries?: string[];
 }
 
 export interface VisaInput {
@@ -468,6 +516,12 @@ export interface VisaInput {
   requiresHotelBooking?: boolean;
   requiresTravelInsurance?: boolean;
   requiresAdditionalDocs?: boolean;
+  requiresInvitationLetter?: boolean;
+  allowedNationalities?: string[];
+  blockedNationalities?: string[];
+  /** @nullable */
+  requiresGulfResidenceCountry?: string | null;
+  requiresValidVisaCountries?: string[];
 }
 
 export interface VisaUpdate {
@@ -493,6 +547,12 @@ export interface VisaUpdate {
   requiresHotelBooking?: boolean;
   requiresTravelInsurance?: boolean;
   requiresAdditionalDocs?: boolean;
+  requiresInvitationLetter?: boolean;
+  allowedNationalities?: string[];
+  blockedNationalities?: string[];
+  /** @nullable */
+  requiresGulfResidenceCountry?: string | null;
+  requiresValidVisaCountries?: string[];
 }
 
 export type VisaApplicationStatus = typeof VisaApplicationStatus[keyof typeof VisaApplicationStatus];
@@ -934,6 +994,10 @@ export interface AdminDashboardSummary {
 export type ScanPassportOcrBody = {
   /** JPEG or PNG passport image, max 10 MB. */
   passportImage: Blob;
+};
+
+export type AcceptVisaTerms200 = {
+  acceptedAt: string;
 };
 
 export type ListVisasParams = {

@@ -1,5 +1,6 @@
 export * from "./users";
 export * from "./visas";
+export * from "./visaConsents";
 export * from "./visaApplications";
 export * from "./packages";
 export * from "./packageBookings";

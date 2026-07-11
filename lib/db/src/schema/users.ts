@@ -1,6 +1,25 @@
-import { boolean, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+
+// ── JSONB sub-types ───────────────────────────────────────────────────────────
+
+export interface ActiveVisa {
+  country: string;
+  visaType: string;
+  visaNumber?: string;
+  issueDate?: string;  // YYYY-MM-DD
+  expiryDate: string;  // YYYY-MM-DD
+  imageUrl?: string;
+}
+
+export interface TravelTrip {
+  country: string;
+  entryDate: string;  // YYYY-MM-DD
+  exitDate: string;   // YYYY-MM-DD
+}
+
+// ── Table ─────────────────────────────────────────────────────────────────────
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -44,6 +63,14 @@ export const usersTable = pgTable("users", {
   gulfResidenceExpiry: text("gulf_residence_expiry"),  // YYYY-MM-DD
   gulfResidenceFrontUrl: text("gulf_residence_front_url"),
   gulfResidenceBackUrl: text("gulf_residence_back_url"),
+
+  // ── Active foreign visas (JSON array of ActiveVisa) ───────────────────────
+  hasActiveForeignVisa: boolean("has_active_foreign_visa").notNull().default(false),
+  activeVisas: jsonb("active_visas").notNull().default([]).$type<ActiveVisa[]>(),
+
+  // ── Travel history (JSON array of TravelTrip, last 5 years) ──────────────
+  hasTravelHistory: boolean("has_travel_history").notNull().default(false),
+  travelHistory: jsonb("travel_history").notNull().default([]).$type<TravelTrip[]>(),
 
   // ── Completion tracking ───────────────────────────────────────────────────
   profileCompletedAt: timestamp("profile_completed_at", { withTimezone: true }),

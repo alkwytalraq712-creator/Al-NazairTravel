@@ -183,7 +183,22 @@ export const SignupResponse = zod.object({
   "gulfResidenceExpiry": zod.string().nullish(),
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
-  "profileCompletedAt": zod.coerce.date().nullish()
+  "profileCompletedAt": zod.coerce.date().nullish(),
+  "hasActiveForeignVisa": zod.boolean().optional(),
+  "activeVisas": zod.array(zod.object({
+  "country": zod.string(),
+  "visaType": zod.string(),
+  "visaNumber": zod.string().nullish(),
+  "issueDate": zod.string().nullish(),
+  "expiryDate": zod.string(),
+  "imageUrl": zod.string().nullish()
+})).optional(),
+  "hasTravelHistory": zod.boolean().optional(),
+  "travelHistory": zod.array(zod.object({
+  "country": zod.string(),
+  "entryDate": zod.string(),
+  "exitDate": zod.string()
+})).optional()
 })
 
 
@@ -230,7 +245,22 @@ export const LoginResponse = zod.object({
   "gulfResidenceExpiry": zod.string().nullish(),
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
-  "profileCompletedAt": zod.coerce.date().nullish()
+  "profileCompletedAt": zod.coerce.date().nullish(),
+  "hasActiveForeignVisa": zod.boolean().optional(),
+  "activeVisas": zod.array(zod.object({
+  "country": zod.string(),
+  "visaType": zod.string(),
+  "visaNumber": zod.string().nullish(),
+  "issueDate": zod.string().nullish(),
+  "expiryDate": zod.string(),
+  "imageUrl": zod.string().nullish()
+})).optional(),
+  "hasTravelHistory": zod.boolean().optional(),
+  "travelHistory": zod.array(zod.object({
+  "country": zod.string(),
+  "entryDate": zod.string(),
+  "exitDate": zod.string()
+})).optional()
 })
 
 
@@ -278,7 +308,34 @@ export const GetCurrentUserResponse = zod.object({
   "gulfResidenceExpiry": zod.string().nullish(),
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
-  "profileCompletedAt": zod.coerce.date().nullish()
+  "profileCompletedAt": zod.coerce.date().nullish(),
+  "hasActiveForeignVisa": zod.boolean().optional(),
+  "activeVisas": zod.array(zod.object({
+  "country": zod.string(),
+  "visaType": zod.string(),
+  "visaNumber": zod.string().nullish(),
+  "issueDate": zod.string().nullish(),
+  "expiryDate": zod.string(),
+  "imageUrl": zod.string().nullish()
+})).optional(),
+  "hasTravelHistory": zod.boolean().optional(),
+  "travelHistory": zod.array(zod.object({
+  "country": zod.string(),
+  "entryDate": zod.string(),
+  "exitDate": zod.string()
+})).optional()
+})
+
+
+/**
+ * @summary Record user's consent to visa application terms
+ */
+export const AcceptVisaTermsBody = zod.object({
+  "visaId": zod.number()
+})
+
+export const AcceptVisaTermsResponse = zod.object({
+  "acceptedAt": zod.coerce.date()
 })
 
 
@@ -334,7 +391,22 @@ export const UpdateProfileBody = zod.object({
   "gulfResidenceNumber": zod.string().optional(),
   "gulfResidenceExpiry": zod.string().optional(),
   "gulfResidenceFrontUrl": zod.string().optional(),
-  "gulfResidenceBackUrl": zod.string().optional()
+  "gulfResidenceBackUrl": zod.string().optional(),
+  "hasActiveForeignVisa": zod.boolean().optional(),
+  "activeVisas": zod.array(zod.object({
+  "country": zod.string(),
+  "visaType": zod.string(),
+  "visaNumber": zod.string().nullish(),
+  "issueDate": zod.string().nullish(),
+  "expiryDate": zod.string(),
+  "imageUrl": zod.string().nullish()
+})).optional(),
+  "hasTravelHistory": zod.boolean().optional(),
+  "travelHistory": zod.array(zod.object({
+  "country": zod.string(),
+  "entryDate": zod.string(),
+  "exitDate": zod.string()
+})).optional()
 })
 
 export const UpdateProfileResponse = zod.object({
@@ -372,7 +444,22 @@ export const UpdateProfileResponse = zod.object({
   "gulfResidenceExpiry": zod.string().nullish(),
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
-  "profileCompletedAt": zod.coerce.date().nullish()
+  "profileCompletedAt": zod.coerce.date().nullish(),
+  "hasActiveForeignVisa": zod.boolean().optional(),
+  "activeVisas": zod.array(zod.object({
+  "country": zod.string(),
+  "visaType": zod.string(),
+  "visaNumber": zod.string().nullish(),
+  "issueDate": zod.string().nullish(),
+  "expiryDate": zod.string(),
+  "imageUrl": zod.string().nullish()
+})).optional(),
+  "hasTravelHistory": zod.boolean().optional(),
+  "travelHistory": zod.array(zod.object({
+  "country": zod.string(),
+  "entryDate": zod.string(),
+  "exitDate": zod.string()
+})).optional()
 })
 
 
@@ -436,7 +523,12 @@ export const GetHomeSummaryResponse = zod.object({
   "requiresFlightBooking": zod.boolean(),
   "requiresHotelBooking": zod.boolean(),
   "requiresTravelInsurance": zod.boolean(),
-  "requiresAdditionalDocs": zod.boolean()
+  "requiresAdditionalDocs": zod.boolean(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
 })),
   "popularPackages": zod.array(zod.object({
   "id": zod.number(),
@@ -547,7 +639,12 @@ export const ListVisasResponseItem = zod.object({
   "requiresFlightBooking": zod.boolean(),
   "requiresHotelBooking": zod.boolean(),
   "requiresTravelInsurance": zod.boolean(),
-  "requiresAdditionalDocs": zod.boolean()
+  "requiresAdditionalDocs": zod.boolean(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
 })
 export const ListVisasResponse = zod.array(ListVisasResponseItem)
 
@@ -579,7 +676,12 @@ export const CreateVisaBody = zod.object({
   "requiresFlightBooking": zod.boolean().optional(),
   "requiresHotelBooking": zod.boolean().optional(),
   "requiresTravelInsurance": zod.boolean().optional(),
-  "requiresAdditionalDocs": zod.boolean().optional()
+  "requiresAdditionalDocs": zod.boolean().optional(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
 })
 
 export const CreateVisaResponse = zod.object({
@@ -605,7 +707,12 @@ export const CreateVisaResponse = zod.object({
   "requiresFlightBooking": zod.boolean(),
   "requiresHotelBooking": zod.boolean(),
   "requiresTravelInsurance": zod.boolean(),
-  "requiresAdditionalDocs": zod.boolean()
+  "requiresAdditionalDocs": zod.boolean(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
 })
 
 
@@ -639,7 +746,12 @@ export const GetVisaResponse = zod.object({
   "requiresFlightBooking": zod.boolean(),
   "requiresHotelBooking": zod.boolean(),
   "requiresTravelInsurance": zod.boolean(),
-  "requiresAdditionalDocs": zod.boolean()
+  "requiresAdditionalDocs": zod.boolean(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
 })
 
 
@@ -674,7 +786,12 @@ export const UpdateVisaBody = zod.object({
   "requiresFlightBooking": zod.boolean().optional(),
   "requiresHotelBooking": zod.boolean().optional(),
   "requiresTravelInsurance": zod.boolean().optional(),
-  "requiresAdditionalDocs": zod.boolean().optional()
+  "requiresAdditionalDocs": zod.boolean().optional(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
 })
 
 export const UpdateVisaResponse = zod.object({
@@ -700,7 +817,12 @@ export const UpdateVisaResponse = zod.object({
   "requiresFlightBooking": zod.boolean(),
   "requiresHotelBooking": zod.boolean(),
   "requiresTravelInsurance": zod.boolean(),
-  "requiresAdditionalDocs": zod.boolean()
+  "requiresAdditionalDocs": zod.boolean(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
 })
 
 
@@ -712,6 +834,23 @@ export const DeleteVisaParams = zod.object({
 })
 
 export const DeleteVisaResponse = zod.void()
+
+
+/**
+ * @summary Check current user eligibility for this visa
+ */
+export const GetVisaEligibilityParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetVisaEligibilityResponse = zod.object({
+  "eligible": zod.boolean(),
+  "blockers": zod.array(zod.object({
+  "type": zod.string(),
+  "message": zod.string(),
+  "actionRoute": zod.string().nullish()
+}))
+})
 
 
 /**
@@ -744,7 +883,12 @@ export const ListMyVisaApplicationsResponseItem = zod.object({
   "requiresFlightBooking": zod.boolean(),
   "requiresHotelBooking": zod.boolean(),
   "requiresTravelInsurance": zod.boolean(),
-  "requiresAdditionalDocs": zod.boolean()
+  "requiresAdditionalDocs": zod.boolean(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
 }),zod.null()]).optional(),
   "referenceNumber": zod.string(),
   "fullName": zod.string(),
@@ -806,7 +950,12 @@ export const CreateVisaApplicationResponse = zod.object({
   "requiresFlightBooking": zod.boolean(),
   "requiresHotelBooking": zod.boolean(),
   "requiresTravelInsurance": zod.boolean(),
-  "requiresAdditionalDocs": zod.boolean()
+  "requiresAdditionalDocs": zod.boolean(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
 }),zod.null()]).optional(),
   "referenceNumber": zod.string(),
   "fullName": zod.string(),
@@ -867,7 +1016,12 @@ export const GetVisaApplicationResponse = zod.object({
   "requiresFlightBooking": zod.boolean(),
   "requiresHotelBooking": zod.boolean(),
   "requiresTravelInsurance": zod.boolean(),
-  "requiresAdditionalDocs": zod.boolean()
+  "requiresAdditionalDocs": zod.boolean(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
 }),zod.null()]).optional(),
   "referenceNumber": zod.string(),
   "fullName": zod.string(),
@@ -928,7 +1082,12 @@ export const ListAllVisaApplicationsResponseItem = zod.object({
   "requiresFlightBooking": zod.boolean(),
   "requiresHotelBooking": zod.boolean(),
   "requiresTravelInsurance": zod.boolean(),
-  "requiresAdditionalDocs": zod.boolean()
+  "requiresAdditionalDocs": zod.boolean(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
 }),zod.null()]).optional(),
   "referenceNumber": zod.string(),
   "fullName": zod.string(),
@@ -994,7 +1153,12 @@ export const UpdateVisaApplicationStatusResponse = zod.object({
   "requiresFlightBooking": zod.boolean(),
   "requiresHotelBooking": zod.boolean(),
   "requiresTravelInsurance": zod.boolean(),
-  "requiresAdditionalDocs": zod.boolean()
+  "requiresAdditionalDocs": zod.boolean(),
+  "requiresInvitationLetter": zod.boolean().optional(),
+  "allowedNationalities": zod.array(zod.string()).optional(),
+  "blockedNationalities": zod.array(zod.string()).optional(),
+  "requiresGulfResidenceCountry": zod.string().nullish(),
+  "requiresValidVisaCountries": zod.array(zod.string()).optional()
 }),zod.null()]).optional(),
   "referenceNumber": zod.string(),
   "fullName": zod.string(),
@@ -2091,7 +2255,22 @@ export const ListCustomersResponseItem = zod.object({
   "gulfResidenceExpiry": zod.string().nullish(),
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
-  "profileCompletedAt": zod.coerce.date().nullish()
+  "profileCompletedAt": zod.coerce.date().nullish(),
+  "hasActiveForeignVisa": zod.boolean().optional(),
+  "activeVisas": zod.array(zod.object({
+  "country": zod.string(),
+  "visaType": zod.string(),
+  "visaNumber": zod.string().nullish(),
+  "issueDate": zod.string().nullish(),
+  "expiryDate": zod.string(),
+  "imageUrl": zod.string().nullish()
+})).optional(),
+  "hasTravelHistory": zod.boolean().optional(),
+  "travelHistory": zod.array(zod.object({
+  "country": zod.string(),
+  "entryDate": zod.string(),
+  "exitDate": zod.string()
+})).optional()
 })
 export const ListCustomersResponse = zod.array(ListCustomersResponseItem)
 
@@ -2138,7 +2317,22 @@ export const GetCustomerResponse = zod.object({
   "gulfResidenceExpiry": zod.string().nullish(),
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
-  "profileCompletedAt": zod.coerce.date().nullish()
+  "profileCompletedAt": zod.coerce.date().nullish(),
+  "hasActiveForeignVisa": zod.boolean().optional(),
+  "activeVisas": zod.array(zod.object({
+  "country": zod.string(),
+  "visaType": zod.string(),
+  "visaNumber": zod.string().nullish(),
+  "issueDate": zod.string().nullish(),
+  "expiryDate": zod.string(),
+  "imageUrl": zod.string().nullish()
+})).optional(),
+  "hasTravelHistory": zod.boolean().optional(),
+  "travelHistory": zod.array(zod.object({
+  "country": zod.string(),
+  "entryDate": zod.string(),
+  "exitDate": zod.string()
+})).optional()
 })
 
 
@@ -2180,7 +2374,22 @@ export const ListEmployeesResponseItem = zod.object({
   "gulfResidenceExpiry": zod.string().nullish(),
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
-  "profileCompletedAt": zod.coerce.date().nullish()
+  "profileCompletedAt": zod.coerce.date().nullish(),
+  "hasActiveForeignVisa": zod.boolean().optional(),
+  "activeVisas": zod.array(zod.object({
+  "country": zod.string(),
+  "visaType": zod.string(),
+  "visaNumber": zod.string().nullish(),
+  "issueDate": zod.string().nullish(),
+  "expiryDate": zod.string(),
+  "imageUrl": zod.string().nullish()
+})).optional(),
+  "hasTravelHistory": zod.boolean().optional(),
+  "travelHistory": zod.array(zod.object({
+  "country": zod.string(),
+  "entryDate": zod.string(),
+  "exitDate": zod.string()
+})).optional()
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
 
@@ -2237,7 +2446,22 @@ export const CreateEmployeeResponse = zod.object({
   "gulfResidenceExpiry": zod.string().nullish(),
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
-  "profileCompletedAt": zod.coerce.date().nullish()
+  "profileCompletedAt": zod.coerce.date().nullish(),
+  "hasActiveForeignVisa": zod.boolean().optional(),
+  "activeVisas": zod.array(zod.object({
+  "country": zod.string(),
+  "visaType": zod.string(),
+  "visaNumber": zod.string().nullish(),
+  "issueDate": zod.string().nullish(),
+  "expiryDate": zod.string(),
+  "imageUrl": zod.string().nullish()
+})).optional(),
+  "hasTravelHistory": zod.boolean().optional(),
+  "travelHistory": zod.array(zod.object({
+  "country": zod.string(),
+  "entryDate": zod.string(),
+  "exitDate": zod.string()
+})).optional()
 })
 
 
@@ -2297,7 +2521,22 @@ export const UpdateEmployeeResponse = zod.object({
   "gulfResidenceExpiry": zod.string().nullish(),
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
-  "profileCompletedAt": zod.coerce.date().nullish()
+  "profileCompletedAt": zod.coerce.date().nullish(),
+  "hasActiveForeignVisa": zod.boolean().optional(),
+  "activeVisas": zod.array(zod.object({
+  "country": zod.string(),
+  "visaType": zod.string(),
+  "visaNumber": zod.string().nullish(),
+  "issueDate": zod.string().nullish(),
+  "expiryDate": zod.string(),
+  "imageUrl": zod.string().nullish()
+})).optional(),
+  "hasTravelHistory": zod.boolean().optional(),
+  "travelHistory": zod.array(zod.object({
+  "country": zod.string(),
+  "entryDate": zod.string(),
+  "exitDate": zod.string()
+})).optional()
 })
 
 

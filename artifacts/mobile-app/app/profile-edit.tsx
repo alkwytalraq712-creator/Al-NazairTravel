@@ -29,6 +29,21 @@ import { useQueryClient } from '@tanstack/react-query';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
+interface ActiveVisaEntry {
+  country: string;
+  visaType: string;
+  visaNumber: string;
+  issueDate: string;
+  expiryDate: string;
+  imageUrl: string;
+}
+
+interface TravelTripEntry {
+  country: string;
+  entryDate: string;
+  exitDate: string;
+}
+
 interface ProfileForm {
   // Base
   fullName: string;
@@ -55,13 +70,19 @@ interface ProfileForm {
   passportIssueDate: string;
   passportExpiry: string;
   passportImageUrl: string;
-  // Gulf
+  // Gulf residence
   hasGulfResidence: boolean;
   gulfResidenceCountry: string;
   gulfResidenceNumber: string;
   gulfResidenceExpiry: string;
   gulfResidenceFrontUrl: string;
   gulfResidenceBackUrl: string;
+  // Active foreign visas
+  hasActiveForeignVisa: boolean;
+  activeVisas: ActiveVisaEntry[];
+  // Travel history
+  hasTravelHistory: boolean;
+  travelHistory: TravelTripEntry[];
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -331,6 +352,10 @@ export default function ProfileEditScreen() {
     gulfResidenceExpiry: (user as any)?.gulfResidenceExpiry ?? '',
     gulfResidenceFrontUrl: (user as any)?.gulfResidenceFrontUrl ?? '',
     gulfResidenceBackUrl: (user as any)?.gulfResidenceBackUrl ?? '',
+    hasActiveForeignVisa: (user as any)?.hasActiveForeignVisa ?? false,
+    activeVisas: ((user as any)?.activeVisas ?? []) as ActiveVisaEntry[],
+    hasTravelHistory: (user as any)?.hasTravelHistory ?? false,
+    travelHistory: ((user as any)?.travelHistory ?? []) as TravelTripEntry[],
   });
 
   const set = (key: keyof ProfileForm) => (val: string | boolean) =>
@@ -382,6 +407,10 @@ export default function ProfileEditScreen() {
           gulfResidenceExpiry: form.hasGulfResidence ? (form.gulfResidenceExpiry.trim() || undefined) : undefined,
           gulfResidenceFrontUrl: form.hasGulfResidence ? (form.gulfResidenceFrontUrl || undefined) : undefined,
           gulfResidenceBackUrl: form.hasGulfResidence ? (form.gulfResidenceBackUrl || undefined) : undefined,
+          hasActiveForeignVisa: form.hasActiveForeignVisa,
+          activeVisas: form.hasActiveForeignVisa ? form.activeVisas : [],
+          hasTravelHistory: form.hasTravelHistory,
+          travelHistory: form.hasTravelHistory ? form.travelHistory : [],
         },
       },
       {
@@ -481,6 +510,80 @@ export default function ProfileEditScreen() {
                 folder="gulf_back"
                 uploading={uploading}
               />
+            </>
+          )}
+        </View>
+
+        {/* ── Active Foreign Visas ──────────────────────────────────────────── */}
+        <SectionHeader title="التأشيرات السارية في دول أخرى" icon="globe-outline" />
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Toggle
+            label="لدي تأشيرة سارية في دولة أخرى"
+            value={form.hasActiveForeignVisa}
+            onToggle={() => set('hasActiveForeignVisa')(!form.hasActiveForeignVisa)}
+          />
+          {form.hasActiveForeignVisa && (
+            <>
+              <View style={styles.divider} />
+              {form.activeVisas.map((av, i) => (
+                <View key={i} style={{ marginBottom: 14, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12 }}>
+                  <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ color: colors.foreground, fontWeight: '600', textAlign: 'right' }}>تأشيرة {i + 1}</Text>
+                    <TouchableOpacity onPress={() => setForm(f => ({ ...f, activeVisas: f.activeVisas.filter((_, idx) => idx !== i) }))}>
+                      <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                  <Field label="الدولة" value={av.country} onChangeText={v => setForm(f => { const av2 = [...f.activeVisas]; av2[i] = { ...av2[i], country: v }; return { ...f, activeVisas: av2 }; })} />
+                  <Field label="نوع التأشيرة" value={av.visaType} onChangeText={v => setForm(f => { const av2 = [...f.activeVisas]; av2[i] = { ...av2[i], visaType: v }; return { ...f, activeVisas: av2 }; })} />
+                  <Field label="رقم التأشيرة (اختياري)" value={av.visaNumber} onChangeText={v => setForm(f => { const av2 = [...f.activeVisas]; av2[i] = { ...av2[i], visaNumber: v }; return { ...f, activeVisas: av2 }; })} />
+                  <Field label="تاريخ الإصدار (YYYY-MM-DD)" value={av.issueDate} onChangeText={v => setForm(f => { const av2 = [...f.activeVisas]; av2[i] = { ...av2[i], issueDate: v }; return { ...f, activeVisas: av2 }; })} />
+                  <Field label="تاريخ الانتهاء (YYYY-MM-DD)" value={av.expiryDate} onChangeText={v => setForm(f => { const av2 = [...f.activeVisas]; av2[i] = { ...av2[i], expiryDate: v }; return { ...f, activeVisas: av2 }; })} />
+                </View>
+              ))}
+              <TouchableOpacity
+                onPress={() => setForm(f => ({ ...f, activeVisas: [...f.activeVisas, { country: '', visaType: '', visaNumber: '', issueDate: '', expiryDate: '', imageUrl: '' }] }))}
+                style={[styles.uploadBtn, { borderColor: colors.primary, alignSelf: 'flex-end', marginTop: 4 }]}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
+                <Text style={{ color: colors.primary, marginRight: 4 }}>إضافة تأشيرة</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+
+        {/* ── Travel History ────────────────────────────────────────────────── */}
+        <SectionHeader title="سجل السفر (آخر 5 سنوات)" icon="airplane-outline" />
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Toggle
+            label="سبق لي السفر إلى دول خارجية خلال آخر خمس سنوات"
+            value={form.hasTravelHistory}
+            onToggle={() => set('hasTravelHistory')(!form.hasTravelHistory)}
+          />
+          {form.hasTravelHistory && (
+            <>
+              <View style={styles.divider} />
+              {form.travelHistory.map((trip, i) => (
+                <View key={i} style={{ marginBottom: 14, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12 }}>
+                  <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ color: colors.foreground, fontWeight: '600', textAlign: 'right' }}>رحلة {i + 1}</Text>
+                    <TouchableOpacity onPress={() => setForm(f => ({ ...f, travelHistory: f.travelHistory.filter((_, idx) => idx !== i) }))}>
+                      <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                  <Field label="الدولة" value={trip.country} onChangeText={v => setForm(f => { const t = [...f.travelHistory]; t[i] = { ...t[i], country: v }; return { ...f, travelHistory: t }; })} />
+                  <Field label="تاريخ الدخول (YYYY-MM-DD)" value={trip.entryDate} onChangeText={v => setForm(f => { const t = [...f.travelHistory]; t[i] = { ...t[i], entryDate: v }; return { ...f, travelHistory: t }; })} />
+                  <Field label="تاريخ المغادرة (YYYY-MM-DD)" value={trip.exitDate} onChangeText={v => setForm(f => { const t = [...f.travelHistory]; t[i] = { ...t[i], exitDate: v }; return { ...f, travelHistory: t }; })} />
+                </View>
+              ))}
+              <TouchableOpacity
+                onPress={() => setForm(f => ({ ...f, travelHistory: [...f.travelHistory, { country: '', entryDate: '', exitDate: '' }] }))}
+                style={[styles.uploadBtn, { borderColor: colors.primary, alignSelf: 'flex-end', marginTop: 4 }]}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
+                <Text style={{ color: colors.primary, marginRight: 4 }}>إضافة رحلة</Text>
+              </TouchableOpacity>
             </>
           )}
         </View>

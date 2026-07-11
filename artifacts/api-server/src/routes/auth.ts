@@ -14,6 +14,7 @@ import {
 } from "@workspace/api-zod";
 import { hashPassword, verifyPassword, serializeUser, generateToken, getProfileCompletion } from "../lib/auth";
 import { requireAuth } from "../lib/auth";
+import { visaConsentTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -160,6 +161,19 @@ router.patch("/auth/profile", async (req, res): Promise<void> => {
     .returning();
 
   res.json(UpdateProfileResponse.parse(serializeUser(user)));
+});
+
+router.post("/auth/accept-visa-terms", requireAuth, async (req, res): Promise<void> => {
+  const visaId = Number(req.body?.visaId);
+  if (!visaId || isNaN(visaId)) {
+    res.status(400).json({ error: "visaId required" });
+    return;
+  }
+  const [consent] = await db
+    .insert(visaConsentTable)
+    .values({ userId: req.session.userId!, visaId })
+    .returning();
+  res.json({ acceptedAt: consent.acceptedAt.toISOString() });
 });
 
 router.post("/auth/change-password", async (req, res): Promise<void> => {

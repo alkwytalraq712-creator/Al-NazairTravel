@@ -51,6 +51,12 @@ const visaSchema = z.object({
   requiresHotelBooking:    z.boolean().default(false),
   requiresTravelInsurance: z.boolean().default(false),
   requiresAdditionalDocs:  z.boolean().default(false),
+  requiresInvitationLetter:z.boolean().default(false),
+  // Eligibility rules
+  allowedNationalities:    z.string().default(''),  // comma-separated
+  blockedNationalities:    z.string().default(''),  // comma-separated
+  requiresGulfResidenceCountry: z.string().default(''),
+  requiresValidVisaCountries:   z.string().default(''),  // comma-separated
 });
 
 type VisaFormValues = z.infer<typeof visaSchema>;
@@ -58,14 +64,15 @@ type VisaFormValues = z.infer<typeof visaSchema>;
 // ─── Requirement flag labels ─────────────────────────────────────────────────
 
 const REQUIREMENT_FLAGS: Array<{ field: keyof VisaFormValues; label: string; description: string }> = [
-  { field: 'requiresGulfResidence',   label: 'إقامة خليجية سارية',    description: 'يشترط وجود إقامة سارية في دولة خليجية' },
-  { field: 'requiresPersonalPhoto',   label: 'صورة شخصية',            description: 'صورة شخصية حديثة بخلفية بيضاء' },
-  { field: 'requiresPassportImage',   label: 'صورة الجواز',            description: 'الصفحة الرئيسية من جواز السفر' },
-  { field: 'requiresBankStatement',   label: 'كشف حساب بنكي',         description: '3 أشهر الأخيرة على الأقل' },
-  { field: 'requiresFlightBooking',   label: 'حجز طيران',              description: 'تذكرة طيران مؤكدة أو حجز مؤقت' },
-  { field: 'requiresHotelBooking',    label: 'حجز فندق',               description: 'حجز إقامة مؤكد طوال فترة الرحلة' },
-  { field: 'requiresTravelInsurance', label: 'تأمين سفر',              description: 'بوليصة تأمين سفر سارية' },
-  { field: 'requiresAdditionalDocs',  label: 'مستندات إضافية',         description: 'مستندات خاصة بهذه الوجهة' },
+  { field: 'requiresGulfResidence',    label: 'إقامة خليجية سارية',    description: 'يشترط وجود إقامة سارية في دولة خليجية' },
+  { field: 'requiresPersonalPhoto',    label: 'صورة شخصية',            description: 'صورة شخصية حديثة بخلفية بيضاء' },
+  { field: 'requiresPassportImage',    label: 'صورة الجواز',            description: 'الصفحة الرئيسية من جواز السفر' },
+  { field: 'requiresBankStatement',    label: 'كشف حساب بنكي',         description: '3 أشهر الأخيرة على الأقل' },
+  { field: 'requiresFlightBooking',    label: 'حجز طيران',              description: 'تذكرة طيران مؤكدة أو حجز مؤقت' },
+  { field: 'requiresHotelBooking',     label: 'حجز فندق',               description: 'حجز إقامة مؤكد طوال فترة الرحلة' },
+  { field: 'requiresTravelInsurance',  label: 'تأمين سفر',              description: 'بوليصة تأمين سفر سارية' },
+  { field: 'requiresAdditionalDocs',   label: 'مستندات إضافية',         description: 'مستندات خاصة بهذه الوجهة' },
+  { field: 'requiresInvitationLetter', label: 'خطاب تعريف',             description: 'خطاب تعريف من جهة العمل أو الجهة الداعية' },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -288,14 +295,19 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null; onSuccess:
       ...visa,
       price: Number(visa.price),
       requiredDocuments: visa.requiredDocuments.join('\n'),
-      requiresGulfResidence:   v?.requiresGulfResidence   ?? false,
-      requiresPersonalPhoto:   v?.requiresPersonalPhoto   ?? true,
-      requiresPassportImage:   v?.requiresPassportImage   ?? true,
-      requiresBankStatement:   v?.requiresBankStatement   ?? false,
-      requiresFlightBooking:   v?.requiresFlightBooking   ?? false,
-      requiresHotelBooking:    v?.requiresHotelBooking    ?? false,
-      requiresTravelInsurance: v?.requiresTravelInsurance ?? false,
-      requiresAdditionalDocs:  v?.requiresAdditionalDocs  ?? false,
+      requiresGulfResidence:    v?.requiresGulfResidence    ?? false,
+      requiresPersonalPhoto:    v?.requiresPersonalPhoto    ?? true,
+      requiresPassportImage:    v?.requiresPassportImage    ?? true,
+      requiresBankStatement:    v?.requiresBankStatement    ?? false,
+      requiresFlightBooking:    v?.requiresFlightBooking    ?? false,
+      requiresHotelBooking:     v?.requiresHotelBooking     ?? false,
+      requiresTravelInsurance:  v?.requiresTravelInsurance  ?? false,
+      requiresAdditionalDocs:   v?.requiresAdditionalDocs   ?? false,
+      requiresInvitationLetter: v?.requiresInvitationLetter ?? false,
+      allowedNationalities:    (v?.allowedNationalities    ?? []).join(', '),
+      blockedNationalities:    (v?.blockedNationalities    ?? []).join(', '),
+      requiresGulfResidenceCountry: v?.requiresGulfResidenceCountry ?? '',
+      requiresValidVisaCountries:  (v?.requiresValidVisaCountries  ?? []).join(', '),
     } : {
       countryName: '',
       countryFlagUrl: '',
@@ -310,21 +322,32 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null; onSuccess:
       entriesAllowed: 'دخول لمرة واحدة',
       validity: '90 يوماً',
       isFeatured: false,
-      requiresGulfResidence:   false,
-      requiresPersonalPhoto:   true,
-      requiresPassportImage:   true,
-      requiresBankStatement:   false,
-      requiresFlightBooking:   false,
-      requiresHotelBooking:    false,
-      requiresTravelInsurance: false,
-      requiresAdditionalDocs:  false,
+      requiresGulfResidence:    false,
+      requiresPersonalPhoto:    true,
+      requiresPassportImage:    true,
+      requiresBankStatement:    false,
+      requiresFlightBooking:    false,
+      requiresHotelBooking:     false,
+      requiresTravelInsurance:  false,
+      requiresAdditionalDocs:   false,
+      requiresInvitationLetter: false,
+      allowedNationalities: '',
+      blockedNationalities: '',
+      requiresGulfResidenceCountry: '',
+      requiresValidVisaCountries: '',
     }
   });
+
+  const splitCSV = (s: string) => s.split(',').map(x => x.trim()).filter(Boolean);
 
   const onSubmit = (values: VisaFormValues) => {
     const data = {
       ...values,
-      requiredDocuments: values.requiredDocuments.split('\n').map(s => s.trim()).filter(Boolean)
+      requiredDocuments: values.requiredDocuments.split('\n').map(s => s.trim()).filter(Boolean),
+      allowedNationalities: splitCSV(values.allowedNationalities as string),
+      blockedNationalities: splitCSV(values.blockedNationalities as string),
+      requiresGulfResidenceCountry: (values.requiresGulfResidenceCountry as string).trim() || null,
+      requiresValidVisaCountries: splitCSV(values.requiresValidVisaCountries as string),
     };
 
     if (visa) {
@@ -465,6 +488,46 @@ function VisaForm({ visa, onSuccess, onCancel }: { visa: Visa | null; onSuccess:
               />
             ))}
           </div>
+        </div>
+
+        {/* ── Eligibility Rules ──────────────────────────────────────────────── */}
+        <div className="rounded-md border p-4 space-y-3">
+          <p className="font-semibold text-sm">شروط الأهلية</p>
+          <p className="text-xs text-muted-foreground">
+            حدد الجنسيات المسموح بها أو المحظورة، وشروط الإقامة الخليجية والتأشيرات السارية المطلوبة.
+            اترك الحقل فارغاً لعدم تطبيق الشرط.
+          </p>
+          <FormField control={form.control} name="allowedNationalities" render={({ field }) => (
+            <FormItem>
+              <FormLabel>الجنسيات المسموح لها (مفصولة بفاصلة)</FormLabel>
+              <FormControl><Input placeholder="مثال: Iraqi, Yemeni, Jordanian" {...field} /></FormControl>
+              <p className="text-xs text-muted-foreground">فارغ = جميع الجنسيات مسموح لها</p>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <FormField control={form.control} name="blockedNationalities" render={({ field }) => (
+            <FormItem>
+              <FormLabel>الجنسيات المحظورة (مفصولة بفاصلة)</FormLabel>
+              <FormControl><Input placeholder="مثال: Israeli" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <FormField control={form.control} name="requiresGulfResidenceCountry" render={({ field }) => (
+            <FormItem>
+              <FormLabel>دولة الإقامة الخليجية المحددة (اختياري)</FormLabel>
+              <FormControl><Input placeholder="مثال: Saudi Arabia — فارغ = أي دولة خليجية" {...field} /></FormControl>
+              <p className="text-xs text-muted-foreground">يُستخدم فقط عند تفعيل شرط الإقامة الخليجية</p>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <FormField control={form.control} name="requiresValidVisaCountries" render={({ field }) => (
+            <FormItem>
+              <FormLabel>يشترط تأشيرة سارية لـ (مفصولة بفاصلة)</FormLabel>
+              <FormControl><Input placeholder="مثال: schengen, uk, us, canada, australia, japan" {...field} /></FormControl>
+              <p className="text-xs text-muted-foreground">فارغ = لا يشترط تأشيرة سابقة</p>
+              <FormMessage />
+            </FormItem>
+          )} />
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t">

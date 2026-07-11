@@ -5,6 +5,8 @@
  * Qema Al Nathair Travel & Tourism API
  * OpenAPI spec version: 0.1.0
  */
+import type { ActiveVisa } from './activeVisa';
+import type { TravelTrip } from './travelTrip';
 import type { UserRole } from './userRole';
 
 export interface User {
@@ -70,4 +72,8 @@ export interface User {
   gulfResidenceBackUrl?: string | null;
   /** @nullable */
   profileCompletedAt?: Date | null;
+  hasActiveForeignVisa?: boolean;
+  activeVisas?: ActiveVisa[];
+  hasTravelHistory?: boolean;
+  travelHistory?: TravelTrip[];
 }
