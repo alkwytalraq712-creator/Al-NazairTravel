@@ -35,7 +35,14 @@ export default function AccountScreen() {
   function handleLogout() {
     Alert.alert('تسجيل الخروج', 'هل تريد تسجيل الخروج؟', [
       { text: 'إلغاء', style: 'cancel' },
-      { text: 'خروج', style: 'destructive', onPress: logout },
+      {
+        text: 'خروج',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          router.replace('/auth/login' as any);
+        },
+      },
     ]);
   }
 
