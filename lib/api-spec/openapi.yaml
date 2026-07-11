@@ -3035,10 +3035,31 @@ components:
         passportNumber: { type: string }
         passportExpiry: { type: string, format: date }
         passportIssueCountry: { type: string }
+        title: { type: string }
+        eTicketNumber: { type: string }
 
     FlightBookingStatus:
       type: string
       enum: [pending, confirmed, ticketed, cancelled, completed]
+
+    FlightSegmentInfo:
+      type: object
+      required: [fromAirport, toAirport, departTime, arriveTime]
+      properties:
+        fromAirport: { type: string }
+        fromAirportName: { type: string }
+        fromCity: { type: string }
+        toAirport: { type: string }
+        toAirportName: { type: string }
+        toCity: { type: string }
+        departTime: { type: string, format: date-time }
+        arriveTime: { type: string, format: date-time }
+        airlineName: { type: string }
+        airlineLogoUrl: { type: string }
+        flightNumber: { type: string }
+        aircraft: { type: string }
+        durationMinutes: { type: integer }
+        cabinClass: { type: string }
 
     FlightBooking:
       type: object
@@ -3069,6 +3090,20 @@ components:
         status:
           $ref: "#/components/schemas/FlightBookingStatus"
         createdAt: { type: string, format: date-time }
+        provider: { type: string }
+        providerMode: { type: string, nullable: true }
+        bookingReference: { type: string, nullable: true }
+        duffelOrderId: { type: string, nullable: true }
+        eticketNumbers:
+          type: array
+          nullable: true
+          items: { type: string }
+        segments:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/FlightSegmentInfo"
+        baggage: { type: string, nullable: true }
 
     FlightBookingInput:
       type: object

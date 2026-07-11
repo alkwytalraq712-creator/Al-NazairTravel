@@ -15,4 +15,6 @@ export interface Passenger {
   passportNumber: string;
   passportExpiry: Date;
   passportIssueCountry?: string;
+  title?: string;
+  eTicketNumber?: string;
 }

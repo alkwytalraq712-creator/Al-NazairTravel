@@ -2174,12 +2174,36 @@ export const ListMyFlightBookingsResponseItem = zod.object({
   "dob": zod.coerce.date(),
   "passportNumber": zod.string(),
   "passportExpiry": zod.coerce.date(),
-  "passportIssueCountry": zod.string().optional()
+  "passportIssueCountry": zod.string().optional(),
+  "title": zod.string().optional(),
+  "eTicketNumber": zod.string().optional()
 })),
   "phone": zod.string(),
   "email": zod.string(),
   "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed']),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "provider": zod.string().optional(),
+  "providerMode": zod.string().nullish(),
+  "bookingReference": zod.string().nullish(),
+  "duffelOrderId": zod.string().nullish(),
+  "eticketNumbers": zod.array(zod.string()).nullish(),
+  "segments": zod.array(zod.object({
+  "fromAirport": zod.string(),
+  "fromAirportName": zod.string().optional(),
+  "fromCity": zod.string().optional(),
+  "toAirport": zod.string(),
+  "toAirportName": zod.string().optional(),
+  "toCity": zod.string().optional(),
+  "departTime": zod.coerce.date(),
+  "arriveTime": zod.coerce.date(),
+  "airlineName": zod.string().optional(),
+  "airlineLogoUrl": zod.string().optional(),
+  "flightNumber": zod.string().optional(),
+  "aircraft": zod.string().optional(),
+  "durationMinutes": zod.number().optional(),
+  "cabinClass": zod.string().optional()
+})).nullish(),
+  "baggage": zod.string().nullish()
 })
 export const ListMyFlightBookingsResponse = zod.array(ListMyFlightBookingsResponseItem)
 
@@ -2214,7 +2238,9 @@ export const CreateFlightBookingBody = zod.object({
   "dob": zod.coerce.date(),
   "passportNumber": zod.string(),
   "passportExpiry": zod.coerce.date(),
-  "passportIssueCountry": zod.string().optional()
+  "passportIssueCountry": zod.string().optional(),
+  "title": zod.string().optional(),
+  "eTicketNumber": zod.string().optional()
 })).min(1),
   "phone": zod.string(),
   "email": zod.string()
@@ -2247,12 +2273,36 @@ export const CreateFlightBookingResponse = zod.object({
   "dob": zod.coerce.date(),
   "passportNumber": zod.string(),
   "passportExpiry": zod.coerce.date(),
-  "passportIssueCountry": zod.string().optional()
+  "passportIssueCountry": zod.string().optional(),
+  "title": zod.string().optional(),
+  "eTicketNumber": zod.string().optional()
 })),
   "phone": zod.string(),
   "email": zod.string(),
   "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed']),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "provider": zod.string().optional(),
+  "providerMode": zod.string().nullish(),
+  "bookingReference": zod.string().nullish(),
+  "duffelOrderId": zod.string().nullish(),
+  "eticketNumbers": zod.array(zod.string()).nullish(),
+  "segments": zod.array(zod.object({
+  "fromAirport": zod.string(),
+  "fromAirportName": zod.string().optional(),
+  "fromCity": zod.string().optional(),
+  "toAirport": zod.string(),
+  "toAirportName": zod.string().optional(),
+  "toCity": zod.string().optional(),
+  "departTime": zod.coerce.date(),
+  "arriveTime": zod.coerce.date(),
+  "airlineName": zod.string().optional(),
+  "airlineLogoUrl": zod.string().optional(),
+  "flightNumber": zod.string().optional(),
+  "aircraft": zod.string().optional(),
+  "durationMinutes": zod.number().optional(),
+  "cabinClass": zod.string().optional()
+})).nullish(),
+  "baggage": zod.string().nullish()
 })
 
 
@@ -2290,12 +2340,36 @@ export const GetFlightBookingResponse = zod.object({
   "dob": zod.coerce.date(),
   "passportNumber": zod.string(),
   "passportExpiry": zod.coerce.date(),
-  "passportIssueCountry": zod.string().optional()
+  "passportIssueCountry": zod.string().optional(),
+  "title": zod.string().optional(),
+  "eTicketNumber": zod.string().optional()
 })),
   "phone": zod.string(),
   "email": zod.string(),
   "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed']),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "provider": zod.string().optional(),
+  "providerMode": zod.string().nullish(),
+  "bookingReference": zod.string().nullish(),
+  "duffelOrderId": zod.string().nullish(),
+  "eticketNumbers": zod.array(zod.string()).nullish(),
+  "segments": zod.array(zod.object({
+  "fromAirport": zod.string(),
+  "fromAirportName": zod.string().optional(),
+  "fromCity": zod.string().optional(),
+  "toAirport": zod.string(),
+  "toAirportName": zod.string().optional(),
+  "toCity": zod.string().optional(),
+  "departTime": zod.coerce.date(),
+  "arriveTime": zod.coerce.date(),
+  "airlineName": zod.string().optional(),
+  "airlineLogoUrl": zod.string().optional(),
+  "flightNumber": zod.string().optional(),
+  "aircraft": zod.string().optional(),
+  "durationMinutes": zod.number().optional(),
+  "cabinClass": zod.string().optional()
+})).nullish(),
+  "baggage": zod.string().nullish()
 })
 
 
@@ -2333,12 +2407,36 @@ export const ListAllFlightBookingsResponseItem = zod.object({
   "dob": zod.coerce.date(),
   "passportNumber": zod.string(),
   "passportExpiry": zod.coerce.date(),
-  "passportIssueCountry": zod.string().optional()
+  "passportIssueCountry": zod.string().optional(),
+  "title": zod.string().optional(),
+  "eTicketNumber": zod.string().optional()
 })),
   "phone": zod.string(),
   "email": zod.string(),
   "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed']),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "provider": zod.string().optional(),
+  "providerMode": zod.string().nullish(),
+  "bookingReference": zod.string().nullish(),
+  "duffelOrderId": zod.string().nullish(),
+  "eticketNumbers": zod.array(zod.string()).nullish(),
+  "segments": zod.array(zod.object({
+  "fromAirport": zod.string(),
+  "fromAirportName": zod.string().optional(),
+  "fromCity": zod.string().optional(),
+  "toAirport": zod.string(),
+  "toAirportName": zod.string().optional(),
+  "toCity": zod.string().optional(),
+  "departTime": zod.coerce.date(),
+  "arriveTime": zod.coerce.date(),
+  "airlineName": zod.string().optional(),
+  "airlineLogoUrl": zod.string().optional(),
+  "flightNumber": zod.string().optional(),
+  "aircraft": zod.string().optional(),
+  "durationMinutes": zod.number().optional(),
+  "cabinClass": zod.string().optional()
+})).nullish(),
+  "baggage": zod.string().nullish()
 })
 export const ListAllFlightBookingsResponse = zod.array(ListAllFlightBookingsResponseItem)
 
@@ -2381,12 +2479,36 @@ export const UpdateFlightBookingStatusResponse = zod.object({
   "dob": zod.coerce.date(),
   "passportNumber": zod.string(),
   "passportExpiry": zod.coerce.date(),
-  "passportIssueCountry": zod.string().optional()
+  "passportIssueCountry": zod.string().optional(),
+  "title": zod.string().optional(),
+  "eTicketNumber": zod.string().optional()
 })),
   "phone": zod.string(),
   "email": zod.string(),
   "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed']),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "provider": zod.string().optional(),
+  "providerMode": zod.string().nullish(),
+  "bookingReference": zod.string().nullish(),
+  "duffelOrderId": zod.string().nullish(),
+  "eticketNumbers": zod.array(zod.string()).nullish(),
+  "segments": zod.array(zod.object({
+  "fromAirport": zod.string(),
+  "fromAirportName": zod.string().optional(),
+  "fromCity": zod.string().optional(),
+  "toAirport": zod.string(),
+  "toAirportName": zod.string().optional(),
+  "toCity": zod.string().optional(),
+  "departTime": zod.coerce.date(),
+  "arriveTime": zod.coerce.date(),
+  "airlineName": zod.string().optional(),
+  "airlineLogoUrl": zod.string().optional(),
+  "flightNumber": zod.string().optional(),
+  "aircraft": zod.string().optional(),
+  "durationMinutes": zod.number().optional(),
+  "cabinClass": zod.string().optional()
+})).nullish(),
+  "baggage": zod.string().nullish()
 })
 
 

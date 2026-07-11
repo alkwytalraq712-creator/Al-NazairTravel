@@ -992,6 +992,8 @@ export interface Passenger {
   passportNumber: string;
   passportExpiry: string;
   passportIssueCountry?: string;
+  title?: string;
+  eTicketNumber?: string;
 }
 
 export type FlightBookingStatus = typeof FlightBookingStatus[keyof typeof FlightBookingStatus];
@@ -1005,6 +1007,23 @@ export const FlightBookingStatus = {
   completed: 'completed',
 } as const;
 
+export interface FlightSegmentInfo {
+  fromAirport: string;
+  fromAirportName?: string;
+  fromCity?: string;
+  toAirport: string;
+  toAirportName?: string;
+  toCity?: string;
+  departTime: string;
+  arriveTime: string;
+  airlineName?: string;
+  airlineLogoUrl?: string;
+  flightNumber?: string;
+  aircraft?: string;
+  durationMinutes?: number;
+  cabinClass?: string;
+}
+
 export interface FlightBooking {
   id: number;
   userId: number;
@@ -1015,6 +1034,13 @@ export interface FlightBooking {
   email: string;
   status: FlightBookingStatus;
   createdAt: string;
+  provider?: string;
+  providerMode?: string | null;
+  bookingReference?: string | null;
+  duffelOrderId?: string | null;
+  eticketNumbers?: string[] | null;
+  segments?: FlightSegmentInfo[] | null;
+  baggage?: string | null;
 }
 
 export interface FlightBookingInput {

@@ -17,44 +17,15 @@ import {
 } from "@workspace/api-zod";
 import { requireAdmin, requireAuth } from "../lib/auth";
 import { generateReferenceNumber } from "../lib/reference";
+import {
+  createFlightOrder,
+  duffelPost,
+  isDuffelConfigured,
+  parseDuration,
+  type CreatedOrder,
+} from "../lib/duffel";
 
 const router: IRouter = Router();
-
-// ─── Duffel helpers ────────────────────────────────────────────────────────────
-
-const DUFFEL_BASE = "https://api.duffel.com";
-const DUFFEL_VERSION = "v2";
-
-async function duffelPost(path: string, body: unknown): Promise<any> {
-  const key = process.env.DUFFEL_API_KEY;
-  if (!key) throw new Error("DUFFEL_API_KEY is not set");
-
-  const res = await fetch(`${DUFFEL_BASE}${path}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Duffel-Version": DUFFEL_VERSION,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ data: body }),
-  });
-
-  const json = await res.json() as any;
-  if (!res.ok) {
-    const msg = json?.errors?.[0]?.message ?? json?.meta?.status ?? `Duffel error ${res.status}`;
-    throw new Error(msg);
-  }
-  return json.data;
-}
-
-/** Parse ISO 8601 duration (PT2H30M, PT45M, PT1H) → minutes */
-function parseDuration(dur: string | null | undefined): number {
-  if (!dur) return 0;
-  const m = dur.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
-  if (!m) return 0;
-  return (parseInt(m[1] ?? "0") * 60) + parseInt(m[2] ?? "0");
-}
 
 /** Map a Duffel offer → our FlightOffer shape (outbound slice only) */
 function mapOffer(offer: any, cabinClass: string): object {
@@ -164,7 +135,7 @@ router.get("/flights/search", async (req, res): Promise<void> => {
   } = query.data;
 
   // ── If no Duffel key, return mock data ──
-  if (!process.env.DUFFEL_API_KEY) {
+  if (!isDuffelConfigured()) {
     const offers = mockOffers(from, to, departDate, cabinClass);
     res.json(SearchFlightsResponse.parse(offers));
     return;
@@ -244,26 +215,85 @@ router.post(
       return;
     }
 
+    const { offer, passengers, phone, email } = parsed.data;
+
+    // Normalize passenger dates to YYYY-MM-DD strings.
+    const normPassengers = passengers.map((p) => ({
+      ...p,
+      dob: p.dob instanceof Date ? p.dob.toISOString().slice(0, 10) : p.dob,
+      passportExpiry:
+        p.passportExpiry instanceof Date
+          ? p.passportExpiry.toISOString().slice(0, 10)
+          : p.passportExpiry,
+    }));
+
+    const offerSnapshot = {
+      ...offer,
+      departTime: offer.departTime.toISOString(),
+      arriveTime: offer.arriveTime.toISOString(),
+    };
+
+    // Only real Duffel offers (off_...) can become real orders. Mock offers
+    // (returned when Duffel is unavailable) are stored locally as "pending".
+    const isRealOffer =
+      typeof offer.id === "string" && offer.id.startsWith("off_");
+    let order: CreatedOrder | null = null;
+
+    if (isRealOffer && isDuffelConfigured()) {
+      try {
+        order = await createFlightOrder({
+          offerId: offer.id,
+          email,
+          phone,
+          passengers: normPassengers.map((p) => ({
+            firstName: p.firstName,
+            lastName: p.lastName,
+            gender: p.gender,
+            dob: p.dob,
+            passportNumber: p.passportNumber,
+            passportExpiry: p.passportExpiry,
+            passportIssueCountry: p.passportIssueCountry,
+            nationality: p.nationality,
+          })),
+        });
+      } catch (err: any) {
+        console.error("[Duffel] order error:", err?.message ?? err);
+        const expired =
+          err?.status === 404 ||
+          /expire|no longer|not found|not available|unavailable|sold out/i.test(
+            String(err?.message ?? ""),
+          );
+        res.status(expired ? 409 : 502).json({
+          error: expired
+            ? "انتهت صلاحية عرض هذه الرحلة أو لم يعد متاحًا. يرجى إعادة البحث واختيار الرحلة من جديد."
+            : `تعذّر إتمام الحجز لدى مزوّد الطيران: ${err?.message ?? "خطأ غير متوقع"}`,
+        });
+        return;
+      }
+    }
+
+    const passengersToStore = normPassengers.map((p, i) => ({
+      ...p,
+      eTicketNumber: order?.perPassengerETickets?.[i] ?? undefined,
+    }));
+
     const [booking] = await db
       .insert(flightBookingsTable)
       .values({
-        offer: {
-          ...parsed.data.offer,
-          departTime: parsed.data.offer.departTime.toISOString(),
-          arriveTime: parsed.data.offer.arriveTime.toISOString(),
-        },
-        passengers: parsed.data.passengers.map((p) => ({
-          ...p,
-          dob: p.dob instanceof Date ? p.dob.toISOString().slice(0, 10) : p.dob,
-          passportExpiry:
-            p.passportExpiry instanceof Date
-              ? p.passportExpiry.toISOString().slice(0, 10)
-              : p.passportExpiry,
-        })),
-        phone: parsed.data.phone,
-        email: parsed.data.email,
+        offer: offerSnapshot,
+        passengers: passengersToStore,
+        phone,
+        email,
         userId: req.session.userId as number,
         referenceNumber: generateReferenceNumber("FLT"),
+        provider: order ? "duffel" : "local",
+        providerMode: order?.providerMode ?? null,
+        bookingReference: order?.bookingReference ?? null,
+        duffelOrderId: order?.duffelOrderId ?? null,
+        eticketNumbers: order?.eTicketNumbers ?? null,
+        segments: order?.segments ?? null,
+        baggage: order?.baggage ?? null,
+        status: order?.status ?? "pending",
       })
       .returning();
 

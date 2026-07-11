@@ -28,6 +28,7 @@ export * from './flightBookingInput';
 export * from './flightBookingStatus';
 export * from './flightBookingStatusUpdate';
 export * from './flightOffer';
+export * from './flightSegmentInfo';
 export * from './healthStatus';
 export * from './homeSummary';
 export * from './invoice';
