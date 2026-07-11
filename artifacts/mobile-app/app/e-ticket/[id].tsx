@@ -135,95 +135,320 @@ export default function ETicketScreen() {
   }
 
   function buildTicketHtml(): string {
-    const passengerRows = booking!.passengers.map((p, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${p.firstName} ${p.lastName}</td>
-        <td>${p.passportNumber}</td>
-        <td>${p.nationality}</td>
-        <td>${p.eTicketNumber ?? (booking!.eticketNumbers?.[i] ?? '—')}</td>
-      </tr>`).join('');
+    const pax0Name = booking!.passengers[0]
+      ? `${booking!.passengers[0].firstName} ${booking!.passengers[0].lastName}`
+      : '—';
+    const paxCount = booking!.passengers.length;
+
+    const passengerRows = booking!.passengers.map((p, i) => {
+      const eTicket = (p as any).eTicketNumber ?? booking!.eticketNumbers?.[i] ?? '—';
+      return `
+      <tr class="${i % 2 === 0 ? 'row-even' : 'row-odd'}">
+        <td style="font-weight:700;color:#C9A060">${i + 1}</td>
+        <td>
+          <div style="font-weight:700;font-size:14px">${p.firstName} ${p.lastName}</div>
+          <div style="font-size:11px;color:#888;margin-top:2px">${p.nationality ?? ''}</div>
+        </td>
+        <td style="font-family:monospace;letter-spacing:1px">${p.passportNumber ?? '—'}</td>
+        <td style="color:#C9A060;font-weight:700;font-family:monospace;letter-spacing:2px">${eTicket}</td>
+      </tr>`;
+    }).join('');
+
+    const issueDate = new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
 
     return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>تذكرة إلكترونية — ${qrValue}</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #fff; color: #111; margin: 0; padding: 24px; direction: rtl; }
-  h1 { font-size: 22px; color: #C9A060; margin: 0 0 4px; }
-  .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #C9A060; padding-bottom: 12px; margin-bottom: 20px; }
-  .logo-text { font-size: 26px; font-weight: 900; color: #C9A060; }
-  .airline-name { font-size: 14px; color: #555; }
-  .section { margin-bottom: 20px; }
-  .section h2 { font-size: 14px; color: #C9A060; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 10px; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-  .field label { font-size: 11px; color: #888; display: block; }
-  .field span { font-size: 14px; font-weight: 700; }
-  .route { text-align: center; background: #f9f6f0; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-  .route .airports { display: flex; justify-content: space-between; align-items: center; font-size: 28px; font-weight: 900; }
-  .route .times { display: flex; justify-content: space-between; font-size: 14px; color: #555; margin-top: 6px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { background: #f0e8d0; padding: 8px; text-align: right; }
-  td { padding: 8px; border-bottom: 1px solid #eee; }
-  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; background: #e8f5e9; color: #10B981; }
-  .ref { font-size: 22px; font-weight: 900; color: #C9A060; letter-spacing: 2px; }
-  .footer { font-size: 11px; color: #999; text-align: center; margin-top: 24px; border-top: 1px solid #eee; padding-top: 12px; }
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Cairo', Arial, sans-serif;
+    background: #f4f4f6;
+    color: #1a1a2e;
+    direction: rtl;
+    padding: 20px;
+    font-size: 13px;
+  }
+
+  /* ── Ticket wrapper ─────────────────────── */
+  .ticket {
+    background: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    max-width: 800px;
+    margin: 0 auto 20px;
+  }
+
+  /* ── Top band: company + status ──────────── */
+  .top-band {
+    background: linear-gradient(135deg, #0B1628 0%, #162035 60%, #0F1E36 100%);
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .company-name { font-size: 22px; font-weight: 900; color: #C9A060; line-height: 1.2; }
+  .company-en   { font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 400; }
+  .etkt-label   { font-size: 11px; color: rgba(255,255,255,0.5); text-align: left; }
+  .etkt-title   { font-size: 18px; font-weight: 900; color: #fff; text-align: left; }
+  .status-badge {
+    display: inline-block; margin-top: 6px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+    background: rgba(16,185,129,0.2); color: #10B981;
+    border: 1px solid rgba(16,185,129,0.4);
+  }
+
+  /* ── Route section ──────────────────────── */
+  .route-section {
+    background: linear-gradient(135deg, #0F1E36 0%, #162035 100%);
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .airport-block { text-align: center; }
+  .airport-code {
+    font-size: 48px; font-weight: 900; color: #fff; line-height: 1;
+    letter-spacing: 2px;
+  }
+  .airport-city { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+  .flight-mid { flex: 1; text-align: center; }
+  .flight-line {
+    position: relative; height: 2px;
+    background: linear-gradient(90deg, rgba(201,160,96,0.3), #C9A060, rgba(201,160,96,0.3));
+    margin: 16px 0;
+  }
+  .flight-plane {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: #C9A060; color: #fff;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; margin-top: -14px; margin-left: -14px;
+  }
+  .flight-duration { font-size: 13px; color: #C9A060; font-weight: 700; }
+  .flight-number   { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+  .time-row {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding: 0 8px; margin-top: 8px;
+  }
+  .time-block { text-align: center; }
+  .time-val  { font-size: 26px; font-weight: 900; color: #fff; }
+  .time-date { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+
+  /* ── Perforated divider ─────────────────── */
+  .perforated {
+    display: flex; align-items: center;
+    background: #f4f4f6;
+  }
+  .perf-circle-l, .perf-circle-r {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #f4f4f6; flex-shrink: 0;
+  }
+  .perf-line {
+    flex: 1; height: 0; margin: 0 4px;
+    border-top: 2px dashed #ddd;
+  }
+
+  /* ── Info grid ──────────────────────────── */
+  .info-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .info-cell {
+    padding: 16px 20px;
+    border-left: 1px solid #f0f0f0;
+  }
+  .info-cell:last-child { border-left: none; }
+  .info-cell label { display: block; font-size: 10px; color: #999; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; }
+  .info-cell span  { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+  .pnr-val { font-size: 20px !important; color: #C9A060 !important; letter-spacing: 3px; font-family: monospace !important; }
+  .cabin-val { color: #7c3aed !important; }
+
+  /* ── Passengers table ───────────────────── */
+  .section-title {
+    padding: 14px 20px 10px;
+    font-size: 12px; font-weight: 700; color: #C9A060;
+    letter-spacing: 1px; border-bottom: 1px solid #f0f0f0;
+    background: #fffbf4;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: #f9f6f0; padding: 10px 16px;
+    font-size: 11px; font-weight: 700; color: #888;
+    text-align: right; border-bottom: 2px solid #edd9a3;
+  }
+  .row-even { background: #fff; }
+  .row-odd  { background: #fafafa; }
+  tbody td { padding: 12px 16px; font-size: 13px; vertical-align: top; border-bottom: 1px solid #f0f0f0; }
+
+  /* ── Baggage strip ──────────────────────── */
+  .baggage-strip {
+    background: #f0faf4; border-top: 1px solid #d1fae5;
+    padding: 12px 20px; display: flex; align-items: center; gap: 10px;
+    direction: rtl;
+  }
+  .baggage-icon { font-size: 18px; }
+  .baggage-label { font-size: 12px; color: #065f46; font-weight: 700; }
+  .baggage-val   { font-size: 13px; color: #047857; font-weight: 900; }
+
+  /* ── Footer ─────────────────────────────── */
+  .ticket-footer {
+    background: #0B1628; padding: 16px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .footer-ar { font-size: 11px; color: rgba(255,255,255,0.5); }
+  .footer-en { font-size: 10px; color: rgba(255,255,255,0.3); direction: ltr; text-align: left; }
+
+  /* ── Conditions ──────────────────────────── */
+  .conditions {
+    background: #fff; border-radius: 16px;
+    padding: 20px 24px; max-width: 800px; margin: 0 auto;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .conditions h3 { font-size: 13px; font-weight: 700; color: #C9A060; margin-bottom: 10px; }
+  .conditions ul { padding-right: 18px; }
+  .conditions li { font-size: 11px; color: #666; line-height: 1.8; }
 </style>
 </head>
 <body>
-<div class="header">
-  <div>
-    <div class="logo-text">قمة للسفر والسياحة</div>
-    <div class="airline-name">QEMA Travel & Tourism</div>
-  </div>
-  <div style="text-align:left;">
-    <h1>تذكرة إلكترونية</h1>
-    <div class="badge">${statusLabel}</div>
-  </div>
-</div>
 
-<div class="route">
-  <div class="airports">
-    <div>${fromAirport}<br/><small style="font-size:14px;font-weight:400;color:#888">${fromCity}</small></div>
-    <div style="font-size:18px;color:#C9A060;">✈</div>
-    <div>${toAirport}<br/><small style="font-size:14px;font-weight:400;color:#888">${toCity}</small></div>
-  </div>
-  <div class="times">
-    <span>${formatTime(departStr)}</span>
-    <span style="color:#C9A060">${formatDuration(duration)}</span>
-    <span>${formatTime(arriveStr)}</span>
-  </div>
-  <div style="margin-top:8px;font-size:13px;color:#555">${formatDateAr(departStr.slice(0, 10))} — ${offer.flightNumber} — ${CABIN_LABELS_AR[offer.cabinClass] ?? offer.cabinClass}</div>
-</div>
+<!-- ═══════════════════════════════════ TICKET ═══════════════════════════════════ -->
+<div class="ticket">
 
-<div class="section">
-  <h2>بيانات الحجز</h2>
-  <div class="grid">
-    <div class="field"><label>رقم الطلب</label><span>${booking!.referenceNumber}</span></div>
-    <div class="field"><label>رقم المرجع (PNR)</label><span class="ref">${booking!.bookingReference ?? '—'}</span></div>
-    <div class="field"><label>الإفصاح</label><span>${offer.airlineName}</span></div>
-    <div class="field"><label>تاريخ الإقلاع</label><span>${formatDateAr(departStr.slice(0, 10))}</span></div>
-    <div class="field"><label>وقت الإقلاع</label><span>${formatTime(departStr)}</span></div>
-    <div class="field"><label>وقت الوصول</label><span>${formatTime(arriveStr)}</span></div>
-    ${aircraft ? `<div class="field"><label>طراز الطائرة</label><span>${aircraft}</span></div>` : ''}
-    ${booking!.baggage ? `<div class="field"><label>الأمتعة</label><span>${booking!.baggage}</span></div>` : ''}
+  <!-- Top Band -->
+  <div class="top-band">
+    <div>
+      <div class="company-name">قمة للسفر والسياحة</div>
+      <div class="company-en">QEMA TRAVEL &amp; TOURISM</div>
+    </div>
+    <div style="text-align:left">
+      <div class="etkt-label">E-TICKET / تذكرة إلكترونية</div>
+      <div class="etkt-title">${offer.airlineName}</div>
+      <div class="status-badge">${statusLabel}</div>
+    </div>
   </div>
-</div>
 
-<div class="section">
-  <h2>المسافرون</h2>
+  <!-- Route -->
+  <div class="route-section">
+    <div class="airport-block">
+      <div class="airport-code">${fromAirport}</div>
+      <div class="airport-city">${fromCity || fromAirport}</div>
+    </div>
+
+    <div class="flight-mid">
+      <div class="flight-duration">${formatDuration(duration)}</div>
+      <div class="flight-line">
+        <div class="flight-plane">✈</div>
+      </div>
+      <div class="flight-number">${offer.flightNumber}${aircraft ? ` · ${aircraft}` : ''}</div>
+    </div>
+
+    <div class="airport-block">
+      <div class="airport-code">${toAirport}</div>
+      <div class="airport-city">${toCity || toAirport}</div>
+    </div>
+  </div>
+
+  <!-- Times -->
+  <div style="background:linear-gradient(135deg,#0F1E36,#162035);padding:0 32px 20px;">
+    <div class="time-row">
+      <div class="time-block">
+        <div class="time-val">${formatTime(departStr)}</div>
+        <div class="time-date">${formatDateAr(departStr.slice(0,10))}</div>
+      </div>
+      <div class="time-block">
+        <div class="time-val">${formatTime(arriveStr)}</div>
+        <div class="time-date">${formatDateAr(arriveStr.slice(0,10))}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Perforated divider -->
+  <div class="perforated">
+    <div class="perf-circle-l"></div>
+    <div class="perf-line"></div>
+    <div class="perf-circle-r"></div>
+  </div>
+
+  <!-- Info grid -->
+  <div class="info-grid">
+    <div class="info-cell">
+      <label>رقم المرجع / PNR</label>
+      <span class="pnr-val">${booking!.bookingReference ?? '—'}</span>
+    </div>
+    <div class="info-cell">
+      <label>رقم الطلب / Booking Ref</label>
+      <span>${booking!.referenceNumber}</span>
+    </div>
+    <div class="info-cell">
+      <label>الدرجة / Class</label>
+      <span class="cabin-val">${CABIN_LABELS_AR[offer.cabinClass] ?? offer.cabinClass}</span>
+    </div>
+    <div class="info-cell">
+      <label>عدد المسافرين / Pax</label>
+      <span>${paxCount} ${paxCount === 1 ? 'مسافر' : 'مسافرون'}</span>
+    </div>
+  </div>
+
+  <!-- Baggage -->
+  ${booking!.baggage ? `
+  <div class="baggage-strip">
+    <span class="baggage-icon">🧳</span>
+    <span class="baggage-label">الأمتعة المسموح بها:</span>
+    <span class="baggage-val">${booking!.baggage}</span>
+    <span style="margin-right:auto;font-size:11px;color:#059669">Baggage Allowance</span>
+  </div>` : ''}
+
+  <!-- Passengers table -->
+  <div class="section-title">بيانات المسافرين / PASSENGER DETAILS</div>
   <table>
-    <tr><th>#</th><th>الاسم</th><th>رقم الجواز</th><th>الجنسية</th><th>رقم التذكرة</th></tr>
-    ${passengerRows}
+    <thead>
+      <tr>
+        <th style="width:32px">#</th>
+        <th>الاسم / Name</th>
+        <th>رقم الجواز / Passport</th>
+        <th>رقم التذكرة / E-Ticket No.</th>
+      </tr>
+    </thead>
+    <tbody>${passengerRows}</tbody>
   </table>
+
+  <!-- Footer -->
+  <div class="ticket-footer">
+    <div class="footer-ar">
+      صدرت بواسطة: قمة للسفر والسياحة · تاريخ الإصدار: ${issueDate}<br/>
+      الرجاء إحضار هذه التذكرة والجواز معك إلى المطار
+    </div>
+    <div class="footer-en">
+      Issued by: Qema Travel &amp; Tourism<br/>
+      Please carry this e-ticket and passport to the airport
+    </div>
+  </div>
+
+</div><!-- /ticket -->
+
+<!-- ══════════════════════ TERMS & CONDITIONS ══════════════════════ -->
+<div class="conditions">
+  <h3>شروط وأحكام مهمة · Important Terms</h3>
+  <ul>
+    <li>يجب الحضور إلى المطار قبل موعد الإقلاع بساعتين على الأقل للرحلات الدولية.</li>
+    <li>Arrive at the airport at least 2 hours before departure for international flights.</li>
+    <li>هذه التذكرة شخصية وغير قابلة للتحويل · This ticket is non-transferable.</li>
+    <li>تأكد من صلاحية جواز سفرك قبل السفر · Ensure your passport is valid before travel.</li>
+    <li>قمة للسفر والسياحة · Qema Travel &amp; Tourism — للاستفسار: info@qema.travel</li>
+  </ul>
 </div>
 
-<div class="footer">
-  صدرت هذه التذكرة بواسطة قمة للسفر والسياحة — الرجاء إحضار هذه التذكرة معك إلى المطار<br/>
-  This e-ticket was issued by Qema Travel & Tourism — Please carry this ticket to the airport
-</div>
 </body>
 </html>`;
   }
