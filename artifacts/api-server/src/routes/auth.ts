@@ -35,6 +35,10 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
   }
 
   const passwordHash = await hashPassword(parsed.data.password);
+  // nationality is accepted from the request body even if not in the zod schema
+  const nationality = typeof req.body?.nationality === 'string' && req.body.nationality.trim()
+    ? req.body.nationality.trim()
+    : undefined;
   const [user] = await db
     .insert(usersTable)
     .values({
@@ -42,6 +46,7 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
       phone: parsed.data.phone,
       email: parsed.data.email,
       passwordHash,
+      ...(nationality ? { nationality } : {}),
     })
     .returning();
 
