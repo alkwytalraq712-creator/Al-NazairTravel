@@ -197,7 +197,6 @@ export default function MyProfileScreen() {
           {/* Personal info */}
           <Section title="المعلومات الشخصية" icon="person-outline">
             <InfoRow label="الاسم الكامل" value={name} />
-            {u?.englishName ? <InfoRow label="الاسم كما في الجواز" value={u.englishName} /> : null}
             <InfoRow label="الجنسية" value={u?.nationality ?? ''} />
             <InfoRow label="الجنس" value={GENDER_LABELS[u?.gender] ?? ''} />
             <InfoRow label="تاريخ الميلاد" value={formatDateAr(u?.dob)} />
