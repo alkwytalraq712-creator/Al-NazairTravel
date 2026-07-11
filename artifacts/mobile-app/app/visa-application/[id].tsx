@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,14 +21,17 @@ import { useColors } from '@/hooks/useColors';
 // ─── Status config ─────────────────────────────────────────────────────────────
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: string }> = {
+  filling_data:          { label: 'قيد تعبئة البيانات',  color: '#6B7280', icon: 'create-outline' },
   received:              { label: 'تم الاستلام',          color: '#3B82F6', icon: 'checkmark-circle-outline' },
   reviewing:             { label: 'جاري المراجعة',        color: '#F59E0B', icon: 'time-outline' },
   awaiting_documents:    { label: 'بانتظار مستندات',      color: '#EF4444', icon: 'document-outline' },
   submitted_to_embassy:  { label: 'تم تقديم للسفارة',    color: '#8B5CF6', icon: 'send-outline' },
   processing:            { label: 'جاري المعالجة',         color: '#F08015', icon: 'cog-outline' },
-  issued:                { label: 'تم إصدار التأشيرة',   color: '#10B981', icon: 'ribbon-outline' },
+  approved:              { label: 'تمت الموافقة',          color: '#10B981', icon: 'checkmark-done-outline' },
+  issued:                { label: 'تم إصدار التأشيرة',   color: '#059669', icon: 'ribbon-outline' },
   completed:             { label: 'مكتمل',                color: '#059669', icon: 'checkmark-done-circle' },
   rejected:              { label: 'مرفوض',                color: '#EF4444', icon: 'close-circle-outline' },
+  cancelled:             { label: 'ملغى',                  color: '#9CA3AF', icon: 'ban-outline' },
 };
 
 const VISA_TYPE_AR: Record<string, string> = {
@@ -200,6 +206,43 @@ export default function VisaApplicationTrackScreen() {
           })}
         </View>
 
+        {/* Documents & Photos */}
+        {(app.passportImageUrl || app.personalPhotoUrl) && (
+          <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>الصور والمستندات</Text>
+            <View style={{ flexDirection: 'row-reverse', gap: 12 }}>
+              {app.passportImageUrl && (
+                <TouchableOpacity
+                  style={[styles.photoCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={() => Linking.openURL(app.passportImageUrl!)}
+                  activeOpacity={0.85}
+                >
+                  <Image
+                    source={{ uri: app.passportImageUrl }}
+                    style={styles.photoThumb}
+                    contentFit="cover"
+                  />
+                  <Text style={[styles.photoLabel, { color: colors.mutedForeground }]}>صورة الجواز</Text>
+                </TouchableOpacity>
+              )}
+              {app.personalPhotoUrl && (
+                <TouchableOpacity
+                  style={[styles.photoCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={() => Linking.openURL(app.personalPhotoUrl!)}
+                  activeOpacity={0.85}
+                >
+                  <Image
+                    source={{ uri: app.personalPhotoUrl }}
+                    style={styles.photoThumb}
+                    contentFit="cover"
+                  />
+                  <Text style={[styles.photoLabel, { color: colors.mutedForeground }]}>الصورة الشخصية</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Help text */}
         <View style={[styles.helpCard, { backgroundColor: colors.muted, borderColor: colors.border }]}>
           <Ionicons name="information-circle-outline" size={20} color={colors.mutedForeground} />
@@ -324,4 +367,22 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   secondaryBtnText: { fontFamily: 'Tajawal_700Bold', fontSize: 15 },
+
+  photoCard: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  photoThumb: {
+    width: '100%',
+    height: 120,
+  },
+  photoLabel: {
+    fontSize: 11,
+    fontFamily: 'Tajawal_500Medium',
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
 });

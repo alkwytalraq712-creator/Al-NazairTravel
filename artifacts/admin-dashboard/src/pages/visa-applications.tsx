@@ -6,7 +6,7 @@ import {
   VisaApplicationStatus
 } from '@workspace/api-client-react';
 import { getListAllVisaApplicationsQueryKey } from '@workspace/api-client-react';
-import { Loader2, Search, Filter, FileText, CheckCircle2, XCircle, Clock, ExternalLink } from 'lucide-react';
+import { Loader2, Search, Filter, FileText, CheckCircle2, XCircle, Clock, ExternalLink, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,15 +17,62 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { STATUS_ARABIC, VISA_TYPE_ARABIC, formatDateAr } from '@/lib/translations';
 
+// ─── Document photo with lightbox ──────────────────────────────────────────────
+function AppDocumentPhoto({ src, label }: { src: string; label: string }) {
+  const [open, setOpen] = React.useState(false);
+  function handleDownload() {
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = label.replace(/\s+/g, '_') + '.jpg';
+    a.target = '_blank';
+    a.click();
+  }
+  return (
+    <>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground font-medium">{label}</p>
+          <button onClick={handleDownload} className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+            <Download className="w-3 h-3" />تنزيل
+          </button>
+        </div>
+        <img
+          src={src}
+          alt={label}
+          className="w-full h-36 object-cover rounded-lg cursor-pointer border border-border hover:opacity-90 transition-opacity"
+          onClick={() => setOpen(true)}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
+      </div>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setOpen(false)}>
+          <div className="relative max-w-3xl w-full mx-4" onClick={e => e.stopPropagation()}>
+            <img src={src} alt={label} className="w-full rounded-xl max-h-[80vh] object-contain" />
+            <div className="flex items-center justify-between mt-3">
+              <button onClick={() => setOpen(false)} className="px-4 py-2 rounded border border-border bg-background text-sm hover:bg-muted">إغلاق</button>
+              <button onClick={handleDownload} className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                <Download className="w-3 h-3" />تنزيل
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 const STATUS_COLORS: Record<string, string> = {
+  filling_data: "bg-gray-500/10 text-gray-500 border-gray-500/20",
   received: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   reviewing: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   awaiting_documents: "bg-orange-500/10 text-orange-500 border-orange-500/20",
   submitted_to_embassy: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   processing: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
+  approved: "bg-teal-500/10 text-teal-600 border-teal-500/20",
   issued: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   completed: "bg-zinc-500/10 text-zinc-500 border-zinc-500/20",
-  rejected: "bg-red-500/10 text-red-500 border-red-500/20"
+  rejected: "bg-red-500/10 text-red-500 border-red-500/20",
+  cancelled: "bg-gray-400/10 text-gray-400 border-gray-400/20",
 };
 
 export function VisaApplications() {
@@ -203,28 +250,22 @@ function ApplicationRow({ application }: { application: VisaApplication }) {
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">المستندات</h4>
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">المستندات والصور</h4>
                 <div className="grid grid-cols-2 gap-3">
                   {application.passportImageUrl ? (
-                    <a href={application.passportImageUrl} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 border rounded-md hover:bg-muted transition-colors">
-                      <FileText className="w-8 h-8 text-primary mb-2" />
-                      <span className="text-xs font-medium">صورة الجواز</span>
-                    </a>
+                    <AppDocumentPhoto src={application.passportImageUrl} label="صورة جواز السفر" />
                   ) : (
                     <div className="flex flex-col items-center justify-center p-4 border border-dashed rounded-md text-muted-foreground">
                       <XCircle className="w-8 h-8 mb-2 opacity-20" />
-                      <span className="text-xs">لا يوجد جواز</span>
+                      <span className="text-xs">لا توجد صورة جواز</span>
                     </div>
                   )}
                   {application.personalPhotoUrl ? (
-                    <a href={application.personalPhotoUrl} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 border rounded-md hover:bg-muted transition-colors">
-                      <FileText className="w-8 h-8 text-primary mb-2" />
-                      <span className="text-xs font-medium">صورة شخصية</span>
-                    </a>
+                    <AppDocumentPhoto src={application.personalPhotoUrl} label="الصورة الشخصية" />
                   ) : (
                     <div className="flex flex-col items-center justify-center p-4 border border-dashed rounded-md text-muted-foreground">
                       <XCircle className="w-8 h-8 mb-2 opacity-20" />
-                      <span className="text-xs">لا توجد صورة</span>
+                      <span className="text-xs">لا توجد صورة شخصية</span>
                     </div>
                   )}
                 </div>

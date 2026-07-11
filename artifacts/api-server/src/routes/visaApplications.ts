@@ -124,10 +124,11 @@ router.post(
         dob: user.dob || "",
         occupation: user.occupation || "",
         city: user.address || "",
-        // Passport from profile
+        // Passport & photos from profile
         passportNumber: user.passportNumber || "",
         passportExpiry: user.passportExpiry || "",
         passportImageUrl: user.passportImageUrl,
+        personalPhotoUrl: user.avatarUrl,
         // OCR-enriched fields from profile
         passportType: null,
         issuingCountry: user.passportIssuingCountry,

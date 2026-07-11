@@ -1239,7 +1239,7 @@ export const GetMyLatestVisaApplicationResponse = zod.object({
   "mrz": zod.string().nullish(),
   "ocrConfidence": zod.number().nullish(),
   "ocrVerified": zod.boolean().optional(),
-  "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
+  "status": zod.enum(['filling_data', 'received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'approved', 'issued', 'completed', 'rejected', 'cancelled']),
   "statusHistory": zod.array(zod.object({
   "status": zod.string(),
   "timestamp": zod.coerce.date(),
@@ -1307,7 +1307,7 @@ export const ListMyVisaApplicationsResponseItem = zod.object({
   "mrz": zod.string().nullish(),
   "ocrConfidence": zod.number().nullish(),
   "ocrVerified": zod.boolean().optional(),
-  "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
+  "status": zod.enum(['filling_data', 'received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'approved', 'issued', 'completed', 'rejected', 'cancelled']),
   "statusHistory": zod.array(zod.object({
   "status": zod.string(),
   "timestamp": zod.coerce.date(),
@@ -1380,7 +1380,7 @@ export const CreateVisaApplicationResponse = zod.object({
   "mrz": zod.string().nullish(),
   "ocrConfidence": zod.number().nullish(),
   "ocrVerified": zod.boolean().optional(),
-  "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
+  "status": zod.enum(['filling_data', 'received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'approved', 'issued', 'completed', 'rejected', 'cancelled']),
   "statusHistory": zod.array(zod.object({
   "status": zod.string(),
   "timestamp": zod.coerce.date(),
@@ -1452,7 +1452,7 @@ export const GetVisaApplicationResponse = zod.object({
   "mrz": zod.string().nullish(),
   "ocrConfidence": zod.number().nullish(),
   "ocrVerified": zod.boolean().optional(),
-  "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
+  "status": zod.enum(['filling_data', 'received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'approved', 'issued', 'completed', 'rejected', 'cancelled']),
   "statusHistory": zod.array(zod.object({
   "status": zod.string(),
   "timestamp": zod.coerce.date(),
@@ -1466,7 +1466,7 @@ export const GetVisaApplicationResponse = zod.object({
  * @summary List all visa applications (admin)
  */
 export const ListAllVisaApplicationsQueryParams = zod.object({
-  "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']).optional()
+  "status": zod.enum(['filling_data', 'received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'approved', 'issued', 'completed', 'rejected', 'cancelled']).optional()
 })
 
 export const ListAllVisaApplicationsResponseItem = zod.object({
@@ -1524,7 +1524,7 @@ export const ListAllVisaApplicationsResponseItem = zod.object({
   "mrz": zod.string().nullish(),
   "ocrConfidence": zod.number().nullish(),
   "ocrVerified": zod.boolean().optional(),
-  "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
+  "status": zod.enum(['filling_data', 'received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'approved', 'issued', 'completed', 'rejected', 'cancelled']),
   "statusHistory": zod.array(zod.object({
   "status": zod.string(),
   "timestamp": zod.coerce.date(),
@@ -1543,7 +1543,7 @@ export const UpdateVisaApplicationStatusParams = zod.object({
 })
 
 export const UpdateVisaApplicationStatusBody = zod.object({
-  "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected'])
+  "status": zod.enum(['filling_data', 'received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'approved', 'issued', 'completed', 'rejected', 'cancelled'])
 })
 
 export const UpdateVisaApplicationStatusResponse = zod.object({
@@ -1601,7 +1601,7 @@ export const UpdateVisaApplicationStatusResponse = zod.object({
   "mrz": zod.string().nullish(),
   "ocrConfidence": zod.number().nullish(),
   "ocrVerified": zod.boolean().optional(),
-  "status": zod.enum(['received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'issued', 'completed', 'rejected']),
+  "status": zod.enum(['filling_data', 'received', 'reviewing', 'awaiting_documents', 'submitted_to_embassy', 'processing', 'approved', 'issued', 'completed', 'rejected', 'cancelled']),
   "statusHistory": zod.array(zod.object({
   "status": zod.string(),
   "timestamp": zod.coerce.date(),

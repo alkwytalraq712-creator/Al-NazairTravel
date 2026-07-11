@@ -144,7 +144,14 @@ router.get(
  * These are served from a separate path from /public-objects and can optionally
  * be protected with authentication or ACL checks based on the use case.
  */
-router.get('/storage/objects/*path', requireAuth, async (req: Request, res: Response) => {
+/**
+ * GET /storage/objects/*
+ *
+ * Serve object entities from PRIVATE_OBJECT_DIR.
+ * Public objects (visibility:'public') are served without authentication.
+ * Private objects require the owner's session OR admin role.
+ */
+router.get('/storage/objects/*path', async (req: Request, res: Response) => {
   try {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join('/') : raw;
@@ -152,16 +159,22 @@ router.get('/storage/objects/*path', requireAuth, async (req: Request, res: Resp
     const objectFile =
       await objectStorageService.getObjectEntityFile(objectPath);
 
-    // Admins can access all objects; regular users need ACL ownership
+    // Optional session — public objects work without auth
+    const userId = req.session?.userId;
+
+    // Admins can access all objects
     let isAdmin = false;
-    try {
-      const [u] = await db.select({ role: usersTable.role }).from(usersTable).where(eq(usersTable.id, req.session.userId!));
-      isAdmin = u?.role === 'admin';
-    } catch { /* proceed with isAdmin=false */ }
+    if (userId) {
+      try {
+        const [u] = await db.select({ role: usersTable.role }).from(usersTable).where(eq(usersTable.id, userId));
+        isAdmin = u?.role === 'admin';
+      } catch { /* proceed with isAdmin=false */ }
+    }
 
     if (!isAdmin) {
+      // canAccessObjectEntity returns true for visibility:'public' even without userId
       const canAccess = await objectStorageService.canAccessObjectEntity({
-        userId: String(req.session.userId),
+        userId: userId ? String(userId) : undefined,
         objectFile,
         requestedPermission: ObjectPermission.READ,
       });

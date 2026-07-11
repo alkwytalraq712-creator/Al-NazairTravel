@@ -2592,14 +2592,17 @@ components:
       type: string
       enum:
         [
+          filling_data,
           received,
           reviewing,
           awaiting_documents,
           submitted_to_embassy,
           processing,
+          approved,
           issued,
           completed,
           rejected,
+          cancelled,
         ]
 
     VisaApplication:
