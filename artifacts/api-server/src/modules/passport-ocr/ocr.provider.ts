@@ -178,7 +178,9 @@ class TesseractProvider implements OcrProvider {
   readonly name = 'tesseract';
 
   isAvailable(): boolean {
-    return true; // always available
+    // Disabled: worker-script path not available in this deployment environment.
+    // When enabled, this was crashing the Node process via an unhandled worker error.
+    return false;
   }
 
   async extractText(image: Buffer): Promise<OcrResult> {
