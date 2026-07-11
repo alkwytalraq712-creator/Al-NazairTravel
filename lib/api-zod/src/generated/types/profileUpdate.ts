@@ -41,6 +41,7 @@ export interface ProfileUpdate {
   gulfResidenceExpiry?: string;
   gulfResidenceFrontUrl?: string;
   gulfResidenceBackUrl?: string;
+  residenceType?: string;
   hasActiveForeignVisa?: boolean;
   activeVisas?: ActiveVisa[];
   hasTravelHistory?: boolean;

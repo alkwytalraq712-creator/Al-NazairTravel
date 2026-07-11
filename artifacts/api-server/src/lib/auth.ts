@@ -1,7 +1,30 @@
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { db } from "@workspace/db";
+import { usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import type { User } from "@workspace/db";
+
+const JWT_SECRET = process.env.SESSION_SECRET ?? "changeme";
+
+export function generateToken(userId: number): string {
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "30d" });
+}
+
+export function verifyToken(token: string): { userId: number } | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as { userId: number };
+  } catch {
+    return null;
+  }
+}
+
+export function extractBearerToken(req: Request): string | null {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ")) return null;
+  return auth.slice(7);
+}
 
 declare module "express-session" {
   interface SessionData {
@@ -55,13 +78,14 @@ export function serializeUser(user: User) {
     passportExpiry: user.passportExpiry ?? null,
     passportImageUrl: user.passportImageUrl ?? null,
 
-    // Gulf residence
+    // Gulf residence (legacy kept for compat) + new residence type
     hasGulfResidence: user.hasGulfResidence,
     gulfResidenceCountry: user.gulfResidenceCountry ?? null,
     gulfResidenceNumber: user.gulfResidenceNumber ?? null,
     gulfResidenceExpiry: user.gulfResidenceExpiry ?? null,
     gulfResidenceFrontUrl: user.gulfResidenceFrontUrl ?? null,
     gulfResidenceBackUrl: user.gulfResidenceBackUrl ?? null,
+    residenceType: (user as any).residenceType ?? 'none',
 
     // Active foreign visas & travel history
     hasActiveForeignVisa: user.hasActiveForeignVisa,
@@ -75,93 +99,46 @@ export function serializeUser(user: User) {
 }
 
 /**
- * Calculate profile completion percentage for a user.
- * Returns { percentage, isComplete, missingFields }.
+ * Calculate profile completion percentage.
+ * Uses simplified required fields matching the new 3-step profile form.
  */
 export function getProfileCompletion(user: User) {
-  const required: Array<[keyof User, string]> = [
-    ["firstName",             "الاسم الأول"],
-    ["fatherName",            "اسم الأب"],
-    ["grandfatherName",       "اسم الجد"],
-    ["familyName",            "اسم العائلة"],
-    ["englishName",           "الاسم بالإنجليزية"],
-    ["gender",                "الجنس"],
-    ["dob",                   "تاريخ الميلاد"],
-    ["nationality",           "الجنسية"],
-    ["placeOfBirth",          "مكان الميلاد"],
-    ["maritalStatus",         "الحالة الاجتماعية"],
-    ["occupation",            "المهنة"],
-    ["email",                 "البريد الإلكتروني"],
-    ["whatsapp",              "رقم الواتساب"],
-    ["address",               "عنوان السكن"],
-    ["passportNumber",        "رقم الجواز"],
-    ["passportIssuingCountry","دولة إصدار الجواز"],
-    ["passportIssuingPlace",  "مكان إصدار الجواز"],
-    ["passportIssueDate",     "تاريخ إصدار الجواز"],
-    ["passportExpiry",        "تاريخ انتهاء الجواز"],
-    ["passportImageUrl",      "صورة الجواز"],
+  const required: Array<[string, string]> = [
+    ["avatarUrl",         "الصورة الشخصية"],
+    ["fullName",          "الاسم الكامل"],
+    ["dob",               "تاريخ الميلاد"],
+    ["passportNumber",    "رقم جواز السفر"],
+    ["passportIssueDate", "تاريخ إصدار الجواز"],
+    ["passportExpiry",    "تاريخ انتهاء صلاحية الجواز"],
+    ["passportImageUrl",  "صورة جواز السفر"],
   ];
 
-  const gulfRequired: Array<[keyof User, string]> = [
-    ["gulfResidenceCountry",  "دولة الإقامة الخليجية"],
-    ["gulfResidenceNumber",   "رقم الإقامة الخليجية"],
-    ["gulfResidenceExpiry",   "تاريخ انتهاء الإقامة الخليجية"],
-    ["gulfResidenceFrontUrl", "صورة الإقامة (أمامية)"],
-    ["gulfResidenceBackUrl",  "صورة الإقامة (خلفية)"],
-  ];
+  const residenceType = (user as any).residenceType ?? 'none';
+  const residenceRequired: Array<[string, string]> = residenceType !== 'none' ? [
+    ["gulfResidenceFrontUrl", "صورة الإقامة/التأشيرة (الوجه الأمامي)"],
+    ["gulfResidenceBackUrl",  "صورة الإقامة/التأشيرة (الوجه الخلفي)"],
+  ] : [];
 
-  const allRequired = user.hasGulfResidence
-    ? [...required, ...gulfRequired]
-    : required;
+  const allRequired = [...required, ...residenceRequired];
 
   const missing = allRequired
     .filter(([key]) => {
-      const val = user[key];
-      return val === null || val === undefined || val === "";
+      const val = (user as any)[key];
+      return val === null || val === undefined || val === '';
     })
     .map(([, label]) => label);
 
   const total = allRequired.length;
   const filled = total - missing.length;
-  const percentage = Math.round((filled / total) * 100);
+  const percentage = total === 0 ? 100 : Math.round((filled / total) * 100);
   const isComplete = missing.length === 0;
 
   return { percentage, isComplete, missingFields: missing };
 }
 
-function getJwtSecret(): string {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) throw new Error("SESSION_SECRET not set");
-  return secret;
-}
+// ── Middleware ─────────────────────────────────────────────────────────────────
 
-export function generateToken(userId: number): string {
-  return jwt.sign({ userId }, getJwtSecret(), { expiresIn: "30d" });
-}
-
-export function verifyToken(token: string): { userId: number } | null {
-  try {
-    const payload = jwt.verify(token, getJwtSecret()) as { userId: number };
-    return payload;
-  } catch {
-    return null;
-  }
-}
-
-/** Extract Bearer token from Authorization header */
-export function extractBearerToken(req: Request): string | null {
-  const auth = req.headers.authorization;
-  if (auth && auth.startsWith("Bearer ")) {
-    return auth.slice(7);
-  }
-  return null;
-}
-
-export function requireAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     res.status(401).json({ error: "Not authenticated" });
     return;
@@ -169,15 +146,26 @@ export function requireAuth(
   next();
 }
 
-export function requireAdmin(
+export async function requireAdmin(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
-  const user = res.locals.currentUser as User | undefined;
-  if (!user || user.role !== "admin") {
-    res.status(403).json({ error: "Forbidden" });
+): Promise<void> {
+  if (!req.session.userId) {
+    res.status(401).json({ error: "Not authenticated" });
     return;
   }
-  next();
+  try {
+    const [user] = await db
+      .select({ role: usersTable.role })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.session.userId));
+    if (!user || user.role !== "admin") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    next();
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
 }

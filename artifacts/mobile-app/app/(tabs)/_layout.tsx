@@ -38,6 +38,7 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
+  "use no memo";
   const colors = useColors();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -57,7 +58,7 @@ function ClassicTabLayout() {
           borderTopWidth: isWeb ? 1 : 0,
           borderTopColor: colors.border,
           elevation: 0,
-          paddingBottom: safeAreaInsets.bottom,
+          paddingBottom: isWeb ? 0 : safeAreaInsets.bottom,
           ...(isWeb ? { height: 84 } : {}),
         },
         tabBarBackground: () =>

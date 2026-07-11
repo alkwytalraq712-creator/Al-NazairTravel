@@ -156,9 +156,9 @@ export default function ApplyVisaScreen() {
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   const visaId = Number(id);
-  const { data: visa, isLoading: visaLoading } = useGetVisa({ id: visaId });
+  const { data: visa, isLoading: visaLoading } = useGetVisa(visaId);
   const { data: completion, isLoading: compLoading } = useGetProfileCompletion();
-  const { data: eligibility, isLoading: eligLoading } = useGetVisaEligibility({ id: visaId });
+  const { data: eligibility, isLoading: eligLoading } = useGetVisaEligibility(visaId);
   const submitMutation = useCreateVisaApplication();
 
   // ── Auth gate

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Platform,
   ScrollView,
@@ -8,12 +8,12 @@ import {
   TouchableOpacity,
   View,
   ImageBackground,
-  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { CabinClass } from '@workspace/api-client-react';
+import { AIRPORT_MAP } from '../../lib/airports';
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const DARK = '#0B1628';
@@ -26,38 +26,6 @@ const MUTED = 'rgba(255,255,255,0.50)';
 const BORDER = 'rgba(255,255,255,0.09)';
 const GOLD_BG = 'rgba(201,160,96,0.15)';
 
-// ─── Static airport data ────────────────────────────────────────────────────────
-const AIRPORTS: Record<string, string> = {
-  // Iraq
-  BGW: 'مطار بغداد الدولي',
-  BSR: 'مطار البصرة الدولي',
-  NJF: 'مطار النجف الأشرف',
-  EBL: 'مطار أربيل الدولي',
-  ISU: 'مطار السليمانية',
-  // GCC
-  DXB: 'مطار دبي الدولي',
-  AUH: 'مطار أبوظبي الدولي',
-  SHJ: 'مطار الشارقة الدولي',
-  DOH: 'مطار حمد الدولي',
-  KWI: 'مطار الكويت الدولي',
-  MCT: 'مطار مسقط الدولي',
-  BAH: 'مطار البحرين الدولي',
-  // Arab
-  AMM: 'مطار الملكة علياء الدولي',
-  BEY: 'مطار رفيق الحريري',
-  CAI: 'مطار القاهرة الدولي',
-  RUH: 'مطار الملك خالد الدولي',
-  JED: 'مطار الملك عبدالعزيز',
-  // Turkey / Europe / Asia
-  IST: 'مطار إسطنبول',
-  SAW: 'مطار صبيحة كوكجن',
-  TBS: 'مطار تبيليسي',
-  LHR: 'مطار هيثرو لندن',
-  CDG: 'مطار شارل ديغول',
-  FRA: 'مطار فرانكفورت',
-  BKK: 'مطار سوفارنابهومي',
-  KUL: 'مطار كوالالمبور',
-};
 
 const MONTHS_AR = [
   'يناير','فبراير','مارس','أبريل','مايو','يونيو',
@@ -186,11 +154,12 @@ const CAL = StyleSheet.create({
   pastNum: { color: 'rgba(255,255,255,0.2)' },
 });
 
-// ─── Airport card ───────────────────────────────────────────────────────────────
+// ─── Airport card (TextInput-based, no hooks) ────────────────────────────────────
 function AirportCard({
   label, code, iconName, onChange,
 }: { label: string; code: string; iconName: string; onChange: (v: string) => void }) {
-  const name = AIRPORTS[code.toUpperCase()] ?? (code.length === 3 ? '—' : '');
+  const airport = AIRPORT_MAP.get(code.toUpperCase());
+  const name = airport ? `${airport.city} — ${airport.arabic}` : (code.length === 3 ? '—' : '');
   return (
     <View style={AP.row}>
       <View style={AP.iconWrap}>
@@ -209,6 +178,7 @@ function AirportCard({
           selectionColor={GOLD}
         />
         {name ? <Text style={AP.name} numberOfLines={1}>{name}</Text> : null}
+        {airport && <Text style={AP.country}>{airport.country}</Text>}
       </View>
       <Ionicons name="chevron-down" size={16} color={MUTED} />
     </View>
@@ -221,6 +191,7 @@ const AP = StyleSheet.create({
   label: { color: MUTED, fontSize: 11, fontFamily: 'Tajawal_400Regular', marginBottom: 1 },
   code: { color: WHITE, fontSize: 28, fontFamily: 'Tajawal_800ExtraBold', textAlign: 'right', padding: 0, margin: 0 },
   name: { color: GOLD, fontSize: 11, fontFamily: 'Tajawal_500Medium', marginTop: 1 },
+  country: { color: MUTED, fontSize: 10, fontFamily: 'Tajawal_400Regular', marginTop: 1 },
 });
 
 // ─── Date card ──────────────────────────────────────────────────────────────────

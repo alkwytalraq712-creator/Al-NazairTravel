@@ -72,6 +72,7 @@ export interface User {
   gulfResidenceBackUrl?: string | null;
   /** @nullable */
   profileCompletedAt?: Date | null;
+  residenceType?: string;
   hasActiveForeignVisa?: boolean;
   activeVisas?: ActiveVisa[];
   hasTravelHistory?: boolean;

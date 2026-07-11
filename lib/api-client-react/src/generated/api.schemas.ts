@@ -316,6 +316,7 @@ export interface User {
   gulfResidenceBackUrl?: string | null;
   /** @nullable */
   profileCompletedAt?: string | null;
+  residenceType?: string;
   hasActiveForeignVisa?: boolean;
   activeVisas?: ActiveVisa[];
   hasTravelHistory?: boolean;
@@ -568,6 +569,7 @@ export interface ProfileUpdate {
   gulfResidenceExpiry?: string;
   gulfResidenceFrontUrl?: string;
   gulfResidenceBackUrl?: string;
+  residenceType?: string;
   hasActiveForeignVisa?: boolean;
   activeVisas?: ActiveVisa[];
   hasTravelHistory?: boolean;

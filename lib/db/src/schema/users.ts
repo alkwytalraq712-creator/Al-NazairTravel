@@ -56,13 +56,17 @@ export const usersTable = pgTable("users", {
   passportExpiry: text("passport_expiry"),         // YYYY-MM-DD
   passportImageUrl: text("passport_image_url"),
 
-  // ── Gulf residence ────────────────────────────────────────────────────────
+  // ── Gulf residence (legacy — kept for DB compat) ──────────────────────────
   hasGulfResidence: boolean("has_gulf_residence").notNull().default(false),
   gulfResidenceCountry: text("gulf_residence_country"),
   gulfResidenceNumber: text("gulf_residence_number"),
   gulfResidenceExpiry: text("gulf_residence_expiry"),  // YYYY-MM-DD
   gulfResidenceFrontUrl: text("gulf_residence_front_url"),
   gulfResidenceBackUrl: text("gulf_residence_back_url"),
+
+  // ── Residence type (new simplified flow) ─────────────────────────────────
+  // 'none' | 'gcc' | 'schengen' | 'uk' | 'usa'
+  residenceType: text("residence_type").notNull().default("none"),
 
   // ── Active foreign visas (JSON array of ActiveVisa) ───────────────────────
   hasActiveForeignVisa: boolean("has_active_foreign_visa").notNull().default(false),

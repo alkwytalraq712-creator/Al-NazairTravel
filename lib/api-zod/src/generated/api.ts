@@ -186,6 +186,7 @@ export const SignupResponse = zod.object({
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
   "profileCompletedAt": zod.coerce.date().nullish(),
+  "residenceType": zod.string().optional(),
   "hasActiveForeignVisa": zod.boolean().optional(),
   "activeVisas": zod.array(zod.object({
   "country": zod.string(),
@@ -248,6 +249,7 @@ export const LoginResponse = zod.object({
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
   "profileCompletedAt": zod.coerce.date().nullish(),
+  "residenceType": zod.string().optional(),
   "hasActiveForeignVisa": zod.boolean().optional(),
   "activeVisas": zod.array(zod.object({
   "country": zod.string(),
@@ -311,6 +313,7 @@ export const GetCurrentUserResponse = zod.object({
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
   "profileCompletedAt": zod.coerce.date().nullish(),
+  "residenceType": zod.string().optional(),
   "hasActiveForeignVisa": zod.boolean().optional(),
   "activeVisas": zod.array(zod.object({
   "country": zod.string(),
@@ -394,6 +397,7 @@ export const UpdateProfileBody = zod.object({
   "gulfResidenceExpiry": zod.string().optional(),
   "gulfResidenceFrontUrl": zod.string().optional(),
   "gulfResidenceBackUrl": zod.string().optional(),
+  "residenceType": zod.string().optional(),
   "hasActiveForeignVisa": zod.boolean().optional(),
   "activeVisas": zod.array(zod.object({
   "country": zod.string(),
@@ -447,6 +451,7 @@ export const UpdateProfileResponse = zod.object({
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
   "profileCompletedAt": zod.coerce.date().nullish(),
+  "residenceType": zod.string().optional(),
   "hasActiveForeignVisa": zod.boolean().optional(),
   "activeVisas": zod.array(zod.object({
   "country": zod.string(),
@@ -2677,6 +2682,7 @@ export const ListCustomersResponseItem = zod.object({
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
   "profileCompletedAt": zod.coerce.date().nullish(),
+  "residenceType": zod.string().optional(),
   "hasActiveForeignVisa": zod.boolean().optional(),
   "activeVisas": zod.array(zod.object({
   "country": zod.string(),
@@ -2739,6 +2745,7 @@ export const GetCustomerResponse = zod.object({
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
   "profileCompletedAt": zod.coerce.date().nullish(),
+  "residenceType": zod.string().optional(),
   "hasActiveForeignVisa": zod.boolean().optional(),
   "activeVisas": zod.array(zod.object({
   "country": zod.string(),
@@ -2796,6 +2803,7 @@ export const ListEmployeesResponseItem = zod.object({
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
   "profileCompletedAt": zod.coerce.date().nullish(),
+  "residenceType": zod.string().optional(),
   "hasActiveForeignVisa": zod.boolean().optional(),
   "activeVisas": zod.array(zod.object({
   "country": zod.string(),
@@ -2868,6 +2876,7 @@ export const CreateEmployeeResponse = zod.object({
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
   "profileCompletedAt": zod.coerce.date().nullish(),
+  "residenceType": zod.string().optional(),
   "hasActiveForeignVisa": zod.boolean().optional(),
   "activeVisas": zod.array(zod.object({
   "country": zod.string(),
@@ -2943,6 +2952,7 @@ export const UpdateEmployeeResponse = zod.object({
   "gulfResidenceFrontUrl": zod.string().nullish(),
   "gulfResidenceBackUrl": zod.string().nullish(),
   "profileCompletedAt": zod.coerce.date().nullish(),
+  "residenceType": zod.string().optional(),
   "hasActiveForeignVisa": zod.boolean().optional(),
   "activeVisas": zod.array(zod.object({
   "country": zod.string(),

@@ -2124,6 +2124,8 @@ components:
         gulfResidenceFrontUrl: { type: ["string", "null"] }
         gulfResidenceBackUrl: { type: ["string", "null"] }
         profileCompletedAt: { type: ["string", "null"], format: date-time }
+        # Simplified residence type: none | gcc | schengen | uk | usa
+        residenceType: { type: string }
         # Current foreign visas & travel history
         hasActiveForeignVisa: { type: boolean }
         activeVisas:
@@ -2381,6 +2383,7 @@ components:
         gulfResidenceExpiry: { type: string }
         gulfResidenceFrontUrl: { type: string }
         gulfResidenceBackUrl: { type: string }
+        residenceType: { type: string }
         hasActiveForeignVisa: { type: boolean }
         activeVisas:
           type: array

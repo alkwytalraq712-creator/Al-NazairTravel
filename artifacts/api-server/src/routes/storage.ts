@@ -6,6 +6,9 @@ import {
   FinalizeUploadResponse,
 } from '@workspace/api-zod';
 import { Router, type IRouter, type Request, type Response } from 'express';
+import { db } from '@workspace/db';
+import { usersTable } from '@workspace/db';
+import { eq } from 'drizzle-orm';
 
 import { requireAuth } from '../lib/auth';
 import { ObjectPermission, setObjectAclPolicy } from '../lib/objectAcl';
@@ -149,14 +152,23 @@ router.get('/storage/objects/*path', requireAuth, async (req: Request, res: Resp
     const objectFile =
       await objectStorageService.getObjectEntityFile(objectPath);
 
-    const canAccess = await objectStorageService.canAccessObjectEntity({
-      userId: String(req.session.userId),
-      objectFile,
-      requestedPermission: ObjectPermission.READ,
-    });
-    if (!canAccess) {
-      res.status(403).json({ error: 'Forbidden' });
-      return;
+    // Admins can access all objects; regular users need ACL ownership
+    let isAdmin = false;
+    try {
+      const [u] = await db.select({ role: usersTable.role }).from(usersTable).where(eq(usersTable.id, req.session.userId!));
+      isAdmin = u?.role === 'admin';
+    } catch { /* proceed with isAdmin=false */ }
+
+    if (!isAdmin) {
+      const canAccess = await objectStorageService.canAccessObjectEntity({
+        userId: String(req.session.userId),
+        objectFile,
+        requestedPermission: ObjectPermission.READ,
+      });
+      if (!canAccess) {
+        res.status(403).json({ error: 'Forbidden' });
+        return;
+      }
     }
 
     const response = await objectStorageService.downloadObject(objectFile);
