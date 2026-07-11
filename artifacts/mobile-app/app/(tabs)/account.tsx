@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   ScrollView,
@@ -31,19 +30,19 @@ export default function AccountScreen() {
   const colors = useColors();
   const { user, isLoading, isAuthenticated, logout } = useAuth();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  function handleLogout() {
-    Alert.alert('تسجيل الخروج', 'هل تريد تسجيل الخروج؟', [
-      { text: 'إلغاء', style: 'cancel' },
-      {
-        text: 'خروج',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/auth/login' as any);
-        },
-      },
-    ]);
+  async function handleLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+    } catch {
+      // ignore — token is already cleared inside logout()
+    } finally {
+      setLoggingOut(false);
+    }
+    router.replace('/auth/login' as any);
   }
 
   if (isLoading) {
@@ -140,12 +139,19 @@ export default function AccountScreen() {
 
         {/* Logout */}
         <TouchableOpacity
-          style={[styles.logoutBtn, { borderColor: colors.destructive }]}
+          style={[styles.logoutBtn, { borderColor: loggingOut ? colors.border : colors.destructive, opacity: loggingOut ? 0.6 : 1 }]}
           onPress={handleLogout}
-          activeOpacity={0.8}
+          activeOpacity={0.75}
+          disabled={loggingOut}
         >
-          <Ionicons name="log-out-outline" size={20} color={colors.destructive} />
-          <Text style={[styles.logoutText, { color: colors.destructive }]}>تسجيل الخروج</Text>
+          {loggingOut ? (
+            <ActivityIndicator size="small" color={colors.destructive} />
+          ) : (
+            <Ionicons name="log-out-outline" size={20} color={colors.destructive} />
+          )}
+          <Text style={[styles.logoutText, { color: colors.destructive }]}>
+            {loggingOut ? 'جاري الخروج...' : 'تسجيل الخروج'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
