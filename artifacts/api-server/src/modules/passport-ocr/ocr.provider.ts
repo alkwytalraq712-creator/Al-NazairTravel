@@ -128,13 +128,22 @@ class OpenAIVisionProvider implements OcrProvider {
   readonly name = 'openai-vision';
 
   isAvailable(): boolean {
-    return !!process.env.OPENAI_API_KEY;
+    // Prefer the Replit-managed OpenAI integration (no personal quota limits).
+    return !!(
+      (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL && process.env.AI_INTEGRATIONS_OPENAI_API_KEY) ||
+      process.env.OPENAI_API_KEY
+    );
   }
 
   async extractText(image: Buffer): Promise<OcrResult> {
     const start = Date.now();
     const { default: OpenAI } = await import('openai');
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const client = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
+      ? new OpenAI({
+          baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+          apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        })
+      : new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const b64 = image.toString('base64');
 

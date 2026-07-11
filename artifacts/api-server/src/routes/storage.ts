@@ -83,8 +83,11 @@ router.post(
         owner: String(req.session.userId),
         visibility: isPublic ? 'public' : 'private',
       });
+      // Must include the /api prefix — Replit's path-based routing only forwards
+      // /api/* to this server. A bare /storage/* URL hits the web app instead
+      // and returns HTML, so images silently fail to load.
       const publicUrl = isPublic
-        ? `${req.protocol}://${req.get('host')}/storage${objectPath}`
+        ? `${req.protocol}://${req.get('host')}/api/storage${objectPath}`
         : undefined;
       res.json(FinalizeUploadResponse.parse({ objectPath, ...(publicUrl ? { publicUrl } : {}) }));
     } catch (error) {
