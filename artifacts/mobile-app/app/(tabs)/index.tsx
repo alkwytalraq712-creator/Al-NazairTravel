@@ -36,61 +36,72 @@ export default function HomeScreen() {
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   return (
-    <ScrollView
-      style={[styles.screen, { backgroundColor: colors.background }]}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 34 : 120 }}
-    >
-      {/* Header + Hero */}
-      <View style={[styles.heroWrap, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      {/* ── Header — lives OUTSIDE ScrollView so scroll gestures never block it ── */}
+      <View style={[styles.headerWrap, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
         <View style={styles.header}>
+          {/* Bell button — Pressable with generous hitSlop */}
           <Pressable
             onPress={() => router.push('/notifications')}
-            hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
-            style={{ position: 'relative' }}
+            hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+            style={styles.headerBtn}
           >
             <Ionicons name="notifications-outline" size={24} color="#fff" />
             <View style={styles.notifDot} />
           </Pressable>
+
           <Image
             source={require('@/assets/images/logo_transparent.png')}
             style={styles.logo}
             resizeMode="contain"
           />
-          <TouchableOpacity onPress={() => router.push('/(tabs)/visas')}>
-            <Ionicons name="search-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
 
-        {/* Banner Slider */}
-        {isLoading ? (
-          <View style={[styles.bannerSkeleton, { backgroundColor: colors.muted }]}>
-            <ActivityIndicator color={colors.primary} />
-          </View>
-        ) : (
-          <View style={styles.bannerWrap}>
-            <BannerSlider
-              banners={home?.banners ?? []}
-              renderOverlay={(banner) => (
-                <View style={styles.bannerOverlay} pointerEvents="box-none">
-                  {!!banner.title && (
-                    <Text style={styles.bannerTitle}>{banner.title}</Text>
-                  )}
-                  <Text style={styles.bannerSubtitle}>اكتشف وجهات رائعة واحجز بسهولة وأمان</Text>
-                  <TouchableOpacity
-                    style={[styles.bannerCta, { backgroundColor: colors.primary }]}
-                    activeOpacity={0.85}
-                    onPress={() => router.push('/(tabs)/packages')}
-                  >
-                    <Ionicons name="arrow-back" size={16} color="#fff" />
-                    <Text style={styles.bannerCtaText}>احجز الآن</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-          </View>
-        )}
+          <Pressable
+            onPress={() => router.push('/(tabs)/visas')}
+            hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+            style={styles.headerBtn}
+          >
+            <Ionicons name="search-outline" size={24} color="#fff" />
+          </Pressable>
+        </View>
       </View>
+
+      {/* ── Scrollable content ── */}
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 34 : 120 }}
+      >
+        {/* Banner — keeps the dark hero background */}
+        <View style={{ backgroundColor: '#0D1526', paddingBottom: 40 }}>
+          {isLoading ? (
+            <View style={[styles.bannerSkeleton, { backgroundColor: colors.muted }]}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : (
+            <View style={styles.bannerWrap}>
+              <BannerSlider
+                banners={home?.banners ?? []}
+                renderOverlay={(banner) => (
+                  <View style={styles.bannerOverlay} pointerEvents="box-none">
+                    {!!banner.title && (
+                      <Text style={styles.bannerTitle}>{banner.title}</Text>
+                    )}
+                    <Text style={styles.bannerSubtitle}>اكتشف وجهات رائعة واحجز بسهولة وأمان</Text>
+                    <TouchableOpacity
+                      style={[styles.bannerCta, { backgroundColor: colors.primary }]}
+                      activeOpacity={0.85}
+                      onPress={() => router.push('/(tabs)/packages')}
+                    >
+                      <Ionicons name="arrow-back" size={16} color="#fff" />
+                      <Text style={styles.bannerCtaText}>احجز الآن</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+            </View>
+          )}
+        </View>
 
       {/* Services */}
       <View style={[styles.section, { backgroundColor: colors.card, marginHorizontal: 16, borderRadius: 18 }]}>
@@ -210,12 +221,15 @@ export default function HomeScreen() {
         </View>
       )}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  heroWrap: { paddingBottom: 40 },
+  // Header container — sits outside ScrollView, no gesture conflicts
+  headerWrap: { paddingBottom: 0 },
+  headerBtn: { position: 'relative' },
   header: {
     flexDirection: 'row-reverse',
     alignItems: 'center',

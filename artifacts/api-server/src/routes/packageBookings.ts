@@ -15,11 +15,13 @@ import {
 } from "@workspace/api-zod";
 import { requireAdmin, requireAuth } from "../lib/auth";
 import { generateReferenceNumber } from "../lib/reference";
+import { coercePkg } from "../lib/coerce";
 
 const router: IRouter = Router();
 
 function withPackage<T>(row: T, pkg: unknown) {
-  return { ...row, package: pkg ?? null };
+  // coercePkg converts PostgreSQL numeric strings → numbers before Zod parsing
+  return { ...row, package: pkg != null ? coercePkg(pkg as any) : null };
 }
 
 router.get(
