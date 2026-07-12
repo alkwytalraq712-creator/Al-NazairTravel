@@ -13,3 +13,4 @@ export * from "./banners";
 export * from "./testimonials";
 export * from "./payments";
 export * from "./invoices";
+export * from "./holdSettings";

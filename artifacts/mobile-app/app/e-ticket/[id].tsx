@@ -15,7 +15,7 @@ import { Image } from 'expo-image';
 import QRCode from 'react-native-qrcode-svg';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { useGetFlightBooking, getGetFlightBookingQueryKey } from '@workspace/api-client-react';
+import { useGetFlightBooking, getGetFlightBookingQueryKey, useCompleteHoldBooking } from '@workspace/api-client-react';
 import { formatDateAr, formatTime, formatDuration, CABIN_LABELS_AR } from '@/lib/flightService';
 import { codeToEnglishName } from '@/lib/countriesEn';
 
@@ -34,6 +34,8 @@ const STATUS_LABELS: Record<string, string> = {
   ticketed: 'صدرت التذكرة ✓',
   cancelled: 'ملغى',
   completed: 'مكتمل',
+  held: 'حجز مؤقت ⏳',
+  expired_hold: 'انتهى الحجز المؤقت',
 };
 const STATUS_COLORS: Record<string, string> = {
   pending: '#F59E0B',
@@ -41,6 +43,8 @@ const STATUS_COLORS: Record<string, string> = {
   ticketed: '#10B981',
   cancelled: '#EF4444',
   completed: '#6B7280',
+  held: '#8B5CF6',
+  expired_hold: '#F97316',
 };
 
 // ─── Company constants ────────────────────────────────────────────────────────
@@ -69,11 +73,63 @@ function dayOfWeekAr(iso: string): string {
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
+function HoldCountdownBanner({ expiresAt }: { expiresAt: string }) {
+  const [label, setLabel] = React.useState('');
+  React.useEffect(() => {
+    function update() {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      if (diff <= 0) { setLabel('انتهت المدة'); return; }
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      setLabel(`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+    }
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  const diff = new Date(expiresAt).getTime() - Date.now();
+  const isExpired = diff <= 0;
+  const isWarning = !isExpired && diff < 2 * 3_600_000;
+  const bg = isExpired ? 'rgba(239,68,68,0.12)' : isWarning ? 'rgba(245,158,11,0.12)' : 'rgba(139,92,246,0.12)';
+  const border = isExpired ? 'rgba(239,68,68,0.3)' : isWarning ? 'rgba(245,158,11,0.3)' : 'rgba(139,92,246,0.3)';
+  const col = isExpired ? '#EF4444' : isWarning ? '#F59E0B' : '#8B5CF6';
+
+  return (
+    <View style={{ backgroundColor: bg, borderRadius: 16, borderWidth: 1, borderColor: border, padding: 16, marginBottom: 14 }}>
+      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <Ionicons name={isExpired ? 'alert-circle' : 'time'} size={18} color={col} />
+        <Text style={{ color: col, fontFamily: 'Tajawal_700Bold', fontSize: 14 }}>
+          {isExpired ? 'انتهت مدة الحجز المؤقت' : 'الوقت المتبقي لإتمام الدفع'}
+        </Text>
+      </View>
+      {!isExpired && (
+        <Text style={{ color: col, fontFamily: 'Tajawal_800ExtraBold', fontSize: 28, textAlign: 'center', letterSpacing: 2, fontVariant: ['tabular-nums'] }}>
+          {label}
+        </Text>
+      )}
+      {!isExpired && (
+        <Text style={{ color: col, fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'center', marginTop: 4, opacity: 0.8 }}>
+          ينتهي الحجز في: {new Date(expiresAt).toLocaleString('ar-SA', { dateStyle: 'medium', timeStyle: 'short' })}
+        </Text>
+      )}
+      {isExpired && (
+        <Text style={{ color: col, fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'right', marginTop: 4, opacity: 0.8 }}>
+          تعذر إتمام الدفع في الوقت المحدد. يرجى إنشاء حجز جديد.
+        </Text>
+      )}
+    </View>
+  );
+}
+
 export default function ETicketScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
   const [exporting, setExporting] = React.useState(false);
+  const [completing, setCompleting] = React.useState(false);
+  const completeMutation = useCompleteHoldBooking();
 
   const bookingId = Number(id);
   const { data: booking, isLoading, isError } = useGetFlightBooking(bookingId, {
@@ -791,6 +847,15 @@ export default function ETicketScreen() {
           {aircraft && <InfoRow label="طراز الطائرة" value={aircraft} />}
         </View>
 
+        {/* ── Hold countdown (for held bookings) ── */}
+        {booking.status === 'held' && booking.holdExpiresAt && (
+          <HoldCountdownBanner expiresAt={
+            typeof booking.holdExpiresAt === 'string'
+              ? booking.holdExpiresAt
+              : (booking.holdExpiresAt as any)?.toISOString?.() ?? ''
+          } />
+        )}
+
         {/* ── QR card ── */}
         <View style={styles.qrCard}>
           <Text style={styles.qrLabel}>امسح الرمز عند المطار</Text>
@@ -801,8 +866,51 @@ export default function ETicketScreen() {
         </View>
       </ScrollView>
 
-      {/* PDF export */}
+      {/* Footer buttons */}
       <View style={[styles.footer, { paddingBottom: Platform.OS === 'web' ? 24 : insets.bottom + 16 }]}>
+        {/* Complete payment button — only for active held bookings */}
+        {booking.status === 'held' && booking.holdExpiresAt && new Date(booking.holdExpiresAt).getTime() > Date.now() && (
+          <TouchableOpacity
+            style={[styles.pdfBtn, { backgroundColor: '#8B5CF6', marginBottom: 10 }, completing && { opacity: 0.7 }]}
+            onPress={async () => {
+              Alert.alert(
+                'إتمام الدفع وتأكيد الحجز',
+                `ستقوم بإتمام عملية الدفع الكاملة للرحلة ${booking.offer.fromAirport} → ${booking.offer.toAirport}.\n\nالمبلغ المطلوب: ${booking.offer.price} ${booking.offer.currency}`,
+                [
+                  { text: 'إلغاء', style: 'cancel' },
+                  {
+                    text: 'تأكيد الدفع',
+                    style: 'default',
+                    onPress: async () => {
+                      setCompleting(true);
+                      try {
+                        await completeMutation.mutateAsync({ id: booking.id });
+                        Alert.alert(
+                          '✅ تم استلام طلب الدفع',
+                          'تم تحويل حجزك إلى قيد الانتظار. سيقوم فريقنا بالتواصل معك لإتمام عملية الدفع وإصدار التذكرة.',
+                          [{ text: 'حسناً' }],
+                        );
+                      } catch (e: any) {
+                        const msg = e?.data?.error ?? e?.message ?? 'حدث خطأ غير متوقع';
+                        Alert.alert('تعذر إتمام الطلب', msg, [{ text: 'حسناً' }]);
+                      } finally {
+                        setCompleting(false);
+                      }
+                    },
+                  },
+                ],
+              );
+            }}
+            disabled={completing}
+            activeOpacity={0.85}
+          >
+            {completing
+              ? <ActivityIndicator color={WHITE} size="small" />
+              : <Ionicons name="checkmark-circle" size={20} color={WHITE} />}
+            <Text style={[styles.pdfBtnText, { color: WHITE }]}>إتمام الدفع وتأكيد الحجز</Text>
+          </TouchableOpacity>
+        )}
+        {/* PDF download */}
         <TouchableOpacity
           style={[styles.pdfBtn, exporting && { opacity: 0.7 }]}
           onPress={handleExportPDF}

@@ -16,6 +16,7 @@ import {
   Wallet,
   Receipt,
   Building2,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLogout } from '@workspace/api-client-react';
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { icon: Users, label: 'العملاء', path: '/customers' },
   { icon: UserCog, label: 'الموظفين', path: '/employees' },
   { icon: Plane, label: 'حجوزات الطيران', path: '/flight-bookings' },
+  { icon: Clock, label: 'الحجوزات المؤقتة', path: '/hold-settings' },
   { icon: FileText, label: 'طلبات التأشيرات', path: '/visa-applications' },
   { icon: Briefcase, label: 'عروض التأشيرات', path: '/visas' },
   { icon: Map, label: 'حجوزات الباقات', path: '/package-bookings' },

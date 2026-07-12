@@ -22,6 +22,8 @@ export const STATUS_ARABIC: Record<string, string> = {
   refunded: "مُرجعة",
   failed: "فشلت",
   draft: "مسودة",
+  held: "حجز مؤقت",
+  expired_hold: "انتهى الحجز المؤقت",
 };
 
 export const PAYMENT_METHOD_ARABIC: Record<string, string> = {

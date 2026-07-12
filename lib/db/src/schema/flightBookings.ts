@@ -1,4 +1,4 @@
-import { integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { doublePrecision, integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -76,6 +76,10 @@ export const flightBookingsTable = pgTable("flight_bookings", {
   segments: jsonb("segments").$type<FlightSegmentInfo[]>(),
   /** Human-readable baggage allowance summary. */
   baggage: text("baggage"),
+  /** When the hold expires (only set for status = 'held'). */
+  holdExpiresAt: timestamp("hold_expires_at", { withTimezone: true }),
+  /** The hold fee charged at the time of holding (non-refundable). */
+  holdFeeAmount: doublePrecision("hold_fee_amount"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { asc, eq } from "drizzle-orm";
-import { db, companySettingsTable, branchTable } from "@workspace/db";
+import { db, companySettingsTable, branchTable, holdSettingsTable } from "@workspace/db";
 import { requireAdmin } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -33,6 +33,41 @@ router.patch("/settings/company", requireAdmin, async (req, res): Promise<void> 
     return;
   }
   res.json(updated);
+});
+
+// ─── Hold Booking Settings ────────────────────────────────────────────────────
+
+router.get("/settings/hold", async (_req, res): Promise<void> => {
+  const [settings] = await db.select().from(holdSettingsTable).where(eq(holdSettingsTable.id, 1));
+  if (!settings) {
+    const [created] = await db.insert(holdSettingsTable).values({ id: 1 }).returning();
+    res.json(created);
+    return;
+  }
+  res.json(settings);
+});
+
+router.patch("/admin/settings/hold", requireAdmin, async (req, res): Promise<void> => {
+  const allowedKeys = ["holdEnabled", "holdFeeAmount", "holdDurationHours"] as const;
+  const update: Record<string, unknown> = {};
+  for (const key of allowedKeys) {
+    if (key in req.body) update[key] = req.body[key];
+  }
+  const [existing] = await db.select().from(holdSettingsTable).where(eq(holdSettingsTable.id, 1));
+  if (existing) {
+    const [updated] = await db
+      .update(holdSettingsTable)
+      .set({ ...update, updatedAt: new Date() })
+      .where(eq(holdSettingsTable.id, 1))
+      .returning();
+    res.json(updated);
+  } else {
+    const [created] = await db
+      .insert(holdSettingsTable)
+      .values({ id: 1, ...update, updatedAt: new Date() } as any)
+      .returning();
+    res.json(created);
+  }
 });
 
 // ─── Branches ─────────────────────────────────────────────────────────────────

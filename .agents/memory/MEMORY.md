@@ -18,3 +18,4 @@
 - [api-client-react dist rebuild](api-client-react-dist-rebuild.md) — @workspace/api-client-react is a composite TS project; after codegen adds new fields, must rebuild with `tsc -b lib/api-client-react/tsconfig.json --force` or mobile app sees stale .d.ts with missing fields.
 - [Expo SDK package install](expo-sdk-install.md) — use `pnpm exec expo install <pkg>` not plain `pnpm add` for Expo SDK packages; plain pnpm installs wrong semver range causing Metro ENOENT watcher crash on tmp dirs.
 - [useGetFlightBooking queryKey](generated-hooks-querykey.md) — generated query hooks (useGetFlightBooking etc.) require explicit `queryKey` when overriding query options; import getGet*QueryKey and pass it alongside `enabled`.
+- [Hold Booking feature architecture](hold-booking-architecture.md) — new statuses `held`/`expired_hold`; holdSettings singleton table; background job in holdExpiry.ts; email service in email.ts; new hooks in api-hold.ts (not orval-generated).

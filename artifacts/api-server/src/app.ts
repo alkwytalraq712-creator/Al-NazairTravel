@@ -8,6 +8,7 @@ import storageRouter from "./routes/storage";
 import { logger } from "./lib/logger";
 import { loadCurrentUser } from "./lib/loadUser";
 import { pool } from "@workspace/db";
+import { startHoldExpiryJob } from "./lib/holdExpiry";
 
 const app: Express = express();
 
@@ -66,5 +67,8 @@ app.use(
 app.use(loadCurrentUser);
 
 app.use("/api", router);
+
+// Start background job to auto-expire held bookings
+startHoldExpiryJob();
 
 export default app;

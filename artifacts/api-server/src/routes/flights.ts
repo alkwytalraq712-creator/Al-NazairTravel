@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { desc, eq } from "drizzle-orm";
-import { db, flightBookingsTable } from "@workspace/db";
+import { db, flightBookingsTable, holdSettingsTable } from "@workspace/db";
+import { sendHoldConfirmationEmail } from "../lib/email";
 import {
   SearchFlightsQueryParams,
   SearchFlightsResponse,
@@ -328,6 +329,137 @@ router.get(
     }
 
     res.json(GetFlightBookingResponse.parse(booking));
+  },
+);
+
+// ─── Hold Booking ─────────────────────────────────────────────────────────────
+
+router.post(
+  "/flight-bookings/hold",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    // 1. Check hold settings
+    const [settings] = await db
+      .select()
+      .from(holdSettingsTable)
+      .where(eq(holdSettingsTable.id, 1));
+
+    const holdEnabled = settings?.holdEnabled ?? true;
+    if (!holdEnabled) {
+      res.status(403).json({ error: "خدمة الحجز المؤقت غير متاحة حالياً" });
+      return;
+    }
+
+    // 2. Parse body — same shape as a regular booking
+    const parsed = CreateFlightBookingBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const { offer, passengers, phone, email } = parsed.data;
+
+    const normPassengers = passengers.map((p) => ({
+      ...p,
+      dob: p.dob instanceof Date ? p.dob.toISOString().slice(0, 10) : p.dob,
+      passportExpiry:
+        p.passportExpiry instanceof Date
+          ? p.passportExpiry.toISOString().slice(0, 10)
+          : p.passportExpiry,
+    }));
+
+    const offerSnapshot = {
+      ...offer,
+      departTime: offer.departTime.toISOString(),
+      arriveTime: offer.arriveTime.toISOString(),
+    };
+
+    const holdDurationHours = settings?.holdDurationHours ?? 24;
+    const holdFeeAmount = settings?.holdFeeAmount ?? 25;
+    const holdExpiresAt = new Date(Date.now() + holdDurationHours * 60 * 60 * 1000);
+
+    const [booking] = await db
+      .insert(flightBookingsTable)
+      .values({
+        offer: offerSnapshot,
+        passengers: normPassengers,
+        phone,
+        email,
+        userId: req.session.userId as number,
+        referenceNumber: generateReferenceNumber("HLD"),
+        provider: "local",
+        status: "held",
+        holdExpiresAt,
+        holdFeeAmount,
+      })
+      .returning();
+
+    // 3. Send confirmation email (non-blocking)
+    const pax = normPassengers[0];
+    if (pax) {
+      sendHoldConfirmationEmail({
+        to: email,
+        referenceNumber: booking.referenceNumber,
+        fromAirport: offerSnapshot.fromAirport,
+        toAirport: offerSnapshot.toAirport,
+        airlineName: offerSnapshot.airlineName,
+        departTime: offerSnapshot.departTime,
+        holdExpiresAt: holdExpiresAt.toISOString(),
+        holdFeeAmount,
+        currency: offerSnapshot.currency,
+        passengerName: `${pax.firstName} ${pax.lastName}`,
+      }).catch(() => {});
+    }
+
+    res.status(201).json(booking);
+  },
+);
+
+router.post(
+  "/flight-bookings/:id/complete",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid booking id" });
+      return;
+    }
+
+    const [booking] = await db
+      .select()
+      .from(flightBookingsTable)
+      .where(eq(flightBookingsTable.id, id));
+
+    if (!booking) {
+      res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+    if (booking.userId !== req.session.userId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (booking.status !== "held") {
+      res.status(409).json({ error: "هذا الحجز غير موجود في حالة الحجز المؤقت" });
+      return;
+    }
+    if (booking.holdExpiresAt && new Date(booking.holdExpiresAt) < new Date()) {
+      // Mark as expired
+      await db
+        .update(flightBookingsTable)
+        .set({ status: "expired_hold" })
+        .where(eq(flightBookingsTable.id, id));
+      res.status(410).json({ error: "انتهت مدة الحجز المؤقت. يرجى إنشاء حجز جديد." });
+      return;
+    }
+
+    // Transition to "pending" — admin will confirm and issue ticket
+    const [updated] = await db
+      .update(flightBookingsTable)
+      .set({ status: "pending" })
+      .where(eq(flightBookingsTable.id, id))
+      .returning();
+
+    res.json(updated);
   },
 );
 

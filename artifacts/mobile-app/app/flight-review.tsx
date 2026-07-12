@@ -5,7 +5,7 @@
  */
 import React, { useState } from 'react';
 import {
-  Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator,
+  Alert, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFlightBookingContext } from '@/context/FlightBookingContext';
 import { useFlightBooking, formatTime, formatDuration, formatDateAr, CABIN_LABELS_AR } from '@/lib/flightService';
+import { useGetHoldSettings, useCreateHoldBooking } from '@workspace/api-client-react';
 import { codeToEnglishName } from '@/lib/countriesEn';
 import type { FlightOffer } from '@/lib/flightService';
 
@@ -28,7 +29,11 @@ export default function FlightReviewScreen() {
   const params = useLocalSearchParams<{ offer?: string; adults?: string; children?: string }>();
   const { state, reset } = useFlightBookingContext();
   const bookingMutation = useFlightBooking();
+  const holdMutation = useCreateHoldBooking();
+  const { data: holdSettings } = useGetHoldSettings();
   const [submitting, setSubmitting] = useState(false);
+  const [showHoldModal, setShowHoldModal] = useState(false);
+  const [holdSubmitting, setHoldSubmitting] = useState(false);
 
   const offer: FlightOffer | null = params.offer ? JSON.parse(params.offer as string) : state.offer;
   const adults = Number(params.adults ?? 1);
@@ -115,6 +120,29 @@ export default function FlightReviewScreen() {
       }
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleHoldConfirm() {
+    if (!offer) return;
+    setHoldSubmitting(true);
+    try {
+      const result = await holdMutation.mutateAsync({
+        data: {
+          offer,
+          phone: state.phone,
+          email: state.email,
+          passengers: state.passengers,
+        },
+      });
+      reset();
+      setShowHoldModal(false);
+      router.replace(`/e-ticket/${result.id}` as any);
+    } catch (e: any) {
+      const rawMsg = e?.data?.error ?? e?.message ?? 'حدث خطأ غير متوقع';
+      Alert.alert('تعذر إنشاء الحجز المؤقت', rawMsg, [{ text: 'حسناً' }]);
+    } finally {
+      setHoldSubmitting(false);
     }
   }
 
@@ -222,6 +250,7 @@ export default function FlightReviewScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Platform.OS === 'web' ? 34 : insets.bottom + 16 }]}>
+        {/* Confirm & Pay */}
         <TouchableOpacity style={styles.ctaBtn} onPress={handleConfirm} activeOpacity={0.88} disabled={submitting}>
           {submitting ? (
             <ActivityIndicator color={DARK} />
@@ -232,7 +261,87 @@ export default function FlightReviewScreen() {
             </>
           )}
         </TouchableOpacity>
+
+        {/* Hold booking — shown only when feature is enabled */}
+        {holdSettings?.holdEnabled !== false && (
+          <TouchableOpacity
+            style={styles.holdBtn}
+            onPress={() => setShowHoldModal(true)}
+            activeOpacity={0.85}
+            disabled={submitting}
+          >
+            <Ionicons name="time-outline" size={18} color="#8B5CF6" />
+            <Text style={styles.holdBtnText}>
+              حجز مؤقت لمدة {holdSettings?.holdDurationHours ?? 24} ساعة
+              {holdSettings?.holdFeeAmount ? ` — ${holdSettings.holdFeeAmount} ${offer.currency}` : ''}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* Hold Booking Modal */}
+      <Modal
+        visible={showHoldModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowHoldModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <Ionicons name="time" size={24} color="#8B5CF6" />
+              <Text style={styles.modalTitle}>تأكيد الحجز المؤقت</Text>
+            </View>
+
+            <Text style={styles.modalBody}>
+              سيتم حجز هذه الرحلة بشكل مؤقت لمدة {holdSettings?.holdDurationHours ?? 24} ساعة،
+              خلالها يمكنك إتمام الدفع الكامل وتأكيد التذكرة.
+            </Text>
+
+            <View style={styles.modalRow}>
+              <Text style={styles.modalValue}>{offer.fromAirport} → {offer.toAirport}</Text>
+              <Text style={styles.modalLabel}>الرحلة</Text>
+            </View>
+            <View style={styles.modalRow}>
+              <Text style={styles.modalValue}>{offer.airlineName}</Text>
+              <Text style={styles.modalLabel}>شركة الطيران</Text>
+            </View>
+            <View style={styles.modalRow}>
+              <Text style={[styles.modalValue, { color: '#10B981' }]}>
+                {holdSettings?.holdFeeAmount ?? 25} {offer.currency}
+              </Text>
+              <Text style={styles.modalLabel}>رسوم الحجز المؤقت (غير مستردة)</Text>
+            </View>
+            <View style={styles.modalRow}>
+              <Text style={styles.modalValue}>{total.toFixed(0)} {offer.currency}</Text>
+              <Text style={styles.modalLabel}>المبلغ الكامل للتذكرة</Text>
+            </View>
+
+            <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 16 }} />
+
+            <View style={{ flexDirection: 'row-reverse', gap: 10 }}>
+              <TouchableOpacity
+                style={[styles.modalConfirmBtn, holdSubmitting && { opacity: 0.6 }]}
+                onPress={handleHoldConfirm}
+                disabled={holdSubmitting}
+                activeOpacity={0.85}
+              >
+                {holdSubmitting
+                  ? <ActivityIndicator color={WHITE} size="small" />
+                  : <Text style={styles.modalConfirmText}>دفع رسوم الحجز المؤقت</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowHoldModal(false)}
+                disabled={holdSubmitting}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.modalCancelText}>إلغاء</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -289,4 +398,44 @@ const styles = StyleSheet.create({
     shadowColor: GOLD, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
   },
   ctaText: { color: DARK, fontFamily: 'Tajawal_800ExtraBold', fontSize: 15 },
+
+  holdBtn: {
+    flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', gap: 8,
+    borderWidth: 1.5, borderColor: '#8B5CF6', borderRadius: 16, paddingVertical: 14, marginTop: 10,
+    backgroundColor: 'rgba(139,92,246,0.08)',
+  },
+  holdBtnText: { color: '#8B5CF6', fontFamily: 'Tajawal_700Bold', fontSize: 14 },
+
+  // Modal
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center',
+    alignItems: 'center', padding: 20,
+  },
+  modalCard: {
+    backgroundColor: '#0F1E36', borderRadius: 24, padding: 24, width: '100%',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.4, shadowRadius: 24, elevation: 16,
+  },
+  modalTitle: { color: WHITE, fontFamily: 'Tajawal_800ExtraBold', fontSize: 18, flex: 1, textAlign: 'right' },
+  modalBody: {
+    color: 'rgba(255,255,255,0.6)', fontFamily: 'Tajawal_400Regular', fontSize: 13,
+    textAlign: 'right', lineHeight: 20, marginBottom: 16,
+  },
+  modalRow: {
+    flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)',
+  },
+  modalLabel: { color: 'rgba(255,255,255,0.45)', fontFamily: 'Tajawal_400Regular', fontSize: 12 },
+  modalValue: { color: WHITE, fontFamily: 'Tajawal_700Bold', fontSize: 14 },
+  modalConfirmBtn: {
+    flex: 1, backgroundColor: '#8B5CF6', borderRadius: 14, paddingVertical: 14,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  modalConfirmText: { color: WHITE, fontFamily: 'Tajawal_800ExtraBold', fontSize: 14 },
+  modalCancelBtn: {
+    paddingHorizontal: 20, borderRadius: 14, paddingVertical: 14,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+  },
+  modalCancelText: { color: 'rgba(255,255,255,0.5)', fontFamily: 'Tajawal_700Bold', fontSize: 14 },
 });

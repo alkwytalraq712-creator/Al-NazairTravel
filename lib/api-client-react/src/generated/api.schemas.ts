@@ -1005,6 +1005,8 @@ export const FlightBookingStatus = {
   ticketed: 'ticketed',
   cancelled: 'cancelled',
   completed: 'completed',
+  held: 'held',
+  expired_hold: 'expired_hold',
 } as const;
 
 export interface FlightSegmentInfo {
@@ -1041,6 +1043,22 @@ export interface FlightBooking {
   eticketNumbers?: string[] | null;
   segments?: FlightSegmentInfo[] | null;
   baggage?: string | null;
+  holdExpiresAt?: string | null;
+  holdFeeAmount?: number | null;
+}
+
+export interface HoldSettings {
+  id: number;
+  holdEnabled: boolean;
+  holdFeeAmount: number;
+  holdDurationHours: number;
+  updatedAt: string;
+}
+
+export interface HoldSettingsUpdate {
+  holdEnabled?: boolean;
+  holdFeeAmount?: number;
+  holdDurationHours?: number;
 }
 
 export interface FlightBookingInput {

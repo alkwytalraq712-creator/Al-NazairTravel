@@ -22,7 +22,9 @@ const STATUS_COLORS: Record<string, string> = {
   confirmed: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   ticketed: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   completed: "bg-zinc-500/10 text-zinc-500 border-zinc-500/20",
-  cancelled: "bg-red-500/10 text-red-500 border-red-500/20"
+  cancelled: "bg-red-500/10 text-red-500 border-red-500/20",
+  held: "bg-violet-500/10 text-violet-500 border-violet-500/20",
+  expired_hold: "bg-orange-500/10 text-orange-500 border-orange-500/20",
 };
 
 export function FlightBookings() {

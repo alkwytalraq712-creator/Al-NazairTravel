@@ -2180,7 +2180,7 @@ export const ListMyFlightBookingsResponseItem = zod.object({
 })),
   "phone": zod.string(),
   "email": zod.string(),
-  "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed']),
+  "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed', 'held', 'expired_hold']),
   "createdAt": zod.coerce.date(),
   "provider": zod.string().optional(),
   "providerMode": zod.string().nullish(),
@@ -2279,7 +2279,7 @@ export const CreateFlightBookingResponse = zod.object({
 })),
   "phone": zod.string(),
   "email": zod.string(),
-  "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed']),
+  "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed', 'held', 'expired_hold']),
   "createdAt": zod.coerce.date(),
   "provider": zod.string().optional(),
   "providerMode": zod.string().nullish(),
@@ -2346,7 +2346,7 @@ export const GetFlightBookingResponse = zod.object({
 })),
   "phone": zod.string(),
   "email": zod.string(),
-  "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed']),
+  "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed', 'held', 'expired_hold']),
   "createdAt": zod.coerce.date(),
   "provider": zod.string().optional(),
   "providerMode": zod.string().nullish(),
@@ -2377,7 +2377,7 @@ export const GetFlightBookingResponse = zod.object({
  * @summary List all flight bookings (admin)
  */
 export const ListAllFlightBookingsQueryParams = zod.object({
-  "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed']).optional()
+  "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed', 'held', 'expired_hold']).optional()
 })
 
 export const ListAllFlightBookingsResponseItem = zod.object({
@@ -2413,7 +2413,7 @@ export const ListAllFlightBookingsResponseItem = zod.object({
 })),
   "phone": zod.string(),
   "email": zod.string(),
-  "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed']),
+  "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed', 'held', 'expired_hold']),
   "createdAt": zod.coerce.date(),
   "provider": zod.string().optional(),
   "providerMode": zod.string().nullish(),
@@ -2485,7 +2485,7 @@ export const UpdateFlightBookingStatusResponse = zod.object({
 })),
   "phone": zod.string(),
   "email": zod.string(),
-  "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed']),
+  "status": zod.enum(['pending', 'confirmed', 'ticketed', 'cancelled', 'completed', 'held', 'expired_hold']),
   "createdAt": zod.coerce.date(),
   "provider": zod.string().optional(),
   "providerMode": zod.string().nullish(),

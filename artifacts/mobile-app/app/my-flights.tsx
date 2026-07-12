@@ -2,7 +2,7 @@
  * My Flights Screen — lists all user flight bookings as rich cards.
  * Tap a card to view the e-ticket.
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator, Platform, RefreshControl, ScrollView,
   StyleSheet, Text, TouchableOpacity, View,
@@ -29,6 +29,8 @@ const STATUS_LABELS: Record<string, string> = {
   ticketed: 'صدرت التذكرة',
   cancelled: 'ملغى',
   completed: 'مكتمل',
+  held: 'حجز مؤقت ⏳',
+  expired_hold: 'انتهى الحجز المؤقت',
 };
 const STATUS_COLORS: Record<string, string> = {
   pending: '#F59E0B',
@@ -36,7 +38,39 @@ const STATUS_COLORS: Record<string, string> = {
   ticketed: '#10B981',
   cancelled: '#EF4444',
   completed: '#6B7280',
+  held: '#8B5CF6',
+  expired_hold: '#F97316',
 };
+
+function HoldCountdown({ expiresAt }: { expiresAt?: string | null }) {
+  const [label, setLabel] = useState('');
+  useEffect(() => {
+    if (!expiresAt) return;
+    function update() {
+      const diff = new Date(expiresAt!).getTime() - Date.now();
+      if (diff <= 0) { setLabel('انتهت المدة'); return; }
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      setLabel(`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+    }
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+  if (!expiresAt) return null;
+  const isExpired = new Date(expiresAt).getTime() < Date.now();
+  const isWarning = !isExpired && new Date(expiresAt).getTime() - Date.now() < 2 * 3_600_000;
+  const bg = isExpired ? 'rgba(239,68,68,0.1)' : isWarning ? 'rgba(245,158,11,0.1)' : 'rgba(139,92,246,0.1)';
+  const border = isExpired ? 'rgba(239,68,68,0.3)' : isWarning ? 'rgba(245,158,11,0.3)' : 'rgba(139,92,246,0.3)';
+  const textColor = isExpired ? '#EF4444' : isWarning ? '#F59E0B' : '#8B5CF6';
+  return (
+    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginTop: 8, padding: 8, borderRadius: 10, backgroundColor: bg, borderWidth: 1, borderColor: border }}>
+      <Text style={{ color: textColor, fontFamily: 'Tajawal_400Regular', fontSize: 11 }}>الوقت المتبقي للدفع الكامل:</Text>
+      <Text style={{ color: textColor, fontFamily: 'Tajawal_800ExtraBold', fontSize: 13, fontVariant: ['tabular-nums'] }}>{label}</Text>
+    </View>
+  );
+}
 
 function BookingCard({ booking }: { booking: FlightBooking }) {
   const offer = booking.offer;
@@ -99,6 +133,11 @@ function BookingCard({ booking }: { booking: FlightBooking }) {
         <Text style={styles.sub}>{formatDuration(offer.durationMinutes)}</Text>
         <Text style={styles.sub}>{formatDateAr(departStr.slice(0, 10))}</Text>
       </View>
+
+      {/* Hold countdown */}
+      {booking.status === 'held' && booking.holdExpiresAt && (
+        <HoldCountdown expiresAt={booking.holdExpiresAt} />
+      )}
 
       {/* References */}
       <View style={[styles.metaRow, { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: BORDER }]}>
