@@ -233,11 +233,11 @@ export default function NotificationsScreen() {
           </View>
           <Text style={[s.emptyMsg, { color: colors.mutedForeground }]}>يجب تسجيل الدخول لعرض الإشعارات</Text>
           <TouchableOpacity
-            style={[s.loginBtn, { backgroundColor: GOLD + '18', borderColor: GOLD + '35' }]}
+            style={[s.loginBtn, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '35' }]}
             onPress={() => router.push('/auth/login')}
             activeOpacity={0.8}
           >
-            <Text style={[s.loginBtnText, { color: GOLD }]}>تسجيل الدخول</Text>
+            <Text style={[s.loginBtnText, { color: colors.primary }]}>تسجيل الدخول</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -321,14 +321,14 @@ export default function NotificationsScreen() {
             return (
               <TouchableOpacity
                 key={t.key}
-                style={[s.tab, active && { borderBottomWidth: 2.5, borderBottomColor: GOLD }]}
+                style={[s.tab, active && { borderBottomWidth: 2.5, borderBottomColor: colors.primary }]}
                 onPress={() => setActiveTab(t.key)}
                 activeOpacity={0.75}
               >
-                <Ionicons name={t.icon as any} size={14} color={active ? GOLD : colors.mutedForeground} />
-                <Text style={[s.tabLabel, { color: active ? GOLD : colors.mutedForeground }]}>{t.label}</Text>
+                <Ionicons name={t.icon as any} size={14} color={active ? colors.primary : colors.mutedForeground} />
+                <Text style={[s.tabLabel, { color: active ? colors.primary : colors.mutedForeground }]}>{t.label}</Text>
                 {count > 0 && (
-                  <View style={[s.tabCount, { backgroundColor: active ? GOLD : colors.muted }]}>
+                  <View style={[s.tabCount, { backgroundColor: active ? colors.primary : colors.muted }]}>
                     <Text style={[s.tabCountText, { color: active ? '#fff' : colors.mutedForeground }]}>{count}</Text>
                   </View>
                 )}
@@ -341,7 +341,7 @@ export default function NotificationsScreen() {
       {/* ── Content ── */}
       {isLoading ? (
         <View style={s.center}>
-          <ActivityIndicator size="large" color={GOLD} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[s.loadingText, { color: colors.mutedForeground }]}>جاري تحميل الإشعارات...</Text>
         </View>
       ) : filtered.length === 0 ? (
@@ -365,12 +365,12 @@ export default function NotificationsScreen() {
           {/* Unread summary bar */}
           {unreadCount > 0 && activeTab === 'all' && (
             <TouchableOpacity
-              style={[s.unreadBar, { backgroundColor: GOLD + '12', borderColor: GOLD + '35' }]}
+              style={[s.unreadBar, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '35' }]}
               onPress={handleMarkAllRead}
               activeOpacity={0.8}
             >
-              <Ionicons name="checkmark-done-outline" size={14} color={GOLD} />
-              <Text style={[s.unreadBarText, { color: GOLD }]}>
+              <Ionicons name="checkmark-done-outline" size={14} color={colors.primary} />
+              <Text style={[s.unreadBarText, { color: colors.primary }]}>
                 لديك {unreadCount} إشعار{unreadCount > 1 ? 'ات' : ''} غير مقروء — اضغط للتحديد كمقروء
               </Text>
             </TouchableOpacity>
