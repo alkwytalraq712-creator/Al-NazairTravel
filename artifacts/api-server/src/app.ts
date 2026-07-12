@@ -63,6 +63,17 @@ function buildTrustedOrigins(): Set<string> {
     origins.add(`https://${process.env.REPLIT_EXPO_DEV_DOMAIN}`);
   }
 
+  // Production deployment hostnames. In a published deployment Replit sets
+  // REPLIT_DOMAINS to this repl's own production domain(s) (the generated
+  // *.replit.app subdomain plus any verified custom domains), comma-separated
+  // and without scheme. The admin dashboard is served from the same origin as
+  // the API in production, so its origin must be trusted or credentialed API
+  // calls (e.g. POST /api/auth/login) are rejected by CORS.
+  for (const d of (process.env.REPLIT_DOMAINS ?? "").split(",")) {
+    const trimmed = d.trim();
+    if (trimmed) origins.add(`https://${trimmed}`);
+  }
+
   // Extra origins for production custom domains, e.g.:
   //   CORS_ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
   for (const o of (process.env.CORS_ALLOWED_ORIGINS ?? "").split(",")) {
