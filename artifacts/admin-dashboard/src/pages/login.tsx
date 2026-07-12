@@ -54,10 +54,10 @@ export function Login() {
         return;
       }
       const data = await res.json() as { role: string; token?: string; fullName: string };
-      if (data.role !== 'admin') {
+      if (data.role !== 'admin' && data.role !== 'staff') {
         toast({
           title: "تم رفض الوصول",
-          description: "يحق لمديري النظام فقط الوصول إلى لوحة التحكم هذه.",
+          description: "هذه البوابة مخصصة للموظفين والمديرين فقط.",
           variant: "destructive",
         });
         return;
