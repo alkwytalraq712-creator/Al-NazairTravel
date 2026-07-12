@@ -16,23 +16,44 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool, { schema });
 
+/** Generates a cryptographically random password (24 chars, URL-safe base64). */
+function generateRandomPassword(): string {
+  const bytes = new Uint8Array(18);
+  crypto.getRandomValues(bytes);
+  return Buffer.from(bytes).toString("base64url");
+}
+
 async function main() {
   console.log("🌱 Starting Qema Travel seed...");
 
   // ── Admin user ────────────────────────────────────────────────────────────
-  const passwordHash = await bcrypt.hash("Admin@1234", 10);
+  // Use ADMIN_PASSWORD env var if provided, otherwise generate a random password.
+  // The generated password is printed once (only when the account is newly created).
+  const adminEmail = process.env.ADMIN_EMAIL ?? "admin@qema.com";
+  const adminPhone = process.env.ADMIN_PHONE ?? "+9647801234567";
+  const generatedPassword = process.env.ADMIN_PASSWORD ?? generateRandomPassword();
+  const passwordHash = await bcrypt.hash(generatedPassword, 10);
   const [admin] = await db
     .insert(schema.usersTable)
     .values({
       fullName: "مدير النظام",
-      phone: "+9647801234567",
-      email: "admin@qema.com",
+      phone: adminPhone,
+      email: adminEmail,
       passwordHash,
       role: "admin",
     })
     .onConflictDoNothing()
     .returning();
-  console.log("✅ Admin user:", admin?.email ?? "already exists");
+  if (admin) {
+    console.log("✅ Admin user created (account did not previously exist).");
+    if (!process.env.ADMIN_PASSWORD) {
+      // Only print the generated password to stdout during initial setup.
+      // Store it immediately; it cannot be recovered after this point.
+      console.log("🔑 Generated admin password (save this now):", generatedPassword);
+    }
+  } else {
+    console.log("✅ Admin user already exists — credentials unchanged.");
+  }
 
   // ── Visas ─────────────────────────────────────────────────────────────────
   const visas = [
@@ -415,11 +436,6 @@ async function main() {
   console.log(`✅ Inserted ${testCount} testimonials`);
 
   console.log("\n✅ Seed complete!");
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("🔑 Admin Credentials:");
-  console.log("   Email:    admin@qema.com");
-  console.log("   Password: Admin@1234");
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   await pool.end();
 }
 
