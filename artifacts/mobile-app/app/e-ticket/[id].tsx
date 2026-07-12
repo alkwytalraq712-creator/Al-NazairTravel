@@ -355,16 +355,14 @@ function buildTicketHtml(booking: any, segments: any[], offer: any, departStr: s
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Electronic_Ticket_${pnr}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 @page{size:A4;margin:15mm 12mm}
 body{
-  font-family:'Cairo','Segoe UI Arabic',Tahoma,Arial,sans-serif;
-  background:#E8EAF0;color:#1A2035;font-size:12px;
-  print-color-adjust:exact;-webkit-print-color-adjust:exact
+  font-family:Tahoma,'Segoe UI Arabic','Arial Unicode MS',Arial,Helvetica,sans-serif;
+  background:#E8EAF0;color:#1A2035;font-size:13px;
+  print-color-adjust:exact;-webkit-print-color-adjust:exact;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
 }
 .page{max-width:780px;margin:0 auto;padding:12px}
 
@@ -386,58 +384,123 @@ body{
   background:${isTemp ? 'linear-gradient(90deg,#F97316,#FBBF24)' : 'linear-gradient(90deg,#C9A060,#E8C07A,#C9A060)'};
 }
 
-/* Header */
-.doc-header{background:linear-gradient(135deg,#0B1628 0%,#132039 60%,#0F1E36 100%);padding:22px 26px 18px}
-.header-top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px}
-
-/* Company block — pure text, no images */
-.company-block{text-align:right;flex:1}
-.company-divider-line{
-  display:block;width:36px;height:3px;
-  background:linear-gradient(90deg,#C9A060,#E8C07A);
-  border-radius:2px;margin:0 0 10px auto;
+/* ═══════════════════════════════
+   HEADER — AIRLINE-GRADE DESIGN
+   ═══════════════════════════════ */
+.doc-header{
+  background:linear-gradient(160deg,#081220 0%,#0D1A2E 55%,#0A1828 100%);
+  padding:24px 28px 0;
 }
-.company-ar{
-  font-family:'Cairo','Segoe UI Arabic',Tahoma,Arial,sans-serif;
-  font-size:20px;font-weight:900;color:#C9A060;
-  line-height:1.3;letter-spacing:0.3px;
+.header-top{
+  display:table;width:100%;
+  border-collapse:collapse;
 }
-.company-en{
-  font-family:'Inter','Cairo',Arial,sans-serif;
-  font-size:9.5px;font-weight:600;color:rgba(255,255,255,0.55);
-  letter-spacing:1.2px;margin-top:4px;text-transform:uppercase;
+.company-block{
+  display:table-cell;
+  vertical-align:top;
+  text-align:right;
+  direction:rtl;
+  padding-bottom:20px;
+  width:55%;
 }
-.company-separator{
-  border:none;border-top:1px solid rgba(255,255,255,0.10);
-  margin:10px 0;
+/* Logo */
+.company-logo{
+  display:block;height:60px;width:auto;max-width:150px;
+  object-fit:contain;margin:0 0 14px auto;
 }
-.company-contact{
-  font-family:'Inter','Cairo',Arial,sans-serif;
-  font-size:10px;font-weight:500;color:rgba(255,255,255,0.70);
-  margin-top:5px;direction:ltr;text-align:right;
-  display:flex;align-items:center;gap:6px;justify-content:flex-end;
+/* Arabic company name — primary identity */
+.company-name-ar{
+  font-family:Tahoma,'Segoe UI Arabic','Arial Unicode MS',Arial,sans-serif;
+  font-size:21px;font-weight:bold;
+  color:#D4AA6A;
+  line-height:1.25;
+  display:block;
+  margin-bottom:4px;
 }
-.company-contact-icon{font-size:10px;opacity:0.8}
-.company-address{
-  font-family:'Cairo','Segoe UI Arabic',Tahoma,Arial,sans-serif;
-  font-size:9px;font-weight:400;color:rgba(255,255,255,0.50);
-  margin-top:4px;direction:rtl;text-align:right;line-height:1.5;
+/* English company name */
+.company-name-en{
+  font-family:Arial,Helvetica,sans-serif;
+  font-size:11px;font-weight:bold;
+  color:rgba(255,255,255,0.80);
+  letter-spacing:1px;
+  text-transform:uppercase;
+  display:block;
+  margin-bottom:14px;
+  direction:ltr;
+  text-align:right;
 }
-.doc-meta{text-align:left;min-width:200px}
-.doc-type-label{font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+/* Gold rule separator */
+.company-rule{
+  display:block;
+  width:100%;height:1px;
+  background:linear-gradient(to left,#C9A060,rgba(201,160,96,0.1));
+  margin-bottom:12px;
+}
+/* Contact rows — BLOCK layout, NOT flex */
+.contact-row{
+  display:block;
+  font-family:Arial,Helvetica,sans-serif;
+  font-size:13px;
+  font-weight:bold;
+  color:#FFFFFF;
+  line-height:1.9;
+  text-align:right;
+  direction:ltr;
+  white-space:nowrap;
+}
+.contact-row-rtl{
+  display:block;
+  font-family:Tahoma,'Segoe UI Arabic','Arial Unicode MS',Arial,sans-serif;
+  font-size:12px;
+  font-weight:normal;
+  color:rgba(255,255,255,0.85);
+  line-height:1.7;
+  text-align:right;
+  direction:rtl;
+}
+/* Meta block (right side — PNR area) */
+.doc-meta{
+  display:table-cell;
+  vertical-align:top;
+  text-align:left;
+  direction:ltr;
+  padding-bottom:20px;
+  width:45%;
+}
+.doc-type-label{
+  font-family:Arial,Helvetica,sans-serif;
+  font-size:9px;color:rgba(255,255,255,0.40);
+  text-transform:uppercase;letter-spacing:0.8px;
+  margin-bottom:4px;display:block;
+}
 .doc-type-val{
-  font-size:13px;font-weight:700;
+  display:block;
+  font-family:Arial,Helvetica,sans-serif;
+  font-size:13px;font-weight:bold;
   color:${isTemp ? '#F97316' : '#C9A060'};
-  margin-bottom:10px;
+  margin-bottom:12px;letter-spacing:0.3px;
 }
-.pnr-label{font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px}
-.pnr-val{font-size:24px;font-weight:900;color:#fff;font-family:monospace;letter-spacing:4px;line-height:1.1}
+.pnr-label{
+  display:block;
+  font-family:Arial,Helvetica,sans-serif;
+  font-size:9px;color:rgba(255,255,255,0.40);
+  text-transform:uppercase;letter-spacing:0.8px;
+}
+.pnr-val{
+  display:block;
+  font-family:'Courier New',Courier,monospace;
+  font-size:26px;font-weight:bold;
+  color:#FFFFFF;letter-spacing:5px;line-height:1.1;
+  margin:2px 0 8px;
+}
 .status-badge{
-  display:inline-block;margin-top:6px;
-  padding:3px 10px;border-radius:20px;
-  font-size:10px;font-weight:700;
-  background:${statusColor}22;color:${statusColor};
-  border:1px solid ${statusColor}55;
+  display:inline-block;margin-top:4px;
+  padding:4px 12px;border-radius:20px;
+  font-family:Arial,Helvetica,sans-serif;
+  font-size:10px;font-weight:bold;
+  background:${statusColor}28;color:${statusColor};
+  border:1px solid ${statusColor}60;
+  letter-spacing:0.3px;
 }
 
 /* Traveler strip */
@@ -566,21 +629,15 @@ body{
   <!-- Header -->
   <div class="doc-header">
     <div class="header-top">
-      <!-- Company block — logo + real text -->
+      <!-- Company block — system fonts, block layout, high-contrast text -->
       <div class="company-block">
-        <img src="${logoDataUrl}" alt="${COMPANY_AR}" style="display:block;height:64px;width:auto;max-width:160px;object-fit:contain;margin:0 0 10px auto;"/>
-        <div class="company-ar">${COMPANY_AR}</div>
-        <div class="company-en">${COMPANY_EN}</div>
-        <hr class="company-separator"/>
-        <div class="company-contact">
-          <span class="company-contact-icon">📞</span>
-          <span>${COMPANY_PHONE}&nbsp;&nbsp;|&nbsp;&nbsp;${COMPANY_PHONE2}</span>
-        </div>
-        <div class="company-contact">
-          <span class="company-contact-icon">✉</span>
-          <span>${COMPANY_EMAIL}</span>
-        </div>
-        <div class="company-address">📍 ${COMPANY_CITY}</div>
+        <img src="${logoDataUrl}" class="company-logo" alt="Qema"/>
+        <span class="company-name-ar">${COMPANY_AR}</span>
+        <span class="company-name-en">${COMPANY_EN}</span>
+        <span class="company-rule"></span>
+        <span class="contact-row">&#128222; ${COMPANY_PHONE} &nbsp;|&nbsp; ${COMPANY_PHONE2}</span>
+        <span class="contact-row">&#9993; ${COMPANY_EMAIL}</span>
+        <span class="contact-row-rtl">&#128205; ${COMPANY_CITY}</span>
       </div>
       <div class="doc-meta">
         <div class="doc-type-label">Document Type</div>
