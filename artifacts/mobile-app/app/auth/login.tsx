@@ -28,8 +28,8 @@ import {
 } from '@/lib/biometric';
 import { useColors } from '@/hooks/useColors';
 
-const GOLD   = '#C9A060';
-const GOLD2  = '#E8C07A';
+const GOLD   = '#E97900';
+const GOLD2  = '#F5A030';
 
 type Tab = 'phone' | 'email';
 

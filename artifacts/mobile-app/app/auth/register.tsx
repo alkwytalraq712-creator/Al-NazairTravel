@@ -24,8 +24,8 @@ import CountryPickerModal from '@/components/CountryPickerModal';
 import { DEFAULT_COUNTRY, NATIONALITIES, type Country } from '@/lib/countries';
 import { useColors } from '@/hooks/useColors';
 
-const GOLD   = '#C9A060';
-const GOLD2  = '#E8C07A';
+const GOLD   = '#E97900';
+const GOLD2  = '#F5A030';
 
 function NationalityPickerModal({
   visible, selected, onSelect, onClose,
