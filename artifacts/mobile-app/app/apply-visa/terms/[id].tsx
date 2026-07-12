@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Modal,
   Platform,
   ScrollView,
@@ -309,6 +310,13 @@ export default function VisaTermsScreen() {
 
   const isPending = createMutation.isPending || acceptMutation.isPending;
 
+  // Block hardware back while mutation is in-flight to prevent duplicate submissions
+  useEffect(() => {
+    if (!isPending) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, [isPending]);
+
   // ── Auth gate
   if (!isAuthenticated) {
     return (
@@ -413,13 +421,18 @@ export default function VisaTermsScreen() {
       <View
         style={[
           styles.header,
-          { paddingTop: paddingTop + 12, backgroundColor: '#0D1526' },
+          { paddingTop: paddingTop + 12, backgroundColor: colors.card },
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        {/* Back button is disabled once submission starts */}
+        <TouchableOpacity
+          onPress={() => { if (!isPending) router.back(); }}
+          style={[styles.backBtn, isPending && { opacity: 0.3 }]}
+          disabled={isPending}
+        >
+          <Ionicons name="chevron-forward" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>الإقرار والشروط والأحكام</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>الإقرار والشروط والأحكام</Text>
         <View style={{ width: 24 }} />
       </View>
 
