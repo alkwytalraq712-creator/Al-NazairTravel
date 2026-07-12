@@ -25,6 +25,7 @@ import {
 import { formatTime, formatDuration, CABIN_LABELS_AR } from '@/lib/flightService';
 import { codeToEnglishName } from '@/lib/countriesEn';
 import { useColors } from '@/hooks/useColors';
+import { COMPANY_LOGO_BASE64 } from '@/lib/logoBase64';
 
 // ─── Brand & Company ──────────────────────────────────────────────────────────
 const GOLD       = '#C9A060';
@@ -208,7 +209,8 @@ function HoldCountdownBanner({ expiresAt }: { expiresAt: string }) {
 }
 
 // ─── PDF HTML Builder ─────────────────────────────────────────────────────────
-function buildTicketHtml(booking: any, segments: any[], offer: any, departStr: string, arriveStr: string, logoDataUrl?: string): string {
+function buildTicketHtml(booking: any, segments: any[], offer: any, departStr: string, arriveStr: string): string {
+  const logoDataUrl = COMPANY_LOGO_BASE64;
   const pnr          = booking.bookingReference ?? '—';
   const isConfirmedDoc = isConfirmed(booking.status);
   const docTitle     = isConfirmedDoc ? 'التذكرة الإلكترونية · ELECTRONIC TICKET' : 'تأكيد الحجز المؤقت · TEMPORARY BOOKING CONFIRMATION';
@@ -241,6 +243,8 @@ function buildTicketHtml(booking: any, segments: any[], offer: any, departStr: s
     const confColor = isConfirmedDoc ? '#059669' : '#F97316';
     const confText  = isConfirmedDoc ? 'Confirmed' : 'Pending';
 
+    const airlineLogoUrl = s.airlineLogoUrl ?? offer.airlineLogoUrl ?? '';
+
     // Simple SVG barcode for PDF
     const barVal = pnr.padEnd(20, '0').slice(0, 20);
     const bw = 2;
@@ -262,7 +266,11 @@ function buildTicketHtml(booking: any, segments: any[], offer: any, departStr: s
       <div class="seg-inner">
         <!-- Airline row -->
         <div class="seg-airline-row">
-          <div class="airline-icon">✈</div>
+          <div class="airline-icon">
+            ${airlineLogoUrl
+              ? `<img src="${airlineLogoUrl}" class="airline-logo-img" alt="${airline}" onerror="this.style.display='none';this.parentNode.innerHTML='✈'" />`
+              : '✈'}
+          </div>
           <div class="airline-info">
             <span class="airline-name">${airline}</span>
             <span class="flight-num">${flNum}</span>
@@ -423,7 +431,8 @@ body{font-family:'Cairo',Arial,sans-serif;background:#E8EAF0;color:#1A2035;font-
 }
 .seg-inner{background:#fff;border:1px solid #DDE1ED;border-top:none;border-radius:0 0 8px 8px;overflow:hidden}
 .seg-airline-row{display:flex;align-items:center;gap:12px;padding:12px 16px 10px;border-bottom:1px solid #F0F2F8;direction:ltr}
-.airline-icon{font-size:18px;width:36px;height:36px;background:#0B1628;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#C9A060;flex-shrink:0}
+.airline-icon{width:40px;height:40px;background:#0B1628;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#C9A060;flex-shrink:0;overflow:hidden;font-size:18px}
+.airline-logo-img{width:36px;height:36px;object-fit:contain;border-radius:6px}
 .airline-info{flex:1}
 .airline-name{display:block;font-size:14px;font-weight:700;color:#1A2035}
 .flight-num{display:block;font-size:11px;color:#888;margin-top:2px}
@@ -727,22 +736,7 @@ export default function ETicketScreen() {
 
   // ─── PDF Export ──────────────────────────────────────────────────────────────
   async function handleExportPDF() {
-    // Load company logo as base64 for embedding in PDF
-    let logoDataUrl = '';
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { Asset } = require('expo-asset') as { Asset: { fromModule: (m: any) => { downloadAsync(): Promise<any>; localUri: string | null } } };
-      const logoAsset = Asset.fromModule(require('@/assets/images/logo_transparent.png'));
-      await logoAsset.downloadAsync();
-      if (logoAsset.localUri) {
-        const base64 = await FileSystem.readAsStringAsync(logoAsset.localUri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        logoDataUrl = `data:image/png;base64,${base64}`;
-      }
-    } catch {}
-
-    const html     = buildTicketHtml(booking, segments, offer, departStr, arriveStr, logoDataUrl);
+    const html     = buildTicketHtml(booking, segments, offer, departStr, arriveStr);
     const filename = `Electronic_Ticket_${pnr}.pdf`;
 
     if (Platform.OS === 'web') {
