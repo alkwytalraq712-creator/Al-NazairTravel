@@ -23,6 +23,7 @@ import {
   useGetProfileCompletion,
   useGetVisaEligibility,
   useGetVisa,
+  useGetCurrentUser,
   getListMyVisaApplicationsQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -303,6 +304,7 @@ export default function VisaTermsScreen() {
   const { data: completion, isLoading: compLoading } = useGetProfileCompletion();
   const { data: eligibility, isLoading: eligLoading } = useGetVisaEligibility(visaId);
   const { data: visa } = useGetVisa(visaId);
+  const { data: currentUser } = useGetCurrentUser();
 
   // ── Mutations
   const acceptMutation = useAcceptVisaTerms();
@@ -549,24 +551,89 @@ export default function VisaTermsScreen() {
             {/* Handle bar */}
             <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12, marginBottom: 20 }} />
 
-            {/* Visa summary */}
+            {/* ── Visa + Applicant Summary Card ── */}
             <LinearGradient
               colors={['#0D1526', '#1a2744']}
-              style={{ marginHorizontal: 16, borderRadius: 16, padding: 20, marginBottom: 20, flexDirection: 'row-reverse', alignItems: 'center', gap: 14 }}
+              style={{ marginHorizontal: 16, borderRadius: 16, marginBottom: 16, overflow: 'hidden' }}
             >
-              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="document-text-outline" size={26} color="#fff" />
+              {/* Gold accent bar */}
+              <View style={{ height: 4, backgroundColor: '#C9A060' }} />
+
+              {/* Header row */}
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(201,160,96,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(201,160,96,0.3)' }}>
+                  <Ionicons name="document-text-outline" size={24} color="#C9A060" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Tajawal_400Regular', fontSize: 11, textAlign: 'right' }}>
+                    طلب تأشيرة جديد
+                  </Text>
+                  <Text style={{ color: '#C9A060', fontFamily: 'Tajawal_800ExtraBold', fontSize: 17, textAlign: 'right', marginTop: 2 }}>
+                    {visa?.countryName ?? '—'}
+                  </Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: 'rgba(255,255,255,0.65)', fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'right', marginBottom: 4 }}>
-                  طلب تأشيرة جديد
+
+              {/* Visa details grid */}
+              <View style={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 10 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Tajawal_700Bold', fontSize: 10, textAlign: 'right', letterSpacing: 0.8, marginBottom: 10, textTransform: 'uppercase' }}>
+                  بيانات التأشيرة
                 </Text>
-                <Text style={{ color: '#fff', fontFamily: 'Tajawal_700Bold', fontSize: 18, textAlign: 'right', marginBottom: 2 }}>
-                  {(visa as any)?.destination ?? ''} – {(visa as any)?.type === 'tourism' ? 'سياحية' : (visa as any)?.type === 'business' ? 'عمل' : (visa as any)?.type ?? ''}
+                {[
+                  {
+                    icon: 'ribbon-outline' as const,
+                    label: 'نوع التأشيرة',
+                    value: visa?.visaType === 'tourism' ? 'سياحية'
+                      : visa?.visaType === 'business' ? 'أعمال'
+                      : visa?.visaType === 'medical' ? 'طبية'
+                      : visa?.visaType === 'study' ? 'دراسية'
+                      : visa?.visaType === 'visit' ? 'زيارة'
+                      : visa?.visaType === 'investment' ? 'استثمارية'
+                      : (visa?.visaType ?? '—'),
+                  },
+                  { icon: 'time-outline' as const, label: 'مدة الإقامة', value: visa?.stayDuration ?? '—' },
+                  { icon: 'calendar-outline' as const, label: 'صلاحية التأشيرة', value: visa?.validity ?? '—' },
+                  { icon: 'enter-outline' as const, label: 'عدد مرات الدخول', value: visa?.entriesAllowed ?? '—' },
+                  { icon: 'hourglass-outline' as const, label: 'وقت المعالجة', value: visa?.processingTime ?? '—' },
+                  {
+                    icon: 'cash-outline' as const,
+                    label: 'الرسوم',
+                    value: visa?.price != null ? `${visa.price} ${visa.currency ?? ''}` : '—',
+                    highlight: true,
+                  },
+                ].map(({ icon, label, value, highlight }) => (
+                  <View key={label} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
+                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name={icon} size={13} color="rgba(255,255,255,0.4)" />
+                      <Text style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'right' }}>{label}</Text>
+                    </View>
+                    <Text style={{ color: highlight ? '#C9A060' : '#fff', fontFamily: highlight ? 'Tajawal_800ExtraBold' : 'Tajawal_600SemiBold', fontSize: 13, textAlign: 'left' }}>{value}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Divider */}
+              <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.10)', marginHorizontal: 18 }} />
+
+              {/* Applicant details */}
+              <View style={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 16 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Tajawal_700Bold', fontSize: 10, textAlign: 'right', letterSpacing: 0.8, marginBottom: 10, textTransform: 'uppercase' }}>
+                  بيانات مقدم الطلب
                 </Text>
-                <Text style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'right' }}>
-                  {(visa as any)?.duration ? `مدة التأشيرة: ${(visa as any).duration} يوم` : ''}
-                </Text>
+                {[
+                  { icon: 'person-outline' as const, label: 'الاسم الكامل', value: (currentUser?.fullName || `${currentUser?.firstName ?? ''} ${currentUser?.familyName ?? ''}`.trim()) || '—' },
+                  { icon: 'card-outline' as const, label: 'رقم الجواز', value: currentUser?.passportNumber ?? '—' },
+                  { icon: 'flag-outline' as const, label: 'الجنسية', value: currentUser?.nationality ?? '—' },
+                  { icon: 'call-outline' as const, label: 'رقم الهاتف', value: currentUser?.phone ?? '—' },
+                ].map(({ icon, label, value }) => (
+                  <View key={label} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
+                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name={icon} size={13} color="rgba(255,255,255,0.4)" />
+                      <Text style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'right' }}>{label}</Text>
+                    </View>
+                    <Text style={{ color: '#fff', fontFamily: 'Tajawal_600SemiBold', fontSize: 13, textAlign: 'left', maxWidth: 180 }} numberOfLines={1}>{value}</Text>
+                  </View>
+                ))}
               </View>
             </LinearGradient>
 
