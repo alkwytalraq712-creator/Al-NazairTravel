@@ -29,14 +29,24 @@
       "favicon": "./assets/images/app-icon.png"
     },
     "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser",
       [
-        "expo-router",
+        "expo-notifications",
         {
-          "origin": "https://replit.com/"
+          "icon": "./assets/images/app-icon.png",
+          "color": "#C9A060",
+          "defaultChannel": "default"
         }
       ],
-      "expo-font",
-      "expo-web-browser"
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "يستخدم التطبيق معرض الصور لرفع صورة شخصية وصورة جواز السفر.",
+          "cameraPermission": "يستخدم التطبيق الكاميرا لالتقاط صورة شخصية وصورة جواز السفر."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
