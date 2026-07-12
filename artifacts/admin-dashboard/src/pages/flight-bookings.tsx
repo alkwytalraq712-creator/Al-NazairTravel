@@ -269,7 +269,7 @@ function StatusUpdater({ booking }: { booking: FlightBooking }) {
             }
           );
         },
-        onError: (e) => toast({ title: "فشل التحديث", description: e.error, variant: "destructive" })
+        onError: (e) => toast({ title: "فشل التحديث", description: (e.data as { error?: string })?.error, variant: "destructive" })
       }
     );
   };

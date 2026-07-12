@@ -1,5 +1,5 @@
 import React from 'react';
-import { useListCustomers } from '@workspace/api-client-react';
+import { useListCustomers, type User } from '@workspace/api-client-react';
 import { Loader2, Search, Mail, Phone, Calendar, Download, FileText, CheckCircle, Clock, ChevronLeft, Home, IdCard, Image as ImageIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDateAr } from '@/lib/translations';
 
-type Customer = NonNullable<ReturnType<typeof useListCustomers>['data']>[number];
+type Customer = User;
 
 const RESIDENCE_LABELS: Record<string, string> = {
   none:      'لا',

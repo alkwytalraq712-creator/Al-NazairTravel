@@ -24,6 +24,8 @@ import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 
+const GOLD = '#C9A060';
+
 // ─── Notification type config ────────────────────────────────────────────────
 type NotifType = 'all' | 'visa_application' | 'package_booking' | 'flight_booking' | 'general' | 'promotion' | 'payment' | 'system';
 

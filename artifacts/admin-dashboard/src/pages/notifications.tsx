@@ -78,8 +78,8 @@ function PushStatsCard() {
   async function load() {
     setLoading(true);
     try {
-      const res = await customFetch('/api/admin/notifications/push-stats');
-      if (res.ok) setStats(await res.json());
+      const data = await customFetch<{ totalUsers: number; withPushToken: number }>('/api/admin/notifications/push-stats');
+      setStats(data);
     } catch {}
     finally { setLoading(false); }
   }

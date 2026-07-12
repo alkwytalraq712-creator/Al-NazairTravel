@@ -190,7 +190,7 @@ function TestimonialForm({ testimonial, onSuccess, onCancel }: { testimonial: Te
           queryClient.invalidateQueries({ queryKey: ['/api/testimonials'] });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: e.error, variant: "destructive" })
+        onError: (e) => toast({ title: "خطأ", description: (e.data as { error?: string })?.error, variant: "destructive" })
       });
     } else {
       createMutation.mutate({ data }, {
@@ -199,7 +199,7 @@ function TestimonialForm({ testimonial, onSuccess, onCancel }: { testimonial: Te
           queryClient.invalidateQueries({ queryKey: ['/api/testimonials'] });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: e.error, variant: "destructive" })
+        onError: (e) => toast({ title: "خطأ", description: (e.data as { error?: string })?.error, variant: "destructive" })
       });
     }
   };
