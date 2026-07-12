@@ -90,8 +90,22 @@ export default function WelcomeScreen() {
     }
   }, [isAuthenticated, isLoading]);
 
-  if (isLoading) return null;
-  if (isAuthenticated) return null;
+  // While the auth check runs (or right after a successful auth, before the
+  // redirect to the tabs fires) never render a blank white screen — show the
+  // branded dark background with the logo. A plain `return null` here caused a
+  // permanent white screen whenever the /api/auth/me request was slow or
+  // unreachable from the device.
+  if (isLoading || isAuthenticated) {
+    return (
+      <View style={styles.splash}>
+        <Image
+          source={require('@/assets/images/logo_transparent.png')}
+          style={styles.splashLogo}
+          resizeMode="contain"
+        />
+      </View>
+    );
+  }
 
   const paddingTop    = Platform.OS === 'web' ? 44 : insets.top;
   const paddingBottom = Platform.OS === 'web' ? 32 : insets.bottom + 16;
@@ -205,6 +219,16 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#050810',
+  },
+  splash: {
+    flex: 1,
+    backgroundColor: '#050810',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  splashLogo: {
+    width: 260,
+    height: 140,
   },
   screen: {
     flex: 1,

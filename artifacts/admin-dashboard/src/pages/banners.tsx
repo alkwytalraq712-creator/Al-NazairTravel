@@ -241,7 +241,7 @@ function BannerForm({ banner, nextOrder, onSuccess, onCancel }: { banner: Banner
           queryClient.invalidateQueries({ queryKey: getListAllBannersQueryKey() });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: e.error, variant: "destructive" })
+        onError: (e) => toast({ title: "خطأ", description: (e.data as { error?: string })?.error ?? e.message, variant: "destructive" })
       });
     } else {
       createMutation.mutate({ data }, {
@@ -250,7 +250,7 @@ function BannerForm({ banner, nextOrder, onSuccess, onCancel }: { banner: Banner
           queryClient.invalidateQueries({ queryKey: getListAllBannersQueryKey() });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: e.error, variant: "destructive" })
+        onError: (e) => toast({ title: "خطأ", description: (e.data as { error?: string })?.error ?? e.message, variant: "destructive" })
       });
     }
   };

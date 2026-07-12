@@ -1,0 +1,27 @@
+kind = "video"
+previewPath = "/launch-video/"
+title = "Qema Launch Video"
+version = "1.0.0"
+id = "artifacts/launch-video"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/launch-video/" ]
+localPort = 19679
+
+[services.development]
+run = "pnpm --filter @workspace/launch-video run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/launch-video", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/launch-video/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19679"
+BASE_PATH = "/launch-video/"

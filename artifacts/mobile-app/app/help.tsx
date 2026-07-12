@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Linking,
   Platform,
@@ -7,11 +7,24 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Animated,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useColors } from '@/hooks/useColors';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const GOLD  = '#C9A060';
+const NAVY  = '#060B18';
+const NAVY2 = '#0C1628';
+const NAVY3 = '#121F38';
 
 const FAQS = [
   {
@@ -36,12 +49,115 @@ const FAQS = [
   },
 ];
 
+function FaqItem({ faq, isExpanded, onPress, index }: { faq: any; isExpanded: boolean; onPress: () => void; index: number }) {
+  const colors = useColors();
+  const anim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(anim, {
+      toValue: 1,
+      delay: index * 100,
+      useNativeDriver: true,
+      bounciness: 10,
+    }).start();
+  }, [anim, index]);
+
+  useEffect(() => {
+    Animated.timing(rotateAnim, {
+      toValue: isExpanded ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [isExpanded, rotateAnim]);
+
+  const rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg']
+  });
+
+  return (
+    <Animated.View style={[
+      styles.faqItemWrap,
+      { backgroundColor: colors.card, borderColor: colors.border, shadowColor: colors.foreground },
+      {
+        opacity: anim,
+        transform: [{
+          translateY: anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [20, 0]
+          })
+        }]
+      }
+    ]}>
+      <TouchableOpacity
+        style={styles.faqHeader}
+        onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          onPress();
+        }}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.faqQ, { color: colors.foreground }]}>{faq.q}</Text>
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <Ionicons name="chevron-down" size={20} color={GOLD} />
+        </Animated.View>
+      </TouchableOpacity>
+      {isExpanded && (
+        <View style={styles.faqBody}>
+          <Text style={[styles.faqA, { color: colors.mutedForeground }]}>{faq.a}</Text>
+        </View>
+      )}
+    </Animated.View>
+  );
+}
+
+function SectionCard({
+  title, icon, gradientColors, children, index,
+}: { title: string; icon: string; gradientColors: readonly [string, string]; children: React.ReactNode; index: number }) {
+  const colors = useColors();
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(anim, {
+      toValue: 1,
+      delay: index * 100,
+      useNativeDriver: true,
+      bounciness: 10,
+    }).start();
+  }, [anim, index]);
+
+  return (
+    <Animated.View style={[
+      styles.section,
+      { backgroundColor: colors.card, borderColor: colors.border, shadowColor: colors.foreground },
+      {
+        opacity: anim,
+        transform: [{
+          translateY: anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [20, 0]
+          })
+        }]
+      }
+    ]}>
+      <View style={[styles.sectionHeader, { borderBottomColor: colors.border }]}>
+        <LinearGradient colors={gradientColors} style={styles.sectionIconWrap} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <Ionicons name={icon as any} size={20} color="#FFFFFF" />
+        </LinearGradient>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{title}</Text>
+      </View>
+      <View style={styles.sectionBody}>{children}</View>
+    </Animated.View>
+  );
+}
+
 export default function HelpScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
-  const [expandedFaq, setExpandedFaq] = React.useState<number | null>(null);
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
   function openWhatsApp() {
     Linking.openURL('https://wa.me/9647700000000?text=مرحباً، أحتاج مساعدة').catch(() => {});
@@ -53,79 +169,59 @@ export default function HelpScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-forward" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>المساعدة والدعم</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
-        {/* Contact Methods */}
-        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>تواصل معنا</Text>
-          </View>
-
-          <TouchableOpacity style={[styles.contactBtn, { backgroundColor: '#25D366' }]} onPress={openWhatsApp} activeOpacity={0.85}>
-            <Text style={styles.contactBtnText}>واتساب</Text>
-            <Ionicons name="logo-whatsapp" size={22} color="#fff" />
+      <LinearGradient colors={[NAVY, NAVY2, NAVY3]} style={[styles.headerGradient, { paddingTop: paddingTop + 12 }]}>
+        <View style={styles.headerInner}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.circleBtn}>
+            <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.contactBtn, { backgroundColor: colors.primary, marginTop: 10 }]} onPress={openEmail} activeOpacity={0.85}>
-            <Text style={styles.contactBtnText}>البريد الإلكتروني</Text>
-            <Ionicons name="mail-outline" size={22} color="#fff" />
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>المساعدة والدعم</Text>
+          <View style={{ width: 44 }} />
         </View>
+      </LinearGradient>
 
-        {/* Working Hours */}
-        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="time-outline" size={20} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>ساعات العمل</Text>
-          </View>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+        <SectionCard title="تواصل معنا" icon="chatbubbles" gradientColors={['#3B82F6', '#2563EB']} index={0}>
+          <TouchableOpacity onPress={openWhatsApp} activeOpacity={0.85} style={{ marginBottom: 12 }}>
+            <LinearGradient colors={['#25D366', '#128C7E']} style={styles.contactBtnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              <Ionicons name="logo-whatsapp" size={24} color="#FFFFFF" />
+              <Text style={styles.contactBtnText}>واتساب</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={openEmail} activeOpacity={0.85}>
+            <LinearGradient colors={['#3B82F6', '#1D4ED8']} style={styles.contactBtnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              <Ionicons name="mail" size={24} color="#FFFFFF" />
+              <Text style={styles.contactBtnText}>البريد الإلكتروني</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </SectionCard>
+
+        <SectionCard title="ساعات العمل" icon="time" gradientColors={['#F59E0B', '#D97706']} index={1}>
           {[
-            { day: 'الأحد — الخميس', hours: '9:00 ص — 6:00 م' },
-            { day: 'الجمعة', hours: '9:00 ص — 1:00 م' },
+            { day: 'الأحد - الخميس', hours: '9:00 ص - 6:00 م' },
+            { day: 'الجمعة', hours: '9:00 ص - 1:00 م' },
             { day: 'السبت', hours: 'مغلق' },
-          ].map((item) => (
-            <View key={item.day} style={[styles.hoursRow, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.hoursTime, { color: colors.foreground }]}>{item.hours}</Text>
+          ].map((item, i, arr) => (
+            <View key={item.day} style={[styles.hoursRow, i !== arr.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
               <Text style={[styles.hoursDay, { color: colors.mutedForeground }]}>{item.day}</Text>
+              <Text style={[styles.hoursTime, { color: colors.foreground }]}>{item.hours}</Text>
             </View>
           ))}
-        </View>
+        </SectionCard>
 
-        {/* FAQ */}
-        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>الأسئلة الشائعة</Text>
-          </View>
+        <Text style={[styles.faqSectionTitle, { color: colors.foreground }]}>الأسئلة الشائعة</Text>
+        <View style={styles.faqList}>
           {FAQS.map((faq, i) => (
-            <TouchableOpacity
+            <FaqItem
               key={i}
-              style={[styles.faqItem, { borderBottomColor: colors.border }]}
+              faq={faq}
+              isExpanded={expandedFaq === i}
               onPress={() => setExpandedFaq(expandedFaq === i ? null : i)}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={expandedFaq === i ? 'chevron-up' : 'chevron-down'}
-                size={18}
-                color={colors.primary}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.faqQ, { color: colors.foreground }]}>{faq.q}</Text>
-                {expandedFaq === i && (
-                  <Text style={[styles.faqA, { color: colors.mutedForeground }]}>{faq.a}</Text>
-                )}
-              </View>
-            </TouchableOpacity>
+              index={i + 2}
+            />
           ))}
         </View>
 
-        {/* App Info */}
         <Text style={[styles.version, { color: colors.mutedForeground }]}>قمة النظائر للسفريات · الإصدار 1.0.0</Text>
       </ScrollView>
     </View>
@@ -134,19 +230,124 @@ export default function HelpScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 16 },
-  backBtn: { padding: 4 },
-  headerTitle: { color: '#fff', fontSize: 18, fontFamily: 'Tajawal_800ExtraBold', flex: 1, textAlign: 'right' },
-  section: { borderRadius: 16, borderWidth: 1, padding: 20, marginBottom: 16 },
-  sectionHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontFamily: 'Tajawal_700Bold' },
-  contactBtn: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 14, borderRadius: 12 },
-  contactBtnText: { color: '#fff', fontFamily: 'Tajawal_700Bold', fontSize: 15 },
-  hoursRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1 },
-  hoursDay: { fontSize: 14, fontFamily: 'Tajawal_500Medium' },
-  hoursTime: { fontSize: 14, fontFamily: 'Tajawal_400Regular' },
-  faqItem: { flexDirection: 'row-reverse', gap: 12, paddingVertical: 14, borderBottomWidth: 1 },
-  faqQ: { fontSize: 14, fontFamily: 'Tajawal_700Bold', textAlign: 'right', flex: 1 },
-  faqA: { fontSize: 13, fontFamily: 'Tajawal_400Regular', textAlign: 'right', marginTop: 8, lineHeight: 22 },
-  version: { textAlign: 'center', fontSize: 12, fontFamily: 'Tajawal_400Regular', marginTop: 8 },
+  headerGradient: {
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    paddingBottom: 20,
+    marginBottom: 16,
+  },
+  headerInner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontFamily: 'Tajawal_800ExtraBold',
+    textAlign: 'center',
+  },
+  circleBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  section: {
+    borderRadius: 22,
+    borderWidth: 1,
+    marginBottom: 20,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  sectionHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  sectionIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: { fontSize: 16, fontFamily: 'Tajawal_800ExtraBold' },
+  sectionBody: { padding: 16 },
+
+  contactBtnGradient: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 16,
+    borderRadius: 16,
+  },
+  contactBtnText: { color: '#FFFFFF', fontFamily: 'Tajawal_700Bold', fontSize: 16 },
+
+  hoursRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+  },
+  hoursDay: { fontSize: 15, fontFamily: 'Tajawal_500Medium' },
+  hoursTime: { fontSize: 15, fontFamily: 'Tajawal_700Bold' },
+
+  faqSectionTitle: {
+    fontSize: 18,
+    fontFamily: 'Tajawal_800ExtraBold',
+    textAlign: 'right',
+    marginBottom: 16,
+    marginTop: 8,
+    paddingHorizontal: 8,
+  },
+  faqList: { gap: 12 },
+  faqItemWrap: {
+    borderRadius: 22,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  faqHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 18,
+    gap: 16,
+  },
+  faqQ: {
+    fontSize: 15,
+    fontFamily: 'Tajawal_700Bold',
+    textAlign: 'right',
+    flex: 1,
+    lineHeight: 22,
+  },
+  faqBody: {
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+  },
+  faqA: {
+    fontSize: 14,
+    fontFamily: 'Tajawal_500Medium',
+    textAlign: 'right',
+    lineHeight: 24,
+  },
+  version: {
+    textAlign: 'center',
+    fontSize: 13,
+    fontFamily: 'Tajawal_500Medium',
+    marginTop: 32,
+  },
 });

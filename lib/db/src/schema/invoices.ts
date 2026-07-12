@@ -1,8 +1,8 @@
 import {
   date,
+  doublePrecision,
   integer,
   jsonb,
-  numeric,
   pgTable,
   serial,
   text,
@@ -25,9 +25,9 @@ export const invoicesTable = pgTable("invoices", {
   customerPhone: text("customer_phone").notNull(),
   customerEmail: text("customer_email"),
   items: jsonb("items").$type<InvoiceItem[]>().notNull(),
-  subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
-  tax: numeric("tax", { precision: 10, scale: 2 }).notNull().default("0"),
-  total: numeric("total", { precision: 10, scale: 2 }).notNull(),
+  subtotal: doublePrecision("subtotal").notNull(),
+  tax: doublePrecision("tax").notNull().default(0),
+  total: doublePrecision("total").notNull(),
   currency: text("currency").notNull().default("IQD"),
   status: text("status").notNull().default("draft"), // draft | issued | paid | cancelled
   issuedAt: timestamp("issued_at", { withTimezone: true }),

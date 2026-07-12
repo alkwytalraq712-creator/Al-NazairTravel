@@ -28,7 +28,224 @@ tags:
     description: Customer testimonials
   - name: admin
     description: Admin-only management endpoints
+  - name: Storage
+    description: Object storage upload and serving endpoints.
 paths:
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      description: |
+        Returns a presigned GCS URL for direct upload. The client sends JSON
+        metadata here, then uploads the file directly to the returned URL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to generate upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /storage/public-objects/{filePath}:
+    get:
+      tags: [Storage]
+      operationId: getPublicObject
+      summary: Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+      description: |
+        Unconditionally public — no authentication or ACL checks.
+        Searches PUBLIC_OBJECT_SEARCH_PATHS for the given file path.
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Relative file path within the public search paths.
+      responses:
+        '200':
+          description: Object content streamed with correct Content-Type.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to serve public object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /ocr/passport:
+    post:
+      tags: [visas]
+      operationId: scanPassportOcr
+      summary: OCR a passport image and extract structured data
+      description: |
+        Accepts multipart/form-data with a passport image (JPEG/PNG ≤ 10 MB).
+        Preprocesses the image, runs OCR (Google Vision → Azure → OpenAI → Tesseract),
+        parses the MRZ zone, extracts and validates all passport fields,
+        stores the image in object storage, and returns structured JSON.
+        Rate-limited to 10 requests per minute per user.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [passportImage]
+              properties:
+                passportImage:
+                  type: string
+                  format: binary
+                  description: JPEG or PNG passport image, max 10 MB.
+      responses:
+        '200':
+          description: Passport OCR successful.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassportOcrResponse'
+        '400':
+          description: Missing or invalid image.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: File too large.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '415':
+          description: Unsupported image type.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Passport not detected or data invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: OCR processing failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /storage/uploads/finalize:
+    post:
+      tags: [Storage]
+      operationId: finalizeUpload
+      summary: Finalize an uploaded object and set its ACL policy
+      description: |
+        Call after the file has been PUT to the presigned upload URL. Marks the
+        authenticated caller as the object's owner (private visibility) so it
+        can later be retrieved via GET /storage/objects/{objectPath}.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinalizeUploadRequest'
+      responses:
+        '200':
+          description: Object finalized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinalizeUploadResponse'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Object not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to finalize object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an object entity from PRIVATE_OBJECT_DIR
+      description: |
+        Serves object entities uploaded via presigned URLs. These can optionally
+        be protected with authentication or ACL checks based on the use case.
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Object path within the private object dir (e.g. `uploads/some-uuid`).
+      responses:
+        '200':
+          description: Object content streamed with correct Content-Type.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Object not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to serve object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /healthz:
     get:
       operationId: healthCheck
@@ -121,6 +338,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/accept-visa-terms:
+    post:
+      operationId: acceptVisaTerms
+      tags: [auth]
+      summary: Record user's consent to visa application terms
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptVisaTermsBody"
+      responses:
+        "200":
+          description: Consent recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [acceptedAt]
+                properties:
+                  acceptedAt: { type: string, format: date-time }
+        "401":
+          description: Not authenticated
+
+  /auth/profile/completion:
+    get:
+      operationId: getProfileCompletion
+      tags: [auth]
+      summary: Get profile completion percentage and missing fields
+      responses:
+        "200":
+          description: Profile completion info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileCompletion"
+        "401":
+          description: Not authenticated
 
   /auth/profile:
     patch:
@@ -297,6 +553,240 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /visas/{id}/eligibility:
+    get:
+      operationId: getVisaEligibility
+      tags: [visas]
+      summary: Check current user eligibility for this visa
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Eligibility result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisaEligibilityResult"
+        "401":
+          description: Not authenticated
+        "404":
+          description: Visa not found
+
+  /visas/{id}/rules:
+    get:
+      operationId: listVisaEligibilityRules
+      tags: [visas]
+      summary: List all eligibility rules for a visa (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Rules list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VisaEligibilityRule"
+    post:
+      operationId: createVisaEligibilityRule
+      tags: [visas]
+      summary: Create an eligibility rule for a visa (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisaEligibilityRuleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisaEligibilityRule"
+
+  /visas/{id}/rules/{ruleId}:
+    put:
+      operationId: updateVisaEligibilityRule
+      tags: [visas]
+      summary: Update an eligibility rule (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisaEligibilityRuleInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisaEligibilityRule"
+    delete:
+      operationId: deleteVisaEligibilityRule
+      tags: [visas]
+      summary: Delete an eligibility rule (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /settings/company:
+    get:
+      operationId: getCompanySettings
+      tags: [admin]
+      summary: Get company settings (public)
+      responses:
+        "200":
+          description: Company settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySettings"
+    patch:
+      operationId: updateCompanySettings
+      tags: [admin]
+      summary: Update company settings (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanySettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySettings"
+
+  /settings/branches:
+    get:
+      operationId: listBranches
+      tags: [admin]
+      summary: List all branches (public)
+      responses:
+        "200":
+          description: Branches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Branch"
+    post:
+      operationId: createBranch
+      tags: [admin]
+      summary: Create a branch (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+
+  /settings/branches/{id}:
+    put:
+      operationId: updateBranch
+      tags: [admin]
+      summary: Update a branch (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+    delete:
+      operationId: deleteBranch
+      tags: [admin]
+      summary: Delete a branch (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /visa-applications/my-latest:
+    get:
+      operationId: getMyLatestVisaApplication
+      tags: [visas]
+      summary: Get the most recent visa application for the current user
+      responses:
+        "200":
+          description: Latest application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisaApplication"
+        "404":
+          description: No applications found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /visa-applications:
     get:
@@ -1328,6 +1818,53 @@ paths:
 
 components:
   schemas:
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Original file name.
+        size:
+          type: integer
+          minimum: 1
+          description: File size in bytes.
+        contentType:
+          type: string
+          minLength: 1
+          description: MIME type of the file (e.g. `image/jpeg`).
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          description: Presigned GCS URL for PUT upload.
+        objectPath:
+          type: string
+          description: Normalized object path (e.g. `/objects/uploads/uuid`). Store this in your database.
+        metadata:
+          $ref: '#/components/schemas/UploadUrlRequest'
+    FinalizeUploadRequest:
+      type: object
+      required: [objectPath]
+      properties:
+        objectPath:
+          type: string
+          description: Normalized object path returned from requestUploadUrl (e.g. `/objects/uploads/uuid`).
+        isPublic:
+          type: boolean
+          description: When true, the object ACL is set to public so any authenticated user can read it. Returns a publicUrl.
+    FinalizeUploadResponse:
+      type: object
+      required: [objectPath]
+      properties:
+        objectPath:
+          type: string
+        publicUrl:
+          type: string
+          description: Full URL for serving the object (present when isPublic was true).
     HealthStatus:
       type: object
       properties:
@@ -1356,9 +1893,197 @@ components:
       type: string
       enum: [customer, admin]
 
+    ProfileCompletion:
+      type: object
+      required: [percentage, isComplete, missingFields]
+      properties:
+        percentage: { type: integer, minimum: 0, maximum: 100 }
+        isComplete: { type: boolean }
+        missingFields:
+          type: array
+          items: { type: string }
+
+    ActiveVisa:
+      type: object
+      required: [country, visaType, expiryDate]
+      properties:
+        country: { type: string }
+        visaType: { type: string }
+        visaNumber: { type: ["string", "null"] }
+        issueDate: { type: ["string", "null"] }
+        expiryDate: { type: string }
+        imageUrl: { type: ["string", "null"] }
+
+    TravelTrip:
+      type: object
+      required: [country, entryDate, exitDate]
+      properties:
+        country: { type: string }
+        entryDate: { type: string }
+        exitDate: { type: string }
+
+    VisaEligibilityBlocker:
+      type: object
+      required: [type, message]
+      properties:
+        type: { type: string }
+        message: { type: string }
+        actionRoute: { type: ["string", "null"] }
+
+    VisaEligibilityResult:
+      type: object
+      required: [eligible, blockers]
+      properties:
+        eligible: { type: boolean }
+        blockers:
+          type: array
+          items:
+            $ref: "#/components/schemas/VisaEligibilityBlocker"
+
+    AcceptVisaTermsBody:
+      type: object
+      required: [visaId]
+      properties:
+        visaId: { type: integer }
+
+    VisaEligibilityRule:
+      type: object
+      required: [id, visaId, name, isDefault, nationalities, allowDirect, requiresGulfResidence, requiresValidVisaCountries, requiresInvitationLetter, sortOrder, createdAt]
+      properties:
+        id: { type: integer }
+        visaId: { type: integer }
+        name: { type: string }
+        isDefault: { type: boolean }
+        nationalities:
+          type: array
+          items: { type: string }
+        allowDirect: { type: boolean }
+        requiresGulfResidence: { type: boolean }
+        requiresValidVisaCountries:
+          type: array
+          items: { type: string }
+        requiresInvitationLetter: { type: boolean }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    VisaEligibilityRuleInput:
+      type: object
+      required: [name, isDefault, nationalities, allowDirect, requiresGulfResidence, requiresValidVisaCountries, requiresInvitationLetter, sortOrder]
+      properties:
+        name: { type: string }
+        isDefault: { type: boolean }
+        nationalities:
+          type: array
+          items: { type: string }
+        allowDirect: { type: boolean }
+        requiresGulfResidence: { type: boolean }
+        requiresValidVisaCountries:
+          type: array
+          items: { type: string }
+        requiresInvitationLetter: { type: boolean }
+        sortOrder: { type: integer }
+
+    CompanySettings:
+      type: object
+      properties:
+        id: { type: integer }
+        companyName: { type: string }
+        logoUrl: { type: ["string", "null"] }
+        about: { type: ["string", "null"] }
+        address: { type: ["string", "null"] }
+        websiteUrl: { type: ["string", "null"] }
+        googleMapsUrl: { type: ["string", "null"] }
+        phonePrimary: { type: ["string", "null"] }
+        phoneSecondary: { type: ["string", "null"] }
+        whatsapp: { type: ["string", "null"] }
+        emailSupport: { type: ["string", "null"] }
+        emailOfficial: { type: ["string", "null"] }
+        instagram: { type: ["string", "null"] }
+        tiktok: { type: ["string", "null"] }
+        facebook: { type: ["string", "null"] }
+        twitter: { type: ["string", "null"] }
+        snapchat: { type: ["string", "null"] }
+        youtube: { type: ["string", "null"] }
+        linkedin: { type: ["string", "null"] }
+        telegram: { type: ["string", "null"] }
+        workDays: { type: ["string", "null"] }
+        workHours: { type: ["string", "null"] }
+        weeklyOff: { type: ["string", "null"] }
+        extraSocials: {}
+        updatedAt: { type: string, format: date-time }
+
+    CompanySettingsUpdate:
+      type: object
+      properties:
+        companyName: { type: string }
+        logoUrl: { type: string }
+        about: { type: string }
+        address: { type: string }
+        websiteUrl: { type: string }
+        googleMapsUrl: { type: string }
+        phonePrimary: { type: string }
+        phoneSecondary: { type: string }
+        whatsapp: { type: string }
+        emailSupport: { type: string }
+        emailOfficial: { type: string }
+        instagram: { type: string }
+        tiktok: { type: string }
+        facebook: { type: string }
+        twitter: { type: string }
+        snapchat: { type: string }
+        youtube: { type: string }
+        linkedin: { type: string }
+        telegram: { type: string }
+        workDays: { type: string }
+        workHours: { type: string }
+        weeklyOff: { type: string }
+        extraSocials: {}
+
+    Branch:
+      type: object
+      required: [id, name, country, city, address, status, isVisible, isMain, sortOrder, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        country: { type: string }
+        city: { type: string }
+        address: { type: string }
+        googleMapsUrl: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        whatsapp: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        workHours: { type: ["string", "null"] }
+        workDays: { type: ["string", "null"] }
+        imageUrl: { type: ["string", "null"] }
+        status: { type: string }
+        isVisible: { type: boolean }
+        isMain: { type: boolean }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    BranchInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        country: { type: string }
+        city: { type: string }
+        address: { type: string }
+        googleMapsUrl: { type: string }
+        phone: { type: string }
+        whatsapp: { type: string }
+        email: { type: string }
+        workHours: { type: string }
+        workDays: { type: string }
+        imageUrl: { type: string }
+        status: { type: string }
+        isVisible: { type: boolean }
+        isMain: { type: boolean }
+        sortOrder: { type: integer }
+
     User:
       type: object
-      required: [id, fullName, phone, role, language, currency, createdAt]
+      required: [id, fullName, phone, role, language, currency, createdAt, hasGulfResidence]
       properties:
         id: { type: integer }
         fullName: { type: string }
@@ -1370,6 +2095,48 @@ components:
         language: { type: string }
         currency: { type: string }
         createdAt: { type: string, format: date-time }
+        # Personal profile
+        firstName: { type: ["string", "null"] }
+        fatherName: { type: ["string", "null"] }
+        grandfatherName: { type: ["string", "null"] }
+        familyName: { type: ["string", "null"] }
+        englishName: { type: ["string", "null"] }
+        gender: { type: ["string", "null"] }
+        dob: { type: ["string", "null"] }
+        nationality: { type: ["string", "null"] }
+        placeOfBirth: { type: ["string", "null"] }
+        maritalStatus: { type: ["string", "null"] }
+        occupation: { type: ["string", "null"] }
+        whatsapp: { type: ["string", "null"] }
+        address: { type: ["string", "null"] }
+        # Passport
+        passportNumber: { type: ["string", "null"] }
+        passportIssuingCountry: { type: ["string", "null"] }
+        passportIssuingPlace: { type: ["string", "null"] }
+        passportIssueDate: { type: ["string", "null"] }
+        passportExpiry: { type: ["string", "null"] }
+        passportImageUrl: { type: ["string", "null"] }
+        # Gulf residence
+        hasGulfResidence: { type: boolean }
+        gulfResidenceCountry: { type: ["string", "null"] }
+        gulfResidenceNumber: { type: ["string", "null"] }
+        gulfResidenceExpiry: { type: ["string", "null"] }
+        gulfResidenceFrontUrl: { type: ["string", "null"] }
+        gulfResidenceBackUrl: { type: ["string", "null"] }
+        profileCompletedAt: { type: ["string", "null"], format: date-time }
+        # Simplified residence type: none | gcc | schengen | uk | usa
+        residenceType: { type: string }
+        # Current foreign visas & travel history
+        hasActiveForeignVisa: { type: boolean }
+        activeVisas:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveVisa"
+        hasTravelHistory: { type: boolean }
+        travelHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/TravelTrip"
 
     EmployeeInput:
       type: object
@@ -1420,7 +2187,7 @@ components:
         visaApplicationId: { type: ["integer", "null"] }
         customerName: { type: string }
         customerPhone: { type: string }
-        amount: { type: string }
+        amount: { type: number }
         currency: { type: string }
         method:
           $ref: "#/components/schemas/PaymentMethod"
@@ -1441,7 +2208,7 @@ components:
         visaApplicationId: { type: ["integer", "null"] }
         customerName: { type: string, minLength: 1 }
         customerPhone: { type: string, minLength: 3 }
-        amount: { type: string }
+        amount: { type: number }
         currency: { type: string }
         method:
           $ref: "#/components/schemas/PaymentMethod"
@@ -1454,9 +2221,13 @@ components:
     PaymentUpdate:
       type: object
       properties:
+        bookingType: { type: string }
+        flightBookingId: { type: ["integer", "null"] }
+        packageBookingId: { type: ["integer", "null"] }
+        visaApplicationId: { type: ["integer", "null"] }
         customerName: { type: string, minLength: 1 }
         customerPhone: { type: string, minLength: 3 }
-        amount: { type: string }
+        amount: { type: number }
         currency: { type: string }
         method:
           $ref: "#/components/schemas/PaymentMethod"
@@ -1504,9 +2275,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvoiceItem"
-        subtotal: { type: string }
-        tax: { type: string }
-        total: { type: string }
+        subtotal: { type: number }
+        tax: { type: number }
+        total: { type: number }
         currency: { type: string }
         status:
           $ref: "#/components/schemas/InvoiceStatus"
@@ -1527,9 +2298,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvoiceItem"
-        subtotal: { type: string }
-        tax: { type: string }
-        total: { type: string }
+        subtotal: { type: number }
+        tax: { type: number }
+        total: { type: number }
         currency: { type: string }
         status:
           $ref: "#/components/schemas/InvoiceStatus"
@@ -1547,9 +2318,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvoiceItem"
-        subtotal: { type: string }
-        tax: { type: string }
-        total: { type: string }
+        subtotal: { type: number }
+        tax: { type: number }
+        total: { type: number }
         currency: { type: string }
         status:
           $ref: "#/components/schemas/InvoiceStatus"
@@ -1584,6 +2355,45 @@ components:
         avatarUrl: { type: string }
         language: { type: string }
         currency: { type: string }
+        # Personal profile
+        firstName: { type: string }
+        fatherName: { type: string }
+        grandfatherName: { type: string }
+        familyName: { type: string }
+        englishName: { type: string }
+        gender: { type: string }
+        dob: { type: string }
+        nationality: { type: string }
+        placeOfBirth: { type: string }
+        maritalStatus: { type: string }
+        occupation: { type: string }
+        whatsapp: { type: string }
+        address: { type: string }
+        # Passport
+        passportNumber: { type: string }
+        passportIssuingCountry: { type: string }
+        passportIssuingPlace: { type: string }
+        passportIssueDate: { type: string }
+        passportExpiry: { type: string }
+        passportImageUrl: { type: string }
+        # Gulf residence
+        hasGulfResidence: { type: boolean }
+        gulfResidenceCountry: { type: string }
+        gulfResidenceNumber: { type: string }
+        gulfResidenceExpiry: { type: string }
+        gulfResidenceFrontUrl: { type: string }
+        gulfResidenceBackUrl: { type: string }
+        residenceType: { type: string }
+        hasActiveForeignVisa: { type: boolean }
+        activeVisas:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveVisa"
+        hasTravelHistory: { type: boolean }
+        travelHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/TravelTrip"
 
     PasswordResetRequest:
       type: object
@@ -1601,6 +2411,19 @@ components:
     VisaType:
       type: string
       enum: [tourism, business, medical, study, visit, investment]
+
+    VisaRequirements:
+      description: Per-country requirement flags configurable from admin dashboard
+      type: object
+      properties:
+        requiresGulfResidence:  { type: boolean }
+        requiresPersonalPhoto:  { type: boolean }
+        requiresPassportImage:  { type: boolean }
+        requiresBankStatement:  { type: boolean }
+        requiresFlightBooking:  { type: boolean }
+        requiresHotelBooking:   { type: boolean }
+        requiresTravelInsurance: { type: boolean }
+        requiresAdditionalDocs: { type: boolean }
 
     Visa:
       type: object
@@ -1621,10 +2444,19 @@ components:
           validity,
           isFeatured,
           createdAt,
+          requiresGulfResidence,
+          requiresPersonalPhoto,
+          requiresPassportImage,
+          requiresBankStatement,
+          requiresFlightBooking,
+          requiresHotelBooking,
+          requiresTravelInsurance,
+          requiresAdditionalDocs,
         ]
       properties:
         id: { type: integer }
         countryName: { type: string }
+        countryCode: { type: ["string", "null"] }
         countryFlagUrl: { type: string }
         countryImageUrl: { type: string }
         visaType:
@@ -1641,6 +2473,25 @@ components:
         validity: { type: string }
         isFeatured: { type: boolean }
         createdAt: { type: string, format: date-time }
+        requiresGulfResidence:   { type: boolean }
+        requiresPersonalPhoto:   { type: boolean }
+        requiresPassportImage:   { type: boolean }
+        requiresBankStatement:   { type: boolean }
+        requiresFlightBooking:   { type: boolean }
+        requiresHotelBooking:    { type: boolean }
+        requiresTravelInsurance: { type: boolean }
+        requiresAdditionalDocs:  { type: boolean }
+        requiresInvitationLetter: { type: boolean }
+        allowedNationalities:
+          type: array
+          items: { type: string }
+        blockedNationalities:
+          type: array
+          items: { type: string }
+        requiresGulfResidenceCountry: { type: ["string", "null"] }
+        requiresValidVisaCountries:
+          type: array
+          items: { type: string }
 
     VisaInput:
       type: object
@@ -1661,6 +2512,7 @@ components:
         ]
       properties:
         countryName: { type: string, minLength: 1 }
+        countryCode: { type: string }
         countryFlagUrl: { type: string }
         countryImageUrl: { type: string }
         visaType:
@@ -1676,11 +2528,31 @@ components:
         entriesAllowed: { type: string }
         validity: { type: string }
         isFeatured: { type: boolean }
+        requiresGulfResidence:   { type: boolean }
+        requiresPersonalPhoto:   { type: boolean }
+        requiresPassportImage:   { type: boolean }
+        requiresBankStatement:   { type: boolean }
+        requiresFlightBooking:   { type: boolean }
+        requiresHotelBooking:    { type: boolean }
+        requiresTravelInsurance: { type: boolean }
+        requiresAdditionalDocs:  { type: boolean }
+        requiresInvitationLetter: { type: boolean }
+        allowedNationalities:
+          type: array
+          items: { type: string }
+        blockedNationalities:
+          type: array
+          items: { type: string }
+        requiresGulfResidenceCountry: { type: ["string", "null"] }
+        requiresValidVisaCountries:
+          type: array
+          items: { type: string }
 
     VisaUpdate:
       type: object
       properties:
         countryName: { type: string, minLength: 1 }
+        countryCode: { type: string }
         countryFlagUrl: { type: string }
         countryImageUrl: { type: string }
         visaType:
@@ -1696,19 +2568,41 @@ components:
         entriesAllowed: { type: string }
         validity: { type: string }
         isFeatured: { type: boolean }
+        requiresGulfResidence:   { type: boolean }
+        requiresPersonalPhoto:   { type: boolean }
+        requiresPassportImage:   { type: boolean }
+        requiresBankStatement:   { type: boolean }
+        requiresFlightBooking:   { type: boolean }
+        requiresHotelBooking:    { type: boolean }
+        requiresTravelInsurance: { type: boolean }
+        requiresAdditionalDocs:  { type: boolean }
+        requiresInvitationLetter: { type: boolean }
+        allowedNationalities:
+          type: array
+          items: { type: string }
+        blockedNationalities:
+          type: array
+          items: { type: string }
+        requiresGulfResidenceCountry: { type: ["string", "null"] }
+        requiresValidVisaCountries:
+          type: array
+          items: { type: string }
 
     VisaApplicationStatus:
       type: string
       enum:
         [
+          filling_data,
           received,
           reviewing,
           awaiting_documents,
           submitted_to_embassy,
           processing,
+          approved,
           issued,
           completed,
           rejected,
+          cancelled,
         ]
 
     VisaApplication:
@@ -1753,40 +2647,71 @@ components:
         city: { type: string }
         passportImageUrl: { type: ["string", "null"] }
         personalPhotoUrl: { type: ["string", "null"] }
+        passportType: { type: ["string", "null"] }
+        issuingCountry: { type: ["string", "null"] }
+        passportIssueDate: { type: ["string", "null"], format: date }
+        placeOfBirth: { type: ["string", "null"] }
+        mrz: { type: ["string", "null"] }
+        ocrConfidence: { type: ["integer", "null"] }
+        ocrVerified: { type: boolean }
         status:
           $ref: "#/components/schemas/VisaApplicationStatus"
+        statusHistory:
+          type: array
+          items:
+            type: object
+            required: [status, timestamp]
+            properties:
+              status: { type: string }
+              timestamp: { type: string, format: date-time }
+              note: { type: ["string", "null"] }
         createdAt: { type: string, format: date-time }
 
-    VisaApplicationInput:
+    PassportData:
       type: object
       required:
-        [
-          visaId,
-          fullName,
-          phone,
-          email,
-          nationality,
-          passportNumber,
-          passportExpiry,
-          dob,
-          gender,
-          occupation,
-          city,
-        ]
+        [passportType, passportNumber, surname, givenNames, fullName,
+         nationality, issuingCountry, gender, dateOfBirth, passportIssueDate,
+         passportExpiry, placeOfBirth, mrz, confidence]
+      properties:
+        passportType: { type: string }
+        passportNumber: { type: string }
+        surname: { type: string }
+        givenNames: { type: string }
+        fullName: { type: string }
+        nationality: { type: string }
+        issuingCountry: { type: string }
+        gender: { type: string }
+        dateOfBirth: { type: string, format: date }
+        passportIssueDate: { type: string, format: date }
+        passportExpiry: { type: string, format: date }
+        placeOfBirth: { type: string }
+        mrz: { type: string }
+        confidence: { type: integer, minimum: 0, maximum: 100 }
+
+    PassportOcrResponse:
+      type: object
+      required: [success, passport, meta]
+      properties:
+        success: { type: boolean }
+        passport:
+          $ref: '#/components/schemas/PassportData'
+        meta:
+          type: object
+          required: [provider, durationMs]
+          properties:
+            provider: { type: string }
+            durationMs: { type: integer }
+            passportImagePath: { type: ["string", "null"] }
+
+    VisaApplicationInput:
+      description: >
+        Submit a visa application. All personal/passport data is auto-filled
+        from the user's completed profile. Only visaId is required.
+      type: object
+      required: [visaId]
       properties:
         visaId: { type: integer }
-        fullName: { type: string, minLength: 1 }
-        phone: { type: string }
-        email: { type: string }
-        nationality: { type: string }
-        passportNumber: { type: string }
-        passportExpiry: { type: string, format: date }
-        dob: { type: string, format: date }
-        gender: { type: string }
-        occupation: { type: string }
-        city: { type: string }
-        passportImageUrl: { type: string }
-        personalPhotoUrl: { type: string }
 
     VisaApplicationStatusUpdate:
       type: object
@@ -2110,10 +3035,31 @@ components:
         passportNumber: { type: string }
         passportExpiry: { type: string, format: date }
         passportIssueCountry: { type: string }
+        title: { type: string }
+        eTicketNumber: { type: string }
 
     FlightBookingStatus:
       type: string
       enum: [pending, confirmed, ticketed, cancelled, completed]
+
+    FlightSegmentInfo:
+      type: object
+      required: [fromAirport, toAirport, departTime, arriveTime]
+      properties:
+        fromAirport: { type: string }
+        fromAirportName: { type: string }
+        fromCity: { type: string }
+        toAirport: { type: string }
+        toAirportName: { type: string }
+        toCity: { type: string }
+        departTime: { type: string, format: date-time }
+        arriveTime: { type: string, format: date-time }
+        airlineName: { type: string }
+        airlineLogoUrl: { type: string }
+        flightNumber: { type: string }
+        aircraft: { type: string }
+        durationMinutes: { type: integer }
+        cabinClass: { type: string }
 
     FlightBooking:
       type: object
@@ -2144,6 +3090,20 @@ components:
         status:
           $ref: "#/components/schemas/FlightBookingStatus"
         createdAt: { type: string, format: date-time }
+        provider: { type: string }
+        providerMode: { type: string, nullable: true }
+        bookingReference: { type: string, nullable: true }
+        duffelOrderId: { type: string, nullable: true }
+        eticketNumbers:
+          type: array
+          nullable: true
+          items: { type: string }
+        segments:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/FlightSegmentInfo"
+        baggage: { type: string, nullable: true }
 
     FlightBookingInput:
       type: object

@@ -10,6 +10,7 @@ import type { VisaType } from './visaType';
 export interface VisaInput {
   /** @minLength 1 */
   countryName: string;
+  countryCode?: string;
   countryFlagUrl: string;
   countryImageUrl: string;
   visaType: VisaType;
@@ -22,4 +23,18 @@ export interface VisaInput {
   entriesAllowed: string;
   validity: string;
   isFeatured?: boolean;
+  requiresGulfResidence?: boolean;
+  requiresPersonalPhoto?: boolean;
+  requiresPassportImage?: boolean;
+  requiresBankStatement?: boolean;
+  requiresFlightBooking?: boolean;
+  requiresHotelBooking?: boolean;
+  requiresTravelInsurance?: boolean;
+  requiresAdditionalDocs?: boolean;
+  requiresInvitationLetter?: boolean;
+  allowedNationalities?: string[];
+  blockedNationalities?: string[];
+  /** @nullable */
+  requiresGulfResidenceCountry?: string | null;
+  requiresValidVisaCountries?: string[];
 }

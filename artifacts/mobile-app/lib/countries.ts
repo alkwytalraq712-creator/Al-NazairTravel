@@ -1,0 +1,221 @@
+/**
+ * All world countries with Arabic names and dial codes.
+ * Sorted alphabetically in Arabic (أ to ي).
+ */
+
+export interface Country {
+  name: string;   // Arabic name
+  code: string;   // ISO 3166-1 alpha-2
+  dial: string;   // e.g. "+966"
+  flag: string;   // emoji flag
+}
+
+export const COUNTRIES: Country[] = [
+  // أ
+  { name: 'أذربيجان',                   code: 'AZ', dial: '+994', flag: '🇦🇿' },
+  { name: 'أرمينيا',                    code: 'AM', dial: '+374', flag: '🇦🇲' },
+  { name: 'الأرجنتين',                  code: 'AR', dial: '+54',  flag: '🇦🇷' },
+  { name: 'إريتريا',                    code: 'ER', dial: '+291', flag: '🇪🇷' },
+  { name: 'أستراليا',                   code: 'AU', dial: '+61',  flag: '🇦🇺' },
+  { name: 'أفغانستان',                  code: 'AF', dial: '+93',  flag: '🇦🇫' },
+  { name: 'ألبانيا',                    code: 'AL', dial: '+355', flag: '🇦🇱' },
+  { name: 'ألمانيا',                    code: 'DE', dial: '+49',  flag: '🇩🇪' },
+  { name: 'أنتيغوا وباربودا',            code: 'AG', dial: '+1268',flag: '🇦🇬' },
+  { name: 'أندورا',                     code: 'AD', dial: '+376', flag: '🇦🇩' },
+  { name: 'أنغولا',                     code: 'AO', dial: '+244', flag: '🇦🇴' },
+  { name: 'أوروغواي',                   code: 'UY', dial: '+598', flag: '🇺🇾' },
+  { name: 'أوزبكستان',                  code: 'UZ', dial: '+998', flag: '🇺🇿' },
+  { name: 'أوغندا',                     code: 'UG', dial: '+256', flag: '🇺🇬' },
+  { name: 'أوكرانيا',                   code: 'UA', dial: '+380', flag: '🇺🇦' },
+  { name: 'إثيوبيا',                    code: 'ET', dial: '+251', flag: '🇪🇹' },
+  { name: 'الإمارات العربية المتحدة',    code: 'AE', dial: '+971', flag: '🇦🇪' },
+  { name: 'إندونيسيا',                  code: 'ID', dial: '+62',  flag: '🇮🇩' },
+  { name: 'إيرلندا',                    code: 'IE', dial: '+353', flag: '🇮🇪' },
+  { name: 'إيران',                      code: 'IR', dial: '+98',  flag: '🇮🇷' },
+  { name: 'إيطاليا',                    code: 'IT', dial: '+39',  flag: '🇮🇹' },
+  { name: 'الإكوادور',                  code: 'EC', dial: '+593', flag: '🇪🇨' },
+  { name: 'آيسلندا',                    code: 'IS', dial: '+354', flag: '🇮🇸' },
+  // ب
+  { name: 'باراغواي',                   code: 'PY', dial: '+595', flag: '🇵🇾' },
+  { name: 'باكستان',                    code: 'PK', dial: '+92',  flag: '🇵🇰' },
+  { name: 'بابوا غينيا الجديدة',         code: 'PG', dial: '+675', flag: '🇵🇬' },
+  { name: 'البحرين',                    code: 'BH', dial: '+973', flag: '🇧🇭' },
+  { name: 'بروناي',                     code: 'BN', dial: '+673', flag: '🇧🇳' },
+  { name: 'البرازيل',                   code: 'BR', dial: '+55',  flag: '🇧🇷' },
+  { name: 'البرتغال',                   code: 'PT', dial: '+351', flag: '🇵🇹' },
+  { name: 'بلجيكا',                     code: 'BE', dial: '+32',  flag: '🇧🇪' },
+  { name: 'بلغاريا',                    code: 'BG', dial: '+359', flag: '🇧🇬' },
+  { name: 'بليز',                       code: 'BZ', dial: '+501', flag: '🇧🇿' },
+  { name: 'بنغلاديش',                   code: 'BD', dial: '+880', flag: '🇧🇩' },
+  { name: 'بنما',                       code: 'PA', dial: '+507', flag: '🇵🇦' },
+  { name: 'بنين',                       code: 'BJ', dial: '+229', flag: '🇧🇯' },
+  { name: 'بوتان',                      code: 'BT', dial: '+975', flag: '🇧🇹' },
+  { name: 'بوتسوانا',                   code: 'BW', dial: '+267', flag: '🇧🇼' },
+  { name: 'بوركينا فاسو',               code: 'BF', dial: '+226', flag: '🇧🇫' },
+  { name: 'بوروندي',                    code: 'BI', dial: '+257', flag: '🇧🇮' },
+  { name: 'البوسنة والهرسك',             code: 'BA', dial: '+387', flag: '🇧🇦' },
+  { name: 'بوليفيا',                    code: 'BO', dial: '+591', flag: '🇧🇴' },
+  { name: 'بيرو',                       code: 'PE', dial: '+51',  flag: '🇵🇪' },
+  { name: 'بيلاروسيا',                  code: 'BY', dial: '+375', flag: '🇧🇾' },
+  // ت
+  { name: 'تايلاند',                    code: 'TH', dial: '+66',  flag: '🇹🇭' },
+  { name: 'تايوان',                     code: 'TW', dial: '+886', flag: '🇹🇼' },
+  { name: 'تشاد',                       code: 'TD', dial: '+235', flag: '🇹🇩' },
+  { name: 'تشيلي',                      code: 'CL', dial: '+56',  flag: '🇨🇱' },
+  { name: 'تركيا',                      code: 'TR', dial: '+90',  flag: '🇹🇷' },
+  { name: 'تركمانستان',                 code: 'TM', dial: '+993', flag: '🇹🇲' },
+  { name: 'ترينيداد وتوباغو',            code: 'TT', dial: '+1868',flag: '🇹🇹' },
+  { name: 'تنزانيا',                    code: 'TZ', dial: '+255', flag: '🇹🇿' },
+  { name: 'توغو',                       code: 'TG', dial: '+228', flag: '🇹🇬' },
+  { name: 'تونس',                       code: 'TN', dial: '+216', flag: '🇹🇳' },
+  { name: 'تيمور الشرقية',              code: 'TL', dial: '+670', flag: '🇹🇱' },
+  // ج
+  { name: 'جامايكا',                    code: 'JM', dial: '+1876',flag: '🇯🇲' },
+  { name: 'جزر القمر',                  code: 'KM', dial: '+269', flag: '🇰🇲' },
+  { name: 'جزر المالديف',               code: 'MV', dial: '+960', flag: '🇲🇻' },
+  { name: 'جزر سليمان',                 code: 'SB', dial: '+677', flag: '🇸🇧' },
+  { name: 'جمهورية أفريقيا الوسطى',     code: 'CF', dial: '+236', flag: '🇨🇫' },
+  { name: 'جمهورية الدومينيكان',         code: 'DO', dial: '+1809',flag: '🇩🇴' },
+  { name: 'جمهورية الكونغو',             code: 'CG', dial: '+242', flag: '🇨🇬' },
+  { name: 'جمهورية الكونغو الديمقراطية', code: 'CD', dial: '+243', flag: '🇨🇩' },
+  { name: 'جنوب أفريقيا',               code: 'ZA', dial: '+27',  flag: '🇿🇦' },
+  { name: 'جنوب السودان',               code: 'SS', dial: '+211', flag: '🇸🇸' },
+  { name: 'جيبوتي',                     code: 'DJ', dial: '+253', flag: '🇩🇯' },
+  { name: 'جورجيا',                     code: 'GE', dial: '+995', flag: '🇬🇪' },
+  // د
+  { name: 'الدنمارك',                   code: 'DK', dial: '+45',  flag: '🇩🇰' },
+  // ر
+  { name: 'الرأس الأخضر',               code: 'CV', dial: '+238', flag: '🇨🇻' },
+  { name: 'رواندا',                     code: 'RW', dial: '+250', flag: '🇷🇼' },
+  { name: 'رومانيا',                    code: 'RO', dial: '+40',  flag: '🇷🇴' },
+  { name: 'روسيا',                      code: 'RU', dial: '+7',   flag: '🇷🇺' },
+  // ز
+  { name: 'زامبيا',                     code: 'ZM', dial: '+260', flag: '🇿🇲' },
+  { name: 'زيمبابوي',                   code: 'ZW', dial: '+263', flag: '🇿🇼' },
+  // س
+  { name: 'ساحل العاج',                 code: 'CI', dial: '+225', flag: '🇨🇮' },
+  { name: 'ساموا',                      code: 'WS', dial: '+685', flag: '🇼🇸' },
+  { name: 'سانت لوسيا',                 code: 'LC', dial: '+1758',flag: '🇱🇨' },
+  { name: 'سانت فنسنت وجزر غرينادين',   code: 'VC', dial: '+1784',flag: '🇻🇨' },
+  { name: 'سانت كيتس ونيفيس',           code: 'KN', dial: '+1869',flag: '🇰🇳' },
+  { name: 'سريلانكا',                   code: 'LK', dial: '+94',  flag: '🇱🇰' },
+  { name: 'سلوفاكيا',                   code: 'SK', dial: '+421', flag: '🇸🇰' },
+  { name: 'سلوفينيا',                   code: 'SI', dial: '+386', flag: '🇸🇮' },
+  { name: 'سنغافورة',                   code: 'SG', dial: '+65',  flag: '🇸🇬' },
+  { name: 'السنغال',                    code: 'SN', dial: '+221', flag: '🇸🇳' },
+  { name: 'سواتيني',                    code: 'SZ', dial: '+268', flag: '🇸🇿' },
+  { name: 'سوريا',                      code: 'SY', dial: '+963', flag: '🇸🇾' },
+  { name: 'سورينام',                    code: 'SR', dial: '+597', flag: '🇸🇷' },
+  { name: 'السودان',                    code: 'SD', dial: '+249', flag: '🇸🇩' },
+  { name: 'السويد',                     code: 'SE', dial: '+46',  flag: '🇸🇪' },
+  { name: 'سويسرا',                     code: 'CH', dial: '+41',  flag: '🇨🇭' },
+  { name: 'سيراليون',                   code: 'SL', dial: '+232', flag: '🇸🇱' },
+  { name: 'سيشيل',                      code: 'SC', dial: '+248', flag: '🇸🇨' },
+  // ش
+  { name: 'شمال مقدونيا',               code: 'MK', dial: '+389', flag: '🇲🇰' },
+  // ص
+  { name: 'الصومال',                    code: 'SO', dial: '+252', flag: '🇸🇴' },
+  { name: 'الصين',                      code: 'CN', dial: '+86',  flag: '🇨🇳' },
+  // ط
+  { name: 'طاجيكستان',                  code: 'TJ', dial: '+992', flag: '🇹🇯' },
+  // ع
+  { name: 'العراق',                     code: 'IQ', dial: '+964', flag: '🇮🇶' },
+  { name: 'عُمان',                      code: 'OM', dial: '+968', flag: '🇴🇲' },
+  // غ
+  { name: 'الغابون',                    code: 'GA', dial: '+241', flag: '🇬🇦' },
+  { name: 'غامبيا',                     code: 'GM', dial: '+220', flag: '🇬🇲' },
+  { name: 'غانا',                       code: 'GH', dial: '+233', flag: '🇬🇭' },
+  { name: 'غرينادا',                    code: 'GD', dial: '+1473',flag: '🇬🇩' },
+  { name: 'غواتيمالا',                  code: 'GT', dial: '+502', flag: '🇬🇹' },
+  { name: 'غيانا',                      code: 'GY', dial: '+592', flag: '🇬🇾' },
+  { name: 'غينيا',                      code: 'GN', dial: '+224', flag: '🇬🇳' },
+  { name: 'غينيا الاستوائية',            code: 'GQ', dial: '+240', flag: '🇬🇶' },
+  { name: 'غينيا بيساو',                code: 'GW', dial: '+245', flag: '🇬🇼' },
+  // ف
+  { name: 'فانواتو',                    code: 'VU', dial: '+678', flag: '🇻🇺' },
+  { name: 'فرنسا',                      code: 'FR', dial: '+33',  flag: '🇫🇷' },
+  { name: 'فلسطين',                     code: 'PS', dial: '+970', flag: '🇵🇸' },
+  { name: 'الفلبين',                    code: 'PH', dial: '+63',  flag: '🇵🇭' },
+  { name: 'فنزويلا',                    code: 'VE', dial: '+58',  flag: '🇻🇪' },
+  { name: 'فنلندا',                     code: 'FI', dial: '+358', flag: '🇫🇮' },
+  { name: 'فيتنام',                     code: 'VN', dial: '+84',  flag: '🇻🇳' },
+  { name: 'فيجي',                       code: 'FJ', dial: '+679', flag: '🇫🇯' },
+  // ق
+  { name: 'قبرص',                       code: 'CY', dial: '+357', flag: '🇨🇾' },
+  { name: 'قطر',                        code: 'QA', dial: '+974', flag: '🇶🇦' },
+  { name: 'قيرغيزستان',                 code: 'KG', dial: '+996', flag: '🇰🇬' },
+  // ك
+  { name: 'كازاخستان',                  code: 'KZ', dial: '+7',   flag: '🇰🇿' },
+  { name: 'الكاميرون',                  code: 'CM', dial: '+237', flag: '🇨🇲' },
+  { name: 'كرواتيا',                    code: 'HR', dial: '+385', flag: '🇭🇷' },
+  { name: 'كمبوديا',                    code: 'KH', dial: '+855', flag: '🇰🇭' },
+  { name: 'كندا',                       code: 'CA', dial: '+1',   flag: '🇨🇦' },
+  { name: 'الكويت',                     code: 'KW', dial: '+965', flag: '🇰🇼' },
+  { name: 'كوبا',                       code: 'CU', dial: '+53',  flag: '🇨🇺' },
+  { name: 'كوريا الجنوبية',              code: 'KR', dial: '+82',  flag: '🇰🇷' },
+  { name: 'كوريا الشمالية',              code: 'KP', dial: '+850', flag: '🇰🇵' },
+  { name: 'كوستاريكا',                  code: 'CR', dial: '+506', flag: '🇨🇷' },
+  { name: 'كولومبيا',                   code: 'CO', dial: '+57',  flag: '🇨🇴' },
+  // ل
+  { name: 'لاتفيا',                     code: 'LV', dial: '+371', flag: '🇱🇻' },
+  { name: 'لاوس',                       code: 'LA', dial: '+856', flag: '🇱🇦' },
+  { name: 'لبنان',                      code: 'LB', dial: '+961', flag: '🇱🇧' },
+  { name: 'لوكسمبورغ',                  code: 'LU', dial: '+352', flag: '🇱🇺' },
+  { name: 'ليبيا',                      code: 'LY', dial: '+218', flag: '🇱🇾' },
+  { name: 'ليبيريا',                    code: 'LR', dial: '+231', flag: '🇱🇷' },
+  { name: 'ليتوانيا',                   code: 'LT', dial: '+370', flag: '🇱🇹' },
+  { name: 'ليختنشتاين',                 code: 'LI', dial: '+423', flag: '🇱🇮' },
+  { name: 'ليسوتو',                     code: 'LS', dial: '+266', flag: '🇱🇸' },
+  // م
+  { name: 'مالاوي',                     code: 'MW', dial: '+265', flag: '🇲🇼' },
+  { name: 'مالطا',                      code: 'MT', dial: '+356', flag: '🇲🇹' },
+  { name: 'مالي',                       code: 'ML', dial: '+223', flag: '🇲🇱' },
+  { name: 'ماليزيا',                    code: 'MY', dial: '+60',  flag: '🇲🇾' },
+  { name: 'مدغشقر',                     code: 'MG', dial: '+261', flag: '🇲🇬' },
+  { name: 'مصر',                        code: 'EG', dial: '+20',  flag: '🇪🇬' },
+  { name: 'المغرب',                     code: 'MA', dial: '+212', flag: '🇲🇦' },
+  { name: 'المكسيك',                    code: 'MX', dial: '+52',  flag: '🇲🇽' },
+  { name: 'المملكة العربية السعودية',    code: 'SA', dial: '+966', flag: '🇸🇦' },
+  { name: 'المملكة المتحدة',             code: 'GB', dial: '+44',  flag: '🇬🇧' },
+  { name: 'مولدوفا',                    code: 'MD', dial: '+373', flag: '🇲🇩' },
+  { name: 'موريتانيا',                  code: 'MR', dial: '+222', flag: '🇲🇷' },
+  { name: 'موريشيوس',                   code: 'MU', dial: '+230', flag: '🇲🇺' },
+  { name: 'موزمبيق',                    code: 'MZ', dial: '+258', flag: '🇲🇿' },
+  { name: 'موناكو',                     code: 'MC', dial: '+377', flag: '🇲🇨' },
+  { name: 'منغوليا',                    code: 'MN', dial: '+976', flag: '🇲🇳' },
+  { name: 'ميانمار',                    code: 'MM', dial: '+95',  flag: '🇲🇲' },
+  // ن
+  { name: 'ناميبيا',                    code: 'NA', dial: '+264', flag: '🇳🇦' },
+  { name: 'نيبال',                      code: 'NP', dial: '+977', flag: '🇳🇵' },
+  { name: 'نيجيريا',                    code: 'NG', dial: '+234', flag: '🇳🇬' },
+  { name: 'نيكاراغوا',                  code: 'NI', dial: '+505', flag: '🇳🇮' },
+  { name: 'النيجر',                     code: 'NE', dial: '+227', flag: '🇳🇪' },
+  { name: 'النرويج',                    code: 'NO', dial: '+47',  flag: '🇳🇴' },
+  { name: 'نيوزيلندا',                  code: 'NZ', dial: '+64',  flag: '🇳🇿' },
+  { name: 'النمسا',                     code: 'AT', dial: '+43',  flag: '🇦🇹' },
+  // ه
+  { name: 'هايتي',                      code: 'HT', dial: '+509', flag: '🇭🇹' },
+  { name: 'هندوراس',                    code: 'HN', dial: '+504', flag: '🇭🇳' },
+  { name: 'هنغاريا',                    code: 'HU', dial: '+36',  flag: '🇭🇺' },
+  { name: 'هولندا',                     code: 'NL', dial: '+31',  flag: '🇳🇱' },
+  { name: 'الهند',                      code: 'IN', dial: '+91',  flag: '🇮🇳' },
+  // ي
+  { name: 'اليابان',                    code: 'JP', dial: '+81',  flag: '🇯🇵' },
+  { name: 'اليمن',                      code: 'YE', dial: '+967', flag: '🇾🇪' },
+  { name: 'اليونان',                    code: 'GR', dial: '+30',  flag: '🇬🇷' },
+  // إضافات
+  { name: 'إسبانيا',                    code: 'ES', dial: '+34',  flag: '🇪🇸' },
+  { name: 'إسرائيل',                    code: 'IL', dial: '+972', flag: '🇮🇱' },
+  { name: 'إستونيا',                    code: 'EE', dial: '+372', flag: '🇪🇪' },
+  { name: 'الأردن',                     code: 'JO', dial: '+962', flag: '🇯🇴' },
+  { name: 'الجزائر',                    code: 'DZ', dial: '+213', flag: '🇩🇿' },
+  { name: 'الصيّن',                     code: 'TW', dial: '+886', flag: '🇹🇼' },
+];
+
+// Nationality-only list (for profile, sorted alphabetically in Arabic)
+export const NATIONALITIES: string[] = [
+  ...COUNTRIES.map(c => c.name).filter(n => n !== 'الصيّن'),
+].sort((a, b) => a.localeCompare(b, 'ar'));
+
+// Default country (UAE)
+export const DEFAULT_COUNTRY: Country = COUNTRIES.find(c => c.code === 'AE')!;

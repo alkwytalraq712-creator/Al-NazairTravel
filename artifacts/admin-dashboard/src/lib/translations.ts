@@ -2,25 +2,28 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 export const STATUS_ARABIC: Record<string, string> = {
+  filling_data: "قيد تعبئة البيانات",
   received: "مُستلمة",
   reviewing: "قيد المراجعة",
   awaiting_documents: "بانتظار المستندات",
   submitted_to_embassy: "مُقدمة للسفارة",
   processing: "قيد المعالجة",
+  approved: "تمت الموافقة",
   issued: "مُصدرة",
   completed: "مكتملة",
   rejected: "مرفوضة",
+  cancelled: "ملغاة",
   pending: "قيد الانتظار",
   confirmed: "مؤكدة",
   awaiting_payment: "بانتظار الدفع",
   paid: "مدفوعة",
   vouchers_issued: "تم إصدار القسائم",
-  cancelled: "ملغاة",
   ticketed: "مُصدرة التذكرة",
   refunded: "مُرجعة",
   failed: "فشلت",
   draft: "مسودة",
-  issued: "صادرة",
+  held: "حجز مؤقت",
+  expired_hold: "انتهى الحجز المؤقت",
 };
 
 export const PAYMENT_METHOD_ARABIC: Record<string, string> = {
@@ -58,7 +61,9 @@ export const NOTIFICATION_TYPE_ARABIC: Record<string, string> = {
   package_booking: "حجز باقة",
   flight_booking: "حجز طيران",
   general: "عام",
-  promotion: "عرض ترويجي"
+  promotion: "عرض ترويجي",
+  payment: "مدفوعات",
+  system: "النظام",
 };
 
 export function formatDateAr(date: string | Date, formatStr: string = 'd MMM yyyy') {

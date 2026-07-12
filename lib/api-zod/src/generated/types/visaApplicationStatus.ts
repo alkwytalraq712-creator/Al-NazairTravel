@@ -10,12 +10,15 @@ export type VisaApplicationStatus = typeof VisaApplicationStatus[keyof typeof Vi
 
 
 export const VisaApplicationStatus = {
+  filling_data: 'filling_data',
   received: 'received',
   reviewing: 'reviewing',
   awaiting_documents: 'awaiting_documents',
   submitted_to_embassy: 'submitted_to_embassy',
   processing: 'processing',
+  approved: 'approved',
   issued: 'issued',
   completed: 'completed',
   rejected: 'rejected',
+  cancelled: 'cancelled',
 } as const;

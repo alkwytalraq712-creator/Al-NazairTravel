@@ -56,6 +56,13 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
-    "@expo-google-fonts/tajawal": "^0.4.1"
+    "@expo-google-fonts/tajawal": "^0.4.1",
+    "expo-device": "~8.0.10",
+    "expo-file-system": "^19.0.23",
+    "expo-local-authentication": "~17.0.8",
+    "expo-notifications": "~0.32.17",
+    "expo-print": "^15.0.8",
+    "expo-sharing": "^14.0.8",
+    "react-native-qrcode-svg": "^6.3.21"
   }
 }

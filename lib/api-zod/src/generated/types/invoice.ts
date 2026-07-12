@@ -18,9 +18,9 @@ export interface Invoice {
   /** @nullable */
   customerEmail?: string | null;
   items: InvoiceItem[];
-  subtotal: string;
-  tax: string;
-  total: string;
+  subtotal: number;
+  tax: number;
+  total: number;
   currency: string;
   status: InvoiceStatus;
   /** @nullable */

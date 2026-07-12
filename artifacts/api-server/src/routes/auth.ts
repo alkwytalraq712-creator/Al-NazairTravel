@@ -1,4 +1,6 @@
+import crypto from "node:crypto";
 import { Router, type IRouter } from "express";
+import rateLimit from "express-rate-limit";
 import { eq, or } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import {
@@ -12,11 +14,55 @@ import {
   RequestPasswordResetBody,
   RequestPasswordResetResponse,
 } from "@workspace/api-zod";
-import { hashPassword, verifyPassword, serializeUser, generateToken } from "../lib/auth";
+import { hashPassword, verifyPassword, serializeUser, generateToken, getProfileCompletion } from "../lib/auth";
+import { requireAuth } from "../lib/auth";
+import { visaConsentTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
-router.post("/auth/signup", async (req, res): Promise<void> => {
+// ── Rate limiters ────────────────────────────────────────────────────────────
+// Key by IP address. xForwardedForHeader validation disabled because Replit's
+// proxy already normalises the header and we trust `trust proxy 1` in app.ts.
+const authRateLimitOptions = {
+  validate: { xForwardedForHeader: false },
+  standardHeaders: true,
+  legacyHeaders: false,
+};
+
+/** 5 attempts per 15 minutes — login & signup */
+const loginLimiter = rateLimit({
+  ...authRateLimitOptions,
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many attempts. Please try again in 15 minutes." },
+  handler(_req, res, _next, options) {
+    res.status(429).json(options.message);
+  },
+});
+
+/** 3 requests per 15 minutes — password reset probe prevention */
+const forgotPasswordLimiter = rateLimit({
+  ...authRateLimitOptions,
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { error: "Too many requests. Please try again in 15 minutes." },
+  handler(_req, res, _next, options) {
+    res.status(429).json(options.message);
+  },
+});
+
+/** 10 attempts per 15 minutes — change-password (already requires a session) */
+const changePasswordLimiter = rateLimit({
+  ...authRateLimitOptions,
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many password change attempts. Please try again in 15 minutes." },
+  handler(_req, res, _next, options) {
+    res.status(429).json(options.message);
+  },
+});
+
+router.post("/auth/signup", loginLimiter, async (req, res): Promise<void> => {
   const parsed = SignupBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -33,6 +79,10 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
   }
 
   const passwordHash = await hashPassword(parsed.data.password);
+  // nationality is accepted from the request body even if not in the zod schema
+  const nationality = typeof req.body?.nationality === 'string' && req.body.nationality.trim()
+    ? req.body.nationality.trim()
+    : undefined;
   const [user] = await db
     .insert(usersTable)
     .values({
@@ -40,6 +90,7 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
       phone: parsed.data.phone,
       email: parsed.data.email,
       passwordHash,
+      ...(nationality ? { nationality } : {}),
     })
     .returning();
 
@@ -52,18 +103,14 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
 function normalizePhone(raw: string): string[] {
   const digits = raw.replace(/\D/g, "");
   const variants = new Set<string>([raw]);
-  // If starts with 964, try with + prefix
   if (digits.startsWith("964")) variants.add("+" + digits);
-  // If starts with 0, try with +964 replacing the leading 0
   if (digits.startsWith("0") && digits.length > 1) variants.add("+964" + digits.slice(1));
-  // If doesn't start with +, try adding it
   if (!raw.startsWith("+")) variants.add("+" + digits);
-  // bare digits without country code
   if (digits.length === 10 && digits.startsWith("7")) variants.add("+964" + digits);
   return Array.from(variants);
 }
 
-router.post("/auth/login", async (req, res): Promise<void> => {
+router.post("/auth/login", loginLimiter, async (req, res): Promise<void> => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -73,7 +120,6 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   const identifier = parsed.data.identifier;
   const phoneVariants = normalizePhone(identifier);
 
-  // Try each phone variant + email match
   const [user] = await db
     .select()
     .from(usersTable)
@@ -108,6 +154,25 @@ router.get("/auth/me", async (req, res): Promise<void> => {
   res.json(GetCurrentUserResponse.parse(serializeUser(res.locals.currentUser)));
 });
 
+// ── Profile completion ──────────────────────────────────────────────────────
+
+router.get("/auth/profile/completion", requireAuth, async (req, res): Promise<void> => {
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, req.session.userId as number));
+
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(getProfileCompletion(user));
+});
+
+// ── Profile update ──────────────────────────────────────────────────────────
+
 router.patch("/auth/profile", async (req, res): Promise<void> => {
   if (!req.session.userId) {
     res.status(401).json({ error: "Not authenticated" });
@@ -119,16 +184,49 @@ router.patch("/auth/profile", async (req, res): Promise<void> => {
     return;
   }
 
+  // After saving, compute profileCompletedAt
+  const updateData: Record<string, unknown> = { ...parsed.data };
+
+  // We need to check completion after the potential update — fetch current user first
+  const [current] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId));
+  if (!current) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  // Merge update into current to compute completion
+  const merged = { ...current, ...updateData };
+  const { isComplete } = getProfileCompletion(merged as typeof current);
+
+  if (isComplete && !current.profileCompletedAt) {
+    updateData.profileCompletedAt = new Date();
+  } else if (!isComplete) {
+    updateData.profileCompletedAt = null;
+  }
+
   const [user] = await db
     .update(usersTable)
-    .set(parsed.data)
+    .set(updateData as Parameters<typeof db.update>[0] extends any ? any : never)
     .where(eq(usersTable.id, req.session.userId))
     .returning();
 
   res.json(UpdateProfileResponse.parse(serializeUser(user)));
 });
 
-router.post("/auth/change-password", async (req, res): Promise<void> => {
+router.post("/auth/accept-visa-terms", requireAuth, async (req, res): Promise<void> => {
+  const visaId = Number(req.body?.visaId);
+  if (!visaId || isNaN(visaId)) {
+    res.status(400).json({ error: "visaId required" });
+    return;
+  }
+  const [consent] = await db
+    .insert(visaConsentTable)
+    .values({ userId: req.session.userId!, visaId })
+    .returning();
+  res.json({ acceptedAt: consent.acceptedAt.toISOString() });
+});
+
+router.post("/auth/change-password", changePasswordLimiter, async (req, res): Promise<void> => {
   if (!req.session.userId) {
     res.status(401).json({ error: "Not authenticated" });
     return;
@@ -145,10 +243,7 @@ router.post("/auth/change-password", async (req, res): Promise<void> => {
     res.status(400).json({ error: "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل" });
     return;
   }
-  const [user] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.id, req.session.userId));
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId));
   if (!user) {
     res.status(404).json({ error: "User not found" });
     return;
@@ -159,33 +254,69 @@ router.post("/auth/change-password", async (req, res): Promise<void> => {
     return;
   }
   const passwordHash = await hashPassword(newPassword);
-  await db
-    .update(usersTable)
-    .set({ passwordHash })
-    .where(eq(usersTable.id, req.session.userId));
+  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, req.session.userId));
   res.json({ message: "تم تغيير كلمة المرور بنجاح" });
 });
 
-router.post("/auth/forgot-password", async (req, res): Promise<void> => {
+router.post("/auth/forgot-password", forgotPasswordLimiter, async (req, res): Promise<void> => {
   const parsed = RequestPasswordResetBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  // v1: no real OTP/email delivery -- caller proceeds directly to reset-password.
-  res.json(
-    RequestPasswordResetResponse.parse({
-      message: "If an account exists, reset instructions were issued.",
-    }),
-  );
+  res.json(RequestPasswordResetResponse.parse({ message: "If an account exists, reset instructions were issued." }));
 });
 
-// Password reset via unauthenticated identifier is disabled until OTP/token
-// verification is implemented. Use PATCH /auth/profile while authenticated instead.
 router.post("/auth/reset-password", async (_req, res): Promise<void> => {
-  res.status(501).json({
-    error: "Password reset via identifier is not available. Please contact support.",
-  });
+  res.status(501).json({ error: "Password reset via identifier is not available. Please contact support." });
+});
+
+/**
+ * One-time admin recovery endpoint.
+ *
+ * Disabled unless ADMIN_BOOTSTRAP_TOKEN is set in the environment. When enabled,
+ * a caller who presents the exact token may reset the password of a single fixed
+ * admin account (admin@qema.iq). Guarded by a constant-time token comparison so
+ * it is safe to leave in place; remove the ADMIN_BOOTSTRAP_TOKEN env var to
+ * disable it entirely once recovery is complete.
+ */
+router.post("/auth/admin-recovery", async (req, res): Promise<void> => {
+  const expected = process.env.ADMIN_BOOTSTRAP_TOKEN;
+  if (!expected) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const provided = typeof req.body?.token === "string" ? req.body.token : "";
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    res.status(401).json({ error: "Invalid token" });
+    return;
+  }
+
+  const newPassword =
+    typeof req.body?.newPassword === "string" && req.body.newPassword.length >= 6
+      ? req.body.newPassword
+      : "";
+  if (!newPassword) {
+    res.status(400).json({ error: "newPassword (min 6 chars) is required" });
+    return;
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  const [updated] = await db
+    .update(usersTable)
+    .set({ passwordHash, role: "admin" })
+    .where(eq(usersTable.email, "admin@qema.iq"))
+    .returning({ id: usersTable.id, email: usersTable.email });
+
+  if (!updated) {
+    res.status(404).json({ error: "Admin account not found" });
+    return;
+  }
+
+  res.json({ message: "Admin password reset", email: updated.email });
 });
 
 export default router;

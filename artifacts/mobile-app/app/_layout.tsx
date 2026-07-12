@@ -13,13 +13,25 @@ import {
 } from '@expo-google-fonts/tajawal';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { setBaseUrl } from '@workspace/api-client-react';
+import { setBaseUrl, setAuthTokenGetter } from '@workspace/api-client-react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '@/context/AuthContext';
+import { FlightBookingProvider } from '@/context/FlightBookingContext';
+import { ThemeProvider } from '@/context/ThemeContext';
+import { PushNotificationProvider } from '@/context/PushNotificationProvider';
+import { ServiceSettingsProvider } from '@/context/ServiceSettingsContext';
 
 // Set base URL at module level so all hooks reach the correct server
 if (process.env.EXPO_PUBLIC_DOMAIN) {
   setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 }
+
+// CRITICAL: register a persistent token getter at module-level so it survives
+// Hot Reload / Fast Refresh (which resets module-level variables in custom-fetch).
+// AuthContext also calls setAuthTokenGetter after login — that call overwrites this
+// with an in-memory getter, which is fine and faster. This acts as the fallback
+// that keeps all requests authenticated even immediately after a module reload.
+setAuthTokenGetter(() => AsyncStorage.getItem('@qema_auth_token'));
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,14 +49,24 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="visa/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="apply-visa/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="apply-visa/terms/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="visa-application/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="visa-success" options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="package/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="book-package/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="flight-results" options={{ headerShown: false }} />
-      <Stack.Screen name="book-flight" options={{ headerShown: false }} />
+      <Stack.Screen name="flight-details" options={{ headerShown: false }} />
+      <Stack.Screen name="flight-seats" options={{ headerShown: false }} />
+      <Stack.Screen name="flight-travelers" options={{ headerShown: false }} />
+      <Stack.Screen name="flight-review" options={{ headerShown: false }} />
+      <Stack.Screen name="flight-success" options={{ headerShown: false }} />
       <Stack.Screen name="bookings" options={{ headerShown: false }} />
       <Stack.Screen name="notifications" options={{ headerShown: false }} />
       <Stack.Screen name="auth/login" options={{ headerShown: false }} />
       <Stack.Screen name="auth/register" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
+      <Stack.Screen name="legal/terms" options={{ headerShown: false }} />
+      <Stack.Screen name="legal/privacy" options={{ headerShown: false }} />
     </Stack>
   );
 }
@@ -66,18 +88,26 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <SafeAreaProvider>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </AuthProvider>
-        </QueryClientProvider>
-      </ErrorBoundary>
-    </SafeAreaProvider>
+    <ThemeProvider>
+      <SafeAreaProvider>
+        <ErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <ServiceSettingsProvider>
+                <PushNotificationProvider>
+                  <FlightBookingProvider>
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                      <KeyboardProvider>
+                        <RootLayoutNav />
+                      </KeyboardProvider>
+                    </GestureHandlerRootView>
+                  </FlightBookingProvider>
+                </PushNotificationProvider>
+              </ServiceSettingsProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </ErrorBoundary>
+      </SafeAreaProvider>
+    </ThemeProvider>
   );
 }

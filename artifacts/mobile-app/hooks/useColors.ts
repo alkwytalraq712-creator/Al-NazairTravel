@@ -1,16 +1,12 @@
-import { useColorScheme } from 'react-native';
 import colors from '@/constants/colors';
+import { useTheme } from '@/context/ThemeContext';
 
 /**
- * Returns the design tokens for the current color scheme.
- *
- * The returned object contains all color tokens for the active palette
- * plus scheme-independent values like `radius`.
- *
- * Falls back to the light palette when the device colour scheme is unknown.
+ * Returns design tokens for the active color scheme.
+ * Resolves the scheme through ThemeContext (light | dark | system-follow).
  */
 export function useColors() {
-  const scheme = useColorScheme();
-  const palette = scheme === 'dark' ? colors.dark : colors.light;
+  const { colorScheme } = useTheme();
+  const palette = colorScheme === 'dark' ? colors.dark : colors.light;
   return { ...palette, radius: colors.radius };
 }

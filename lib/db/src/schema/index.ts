@@ -1,5 +1,9 @@
 export * from "./users";
 export * from "./visas";
+export * from "./visaConsents";
+export * from "./visaEligibilityRules";
+export * from "./companySettings";
+export * from "./branches";
 export * from "./visaApplications";
 export * from "./packages";
 export * from "./packageBookings";
@@ -9,3 +13,5 @@ export * from "./banners";
 export * from "./testimonials";
 export * from "./payments";
 export * from "./invoices";
+export * from "./holdSettings";
+export * from "./serviceSettings";

@@ -9,6 +9,11 @@ const largeJson = json({ limit: "20mb" });
 
 // ─── OpenAI client ────────────────────────────────────────────────────────────
 function getOpenAI(): OpenAI {
+  const integrationBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  const integrationKey  = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  if (integrationBase && integrationKey && integrationBase.startsWith('http')) {
+    return new OpenAI({ baseURL: integrationBase, apiKey: integrationKey });
+  }
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OPENAI_API_KEY not configured");
   return new OpenAI({ apiKey: key });

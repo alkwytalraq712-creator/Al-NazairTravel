@@ -20,7 +20,7 @@ export interface Payment {
   visaApplicationId?: number | null;
   customerName: string;
   customerPhone: string;
-  amount: string;
+  amount: number;
   currency: string;
   method: PaymentMethod;
   status: PaymentStatus;

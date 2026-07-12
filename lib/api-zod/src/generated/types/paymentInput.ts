@@ -20,7 +20,7 @@ export interface PaymentInput {
   customerName: string;
   /** @minLength 3 */
   customerPhone: string;
-  amount: string;
+  amount: number;
   currency: string;
   method?: PaymentMethod;
   status?: PaymentStatus;

@@ -215,13 +215,13 @@ function PackageForm({ pkg, onSuccess, onCancel }: { pkg: Package | null, onSucc
 
   const form = useForm<z.infer<typeof packageSchema>>({
     resolver: zodResolver(packageSchema),
-    defaultValues: pkg ? {
+    defaultValues: pkg ? ({
       ...pkg,
       images: pkg.images.join('\n'),
       hotelsIncluded: pkg.hotelsIncluded.join('\n'),
       includedServices: pkg.includedServices.join('\n'),
       excludedServices: pkg.excludedServices.join('\n'),
-    } : {
+    } as z.infer<typeof packageSchema>) : {
       name: '',
       country: '',
       city: '',
@@ -268,7 +268,7 @@ function PackageForm({ pkg, onSuccess, onCancel }: { pkg: Package | null, onSucc
           queryClient.invalidateQueries({ queryKey: getListPackagesQueryKey() });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: e.error, variant: "destructive" })
+        onError: (e) => toast({ title: "خطأ", description: (e.data as { error?: string })?.error ?? e.message, variant: "destructive" })
       });
     } else {
       createMutation.mutate({ data }, {
@@ -277,7 +277,7 @@ function PackageForm({ pkg, onSuccess, onCancel }: { pkg: Package | null, onSucc
           queryClient.invalidateQueries({ queryKey: getListPackagesQueryKey() });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: e.error, variant: "destructive" })
+        onError: (e) => toast({ title: "خطأ", description: (e.data as { error?: string })?.error ?? e.message, variant: "destructive" })
       });
     }
   };

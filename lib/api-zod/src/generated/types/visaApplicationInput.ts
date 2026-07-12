@@ -6,19 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Submit a visa application. All personal/passport data is auto-filled from the user's completed profile. Only visaId is required.
+ */
 export interface VisaApplicationInput {
   visaId: number;
-  /** @minLength 1 */
-  fullName: string;
-  phone: string;
-  email: string;
-  nationality: string;
-  passportNumber: string;
-  passportExpiry: Date;
-  dob: Date;
-  gender: string;
-  occupation: string;
-  city: string;
-  passportImageUrl?: string;
-  personalPhotoUrl?: string;
 }

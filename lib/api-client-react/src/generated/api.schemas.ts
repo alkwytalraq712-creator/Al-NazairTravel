@@ -5,6 +5,45 @@
  * Qema Al Nathair Travel & Tourism API
  * OpenAPI spec version: 0.1.0
  */
+export interface UploadUrlRequest {
+  /**
+     * Original file name.
+     * @minLength 1
+     */
+  name: string;
+  /**
+     * File size in bytes.
+     * @minimum 1
+     */
+  size: number;
+  /**
+     * MIME type of the file (e.g. `image/jpeg`).
+     * @minLength 1
+     */
+  contentType: string;
+}
+
+export interface UploadUrlResponse {
+  /** Presigned GCS URL for PUT upload. */
+  uploadURL: string;
+  /** Normalized object path (e.g. `/objects/uploads/uuid`). Store this in your database. */
+  objectPath: string;
+  metadata?: UploadUrlRequest;
+}
+
+export interface FinalizeUploadRequest {
+  /** Normalized object path returned from requestUploadUrl (e.g. `/objects/uploads/uuid`). */
+  objectPath: string;
+  /** When true, the object ACL is set to public so any authenticated user can read it. Returns a publicUrl. */
+  isPublic?: boolean;
+}
+
+export interface FinalizeUploadResponse {
+  objectPath: string;
+  /** Full URL for serving the object (present when isPublic was true). */
+  publicUrl?: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -23,7 +62,197 @@ export type UserRole = typeof UserRole[keyof typeof UserRole];
 export const UserRole = {
   customer: 'customer',
   admin: 'admin',
+  staff: 'staff',
 } as const;
+
+export interface ProfileCompletion {
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  percentage: number;
+  isComplete: boolean;
+  missingFields: string[];
+}
+
+export interface ActiveVisa {
+  country: string;
+  visaType: string;
+  /** @nullable */
+  visaNumber?: string | null;
+  /** @nullable */
+  issueDate?: string | null;
+  expiryDate: string;
+  /** @nullable */
+  imageUrl?: string | null;
+}
+
+export interface TravelTrip {
+  country: string;
+  entryDate: string;
+  exitDate: string;
+}
+
+export interface VisaEligibilityBlocker {
+  type: string;
+  message: string;
+  /** @nullable */
+  actionRoute?: string | null;
+}
+
+export interface VisaEligibilityResult {
+  eligible: boolean;
+  blockers: VisaEligibilityBlocker[];
+}
+
+export interface AcceptVisaTermsBody {
+  visaId: number;
+}
+
+export interface VisaEligibilityRule {
+  id: number;
+  visaId: number;
+  name: string;
+  isDefault: boolean;
+  nationalities: string[];
+  allowDirect: boolean;
+  requiresGulfResidence: boolean;
+  requiresValidVisaCountries: string[];
+  requiresInvitationLetter: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface VisaEligibilityRuleInput {
+  name: string;
+  isDefault: boolean;
+  nationalities: string[];
+  allowDirect: boolean;
+  requiresGulfResidence: boolean;
+  requiresValidVisaCountries: string[];
+  requiresInvitationLetter: boolean;
+  sortOrder: number;
+}
+
+export interface CompanySettings {
+  id?: number;
+  companyName?: string;
+  /** @nullable */
+  logoUrl?: string | null;
+  /** @nullable */
+  about?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  websiteUrl?: string | null;
+  /** @nullable */
+  googleMapsUrl?: string | null;
+  /** @nullable */
+  phonePrimary?: string | null;
+  /** @nullable */
+  phoneSecondary?: string | null;
+  /** @nullable */
+  whatsapp?: string | null;
+  /** @nullable */
+  emailSupport?: string | null;
+  /** @nullable */
+  emailOfficial?: string | null;
+  /** @nullable */
+  instagram?: string | null;
+  /** @nullable */
+  tiktok?: string | null;
+  /** @nullable */
+  facebook?: string | null;
+  /** @nullable */
+  twitter?: string | null;
+  /** @nullable */
+  snapchat?: string | null;
+  /** @nullable */
+  youtube?: string | null;
+  /** @nullable */
+  linkedin?: string | null;
+  /** @nullable */
+  telegram?: string | null;
+  /** @nullable */
+  workDays?: string | null;
+  /** @nullable */
+  workHours?: string | null;
+  /** @nullable */
+  weeklyOff?: string | null;
+  extraSocials?: unknown;
+  updatedAt?: string;
+}
+
+export interface CompanySettingsUpdate {
+  companyName?: string;
+  logoUrl?: string;
+  about?: string;
+  address?: string;
+  websiteUrl?: string;
+  googleMapsUrl?: string;
+  phonePrimary?: string;
+  phoneSecondary?: string;
+  whatsapp?: string;
+  emailSupport?: string;
+  emailOfficial?: string;
+  instagram?: string;
+  tiktok?: string;
+  facebook?: string;
+  twitter?: string;
+  snapchat?: string;
+  youtube?: string;
+  linkedin?: string;
+  telegram?: string;
+  workDays?: string;
+  workHours?: string;
+  weeklyOff?: string;
+  extraSocials?: unknown;
+}
+
+export interface Branch {
+  id: number;
+  name: string;
+  country: string;
+  city: string;
+  address: string;
+  /** @nullable */
+  googleMapsUrl?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  whatsapp?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  workHours?: string | null;
+  /** @nullable */
+  workDays?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
+  status: string;
+  isVisible: boolean;
+  isMain: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface BranchInput {
+  name: string;
+  country?: string;
+  city?: string;
+  address?: string;
+  googleMapsUrl?: string;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
+  workHours?: string;
+  workDays?: string;
+  imageUrl?: string;
+  status?: string;
+  isVisible?: boolean;
+  isMain?: boolean;
+  sortOrder?: number;
+}
 
 export interface User {
   id: number;
@@ -37,6 +266,62 @@ export interface User {
   language: string;
   currency: string;
   createdAt: string;
+  /** @nullable */
+  firstName?: string | null;
+  /** @nullable */
+  fatherName?: string | null;
+  /** @nullable */
+  grandfatherName?: string | null;
+  /** @nullable */
+  familyName?: string | null;
+  /** @nullable */
+  englishName?: string | null;
+  /** @nullable */
+  gender?: string | null;
+  /** @nullable */
+  dob?: string | null;
+  /** @nullable */
+  nationality?: string | null;
+  /** @nullable */
+  placeOfBirth?: string | null;
+  /** @nullable */
+  maritalStatus?: string | null;
+  /** @nullable */
+  occupation?: string | null;
+  /** @nullable */
+  whatsapp?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  passportNumber?: string | null;
+  /** @nullable */
+  passportIssuingCountry?: string | null;
+  /** @nullable */
+  passportIssuingPlace?: string | null;
+  /** @nullable */
+  passportIssueDate?: string | null;
+  /** @nullable */
+  passportExpiry?: string | null;
+  /** @nullable */
+  passportImageUrl?: string | null;
+  hasGulfResidence: boolean;
+  /** @nullable */
+  gulfResidenceCountry?: string | null;
+  /** @nullable */
+  gulfResidenceNumber?: string | null;
+  /** @nullable */
+  gulfResidenceExpiry?: string | null;
+  /** @nullable */
+  gulfResidenceFrontUrl?: string | null;
+  /** @nullable */
+  gulfResidenceBackUrl?: string | null;
+  /** @nullable */
+  profileCompletedAt?: string | null;
+  residenceType?: string;
+  hasActiveForeignVisa?: boolean;
+  activeVisas?: ActiveVisa[];
+  hasTravelHistory?: boolean;
+  travelHistory?: TravelTrip[];
 }
 
 export interface EmployeeInput {
@@ -130,6 +415,13 @@ export interface PaymentInput {
 }
 
 export interface PaymentUpdate {
+  bookingType?: string;
+  /** @nullable */
+  flightBookingId?: number | null;
+  /** @nullable */
+  packageBookingId?: number | null;
+  /** @nullable */
+  visaApplicationId?: number | null;
   /** @minLength 1 */
   customerName?: string;
   /** @minLength 3 */
@@ -253,6 +545,36 @@ export interface ProfileUpdate {
   avatarUrl?: string;
   language?: string;
   currency?: string;
+  firstName?: string;
+  fatherName?: string;
+  grandfatherName?: string;
+  familyName?: string;
+  englishName?: string;
+  gender?: string;
+  dob?: string;
+  nationality?: string;
+  placeOfBirth?: string;
+  maritalStatus?: string;
+  occupation?: string;
+  whatsapp?: string;
+  address?: string;
+  passportNumber?: string;
+  passportIssuingCountry?: string;
+  passportIssuingPlace?: string;
+  passportIssueDate?: string;
+  passportExpiry?: string;
+  passportImageUrl?: string;
+  hasGulfResidence?: boolean;
+  gulfResidenceCountry?: string;
+  gulfResidenceNumber?: string;
+  gulfResidenceExpiry?: string;
+  gulfResidenceFrontUrl?: string;
+  gulfResidenceBackUrl?: string;
+  residenceType?: string;
+  hasActiveForeignVisa?: boolean;
+  activeVisas?: ActiveVisa[];
+  hasTravelHistory?: boolean;
+  travelHistory?: TravelTrip[];
 }
 
 export interface PasswordResetRequest {
@@ -277,9 +599,25 @@ export const VisaType = {
   investment: 'investment',
 } as const;
 
+/**
+ * Per-country requirement flags configurable from admin dashboard
+ */
+export interface VisaRequirements {
+  requiresGulfResidence?: boolean;
+  requiresPersonalPhoto?: boolean;
+  requiresPassportImage?: boolean;
+  requiresBankStatement?: boolean;
+  requiresFlightBooking?: boolean;
+  requiresHotelBooking?: boolean;
+  requiresTravelInsurance?: boolean;
+  requiresAdditionalDocs?: boolean;
+}
+
 export interface Visa {
   id: number;
   countryName: string;
+  /** @nullable */
+  countryCode?: string | null;
   countryFlagUrl: string;
   countryImageUrl: string;
   visaType: VisaType;
@@ -293,11 +631,26 @@ export interface Visa {
   validity: string;
   isFeatured: boolean;
   createdAt: string;
+  requiresGulfResidence: boolean;
+  requiresPersonalPhoto: boolean;
+  requiresPassportImage: boolean;
+  requiresBankStatement: boolean;
+  requiresFlightBooking: boolean;
+  requiresHotelBooking: boolean;
+  requiresTravelInsurance: boolean;
+  requiresAdditionalDocs: boolean;
+  requiresInvitationLetter?: boolean;
+  allowedNationalities?: string[];
+  blockedNationalities?: string[];
+  /** @nullable */
+  requiresGulfResidenceCountry?: string | null;
+  requiresValidVisaCountries?: string[];
 }
 
 export interface VisaInput {
   /** @minLength 1 */
   countryName: string;
+  countryCode?: string;
   countryFlagUrl: string;
   countryImageUrl: string;
   visaType: VisaType;
@@ -310,11 +663,26 @@ export interface VisaInput {
   entriesAllowed: string;
   validity: string;
   isFeatured?: boolean;
+  requiresGulfResidence?: boolean;
+  requiresPersonalPhoto?: boolean;
+  requiresPassportImage?: boolean;
+  requiresBankStatement?: boolean;
+  requiresFlightBooking?: boolean;
+  requiresHotelBooking?: boolean;
+  requiresTravelInsurance?: boolean;
+  requiresAdditionalDocs?: boolean;
+  requiresInvitationLetter?: boolean;
+  allowedNationalities?: string[];
+  blockedNationalities?: string[];
+  /** @nullable */
+  requiresGulfResidenceCountry?: string | null;
+  requiresValidVisaCountries?: string[];
 }
 
 export interface VisaUpdate {
   /** @minLength 1 */
   countryName?: string;
+  countryCode?: string;
   countryFlagUrl?: string;
   countryImageUrl?: string;
   visaType?: VisaType;
@@ -327,21 +695,45 @@ export interface VisaUpdate {
   entriesAllowed?: string;
   validity?: string;
   isFeatured?: boolean;
+  requiresGulfResidence?: boolean;
+  requiresPersonalPhoto?: boolean;
+  requiresPassportImage?: boolean;
+  requiresBankStatement?: boolean;
+  requiresFlightBooking?: boolean;
+  requiresHotelBooking?: boolean;
+  requiresTravelInsurance?: boolean;
+  requiresAdditionalDocs?: boolean;
+  requiresInvitationLetter?: boolean;
+  allowedNationalities?: string[];
+  blockedNationalities?: string[];
+  /** @nullable */
+  requiresGulfResidenceCountry?: string | null;
+  requiresValidVisaCountries?: string[];
 }
 
 export type VisaApplicationStatus = typeof VisaApplicationStatus[keyof typeof VisaApplicationStatus];
 
 
 export const VisaApplicationStatus = {
+  filling_data: 'filling_data',
   received: 'received',
   reviewing: 'reviewing',
   awaiting_documents: 'awaiting_documents',
   submitted_to_embassy: 'submitted_to_embassy',
   processing: 'processing',
+  approved: 'approved',
   issued: 'issued',
   completed: 'completed',
   rejected: 'rejected',
+  cancelled: 'cancelled',
 } as const;
+
+export type VisaApplicationStatusHistoryItem = {
+  status: string;
+  timestamp: string;
+  /** @nullable */
+  note?: string | null;
+};
 
 export interface VisaApplication {
   id: number;
@@ -363,25 +755,63 @@ export interface VisaApplication {
   passportImageUrl?: string | null;
   /** @nullable */
   personalPhotoUrl?: string | null;
+  /** @nullable */
+  passportType?: string | null;
+  /** @nullable */
+  issuingCountry?: string | null;
+  /** @nullable */
+  passportIssueDate?: string | null;
+  /** @nullable */
+  placeOfBirth?: string | null;
+  /** @nullable */
+  mrz?: string | null;
+  /** @nullable */
+  ocrConfidence?: number | null;
+  ocrVerified?: boolean;
   status: VisaApplicationStatus;
+  statusHistory?: VisaApplicationStatusHistoryItem[];
   createdAt: string;
 }
 
+export interface PassportData {
+  passportType: string;
+  passportNumber: string;
+  surname: string;
+  givenNames: string;
+  fullName: string;
+  nationality: string;
+  issuingCountry: string;
+  gender: string;
+  dateOfBirth: string;
+  passportIssueDate: string;
+  passportExpiry: string;
+  placeOfBirth: string;
+  mrz: string;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  confidence: number;
+}
+
+export type PassportOcrResponseMeta = {
+  provider: string;
+  durationMs: number;
+  /** @nullable */
+  passportImagePath?: string | null;
+};
+
+export interface PassportOcrResponse {
+  success: boolean;
+  passport: PassportData;
+  meta: PassportOcrResponseMeta;
+}
+
+/**
+ * Submit a visa application. All personal/passport data is auto-filled from the user's completed profile. Only visaId is required.
+ */
 export interface VisaApplicationInput {
   visaId: number;
-  /** @minLength 1 */
-  fullName: string;
-  phone: string;
-  email: string;
-  nationality: string;
-  passportNumber: string;
-  passportExpiry: string;
-  dob: string;
-  gender: string;
-  occupation: string;
-  city: string;
-  passportImageUrl?: string;
-  personalPhotoUrl?: string;
 }
 
 export interface VisaApplicationStatusUpdate {
@@ -563,6 +993,8 @@ export interface Passenger {
   passportNumber: string;
   passportExpiry: string;
   passportIssueCountry?: string;
+  title?: string;
+  eTicketNumber?: string;
 }
 
 export type FlightBookingStatus = typeof FlightBookingStatus[keyof typeof FlightBookingStatus];
@@ -574,7 +1006,26 @@ export const FlightBookingStatus = {
   ticketed: 'ticketed',
   cancelled: 'cancelled',
   completed: 'completed',
+  held: 'held',
+  expired_hold: 'expired_hold',
 } as const;
+
+export interface FlightSegmentInfo {
+  fromAirport: string;
+  fromAirportName?: string;
+  fromCity?: string;
+  toAirport: string;
+  toAirportName?: string;
+  toCity?: string;
+  departTime: string;
+  arriveTime: string;
+  airlineName?: string;
+  airlineLogoUrl?: string;
+  flightNumber?: string;
+  aircraft?: string;
+  durationMinutes?: number;
+  cabinClass?: string;
+}
 
 export interface FlightBooking {
   id: number;
@@ -586,6 +1037,29 @@ export interface FlightBooking {
   email: string;
   status: FlightBookingStatus;
   createdAt: string;
+  provider?: string;
+  providerMode?: string | null;
+  bookingReference?: string | null;
+  duffelOrderId?: string | null;
+  eticketNumbers?: string[] | null;
+  segments?: FlightSegmentInfo[] | null;
+  baggage?: string | null;
+  holdExpiresAt?: string | null;
+  holdFeeAmount?: number | null;
+}
+
+export interface HoldSettings {
+  id: number;
+  holdEnabled: boolean;
+  holdFeeAmount: number;
+  holdDurationHours: number;
+  updatedAt: string;
+}
+
+export interface HoldSettingsUpdate {
+  holdEnabled?: boolean;
+  holdFeeAmount?: number;
+  holdDurationHours?: number;
 }
 
 export interface FlightBookingInput {
@@ -609,6 +1083,8 @@ export const NotificationType = {
   flight_booking: 'flight_booking',
   general: 'general',
   promotion: 'promotion',
+  payment: 'payment',
+  system: 'system',
 } as const;
 
 export interface Notification {
@@ -620,6 +1096,10 @@ export interface Notification {
   type: NotificationType;
   isRead: boolean;
   createdAt: string;
+  /** @nullable */
+  imageUrl?: string | null;
+  /** @nullable */
+  data?: Record<string, unknown> | null;
 }
 
 export interface NotificationInput {
@@ -727,6 +1207,15 @@ export interface AdminDashboardSummary {
   pendingFlightBookings: number;
   recentActivity: RecentActivity[];
 }
+
+export type ScanPassportOcrBody = {
+  /** JPEG or PNG passport image, max 10 MB. */
+  passportImage: Blob;
+};
+
+export type AcceptVisaTerms200 = {
+  acceptedAt: string;
+};
 
 export type ListVisasParams = {
 visaType?: VisaType;

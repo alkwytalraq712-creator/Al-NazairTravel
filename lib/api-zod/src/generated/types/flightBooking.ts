@@ -7,6 +7,7 @@
  */
 import type { FlightBookingStatus } from './flightBookingStatus';
 import type { FlightOffer } from './flightOffer';
+import type { FlightSegmentInfo } from './flightSegmentInfo';
 import type { Passenger } from './passenger';
 
 export interface FlightBooking {
@@ -19,4 +20,11 @@ export interface FlightBooking {
   email: string;
   status: FlightBookingStatus;
   createdAt: Date;
+  provider?: string;
+  providerMode?: string | null;
+  bookingReference?: string | null;
+  duffelOrderId?: string | null;
+  eticketNumbers?: string[] | null;
+  segments?: FlightSegmentInfo[] | null;
+  baggage?: string | null;
 }

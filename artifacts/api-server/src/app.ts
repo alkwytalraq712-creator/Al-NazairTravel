@@ -4,9 +4,11 @@ import pinoHttp from "pino-http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import router from "./routes";
+import storageRouter from "./routes/storage";
 import { logger } from "./lib/logger";
 import { loadCurrentUser } from "./lib/loadUser";
 import { pool } from "@workspace/db";
+import { startHoldExpiryJob } from "./lib/holdExpiry";
 
 const app: Express = express();
 
@@ -41,7 +43,60 @@ app.use(
     },
   }),
 );
-app.use(cors({ credentials: true, origin: true }));
+// CORS: only allow credentialed requests from this repl's own exact origins.
+// `origin: true` (reflect any origin) + `credentials: true` is forbidden by
+// the CORS spec and enables full CSRF — any attacker site can make
+// authenticated API calls on behalf of logged-in users.
+//
+// Trusted origins are derived from Replit environment variables that are
+// unique to this specific repl — another project cannot share these hostnames.
+//   REPLIT_DEV_DOMAIN  — main dev hostname (admin dashboard, web preview)
+//   REPLIT_EXPO_DEV_DOMAIN — Expo dev-client hostname (mobile web bundle)
+//   CORS_ALLOWED_ORIGINS — comma-separated extra origins for production
+function buildTrustedOrigins(): Set<string> {
+  const origins = new Set<string>();
+
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    origins.add(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+  }
+  if (process.env.REPLIT_EXPO_DEV_DOMAIN) {
+    origins.add(`https://${process.env.REPLIT_EXPO_DEV_DOMAIN}`);
+  }
+
+  // Production deployment hostnames. In a published deployment Replit sets
+  // REPLIT_DOMAINS to this repl's own production domain(s) (the generated
+  // *.replit.app subdomain plus any verified custom domains), comma-separated
+  // and without scheme. The admin dashboard is served from the same origin as
+  // the API in production, so its origin must be trusted or credentialed API
+  // calls (e.g. POST /api/auth/login) are rejected by CORS.
+  for (const d of (process.env.REPLIT_DOMAINS ?? "").split(",")) {
+    const trimmed = d.trim();
+    if (trimmed) origins.add(`https://${trimmed}`);
+  }
+
+  // Extra origins for production custom domains, e.g.:
+  //   CORS_ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
+  for (const o of (process.env.CORS_ALLOWED_ORIGINS ?? "").split(",")) {
+    const trimmed = o.trim();
+    if (trimmed) origins.add(trimmed);
+  }
+
+  return origins;
+}
+
+const TRUSTED_ORIGINS = buildTrustedOrigins();
+
+app.use(
+  cors({
+    credentials: true,
+    origin(origin, callback) {
+      // Allow server-to-server / same-origin requests (no Origin header)
+      if (!origin) return callback(null, true);
+      if (TRUSTED_ORIGINS.has(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin '${origin}' not allowed`));
+    },
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -65,5 +120,23 @@ app.use(
 app.use(loadCurrentUser);
 
 app.use("/api", router);
+
+// ─── Serve admin dashboard static files (production / Render) ────────────────
+// In production the Dockerfile copies admin-dashboard/dist/public → dist/public
+// so we can serve the SPA from the same origin as the API.
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
+const publicDir = join(__dirname, "public");
+if (existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+  // SPA fallback — any route that didn't match /api/* serves index.html
+  app.get("*", (_req, res) => {
+    res.sendFile(join(publicDir, "index.html"));
+  });
+}
+
+// Start background job to auto-expire held bookings
+startHoldExpiryJob();
 
 export default app;

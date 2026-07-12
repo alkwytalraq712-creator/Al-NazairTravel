@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useListPackages } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { PackageCard } from '@/components/PackageCard';
+import { useServiceSettings } from '@/context/ServiceSettingsContext';
+import { ServiceUnavailable } from '@/components/ServiceUnavailable';
 
 const REGIONS = [
   { key: '', label: 'الكل' },
@@ -28,8 +30,11 @@ const REGIONS = [
 export default function PackagesScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const { packagesEnabled } = useServiceSettings();
   const [search, setSearch] = useState('');
   const [region, setRegion] = useState('');
+
+  if (!packagesEnabled) return <ServiceUnavailable serviceName="الباقات السياحية" icon="map-outline" />;
 
   const { data: packages, isLoading, refetch } = useListPackages(
     region ? { country: region } : undefined,
@@ -46,8 +51,8 @@ export default function PackagesScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
-        <Text style={styles.headerTitle}>الباقات السياحية</Text>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: paddingTop + 12 }]}>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>الباقات السياحية</Text>
       </View>
 
       {/* Search */}
@@ -89,7 +94,7 @@ export default function PackagesScreen() {
               ]}
               activeOpacity={0.8}
             >
-              <Text style={[styles.chipLabel, { color: active ? '#fff' : colors.foreground }]}>
+              <Text style={[styles.chipLabel, { color: active ? colors.primaryForeground : colors.foreground }]}>
                 {r.label}
               </Text>
             </TouchableOpacity>
@@ -134,7 +139,7 @@ export default function PackagesScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: { paddingHorizontal: 20, paddingBottom: 16, alignItems: 'flex-end' },
-  headerTitle: { fontSize: 22, fontFamily: 'Tajawal_800ExtraBold', color: '#fff' },
+  headerTitle: { fontSize: 22, fontFamily: 'Tajawal_800ExtraBold' },
   searchBar: {
     flexDirection: 'row-reverse',
     alignItems: 'center',

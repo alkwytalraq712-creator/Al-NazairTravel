@@ -1,6 +1,8 @@
 import {
+  boolean,
   date,
   integer,
+  jsonb,
   pgTable,
   serial,
   text,
@@ -33,6 +35,28 @@ export const visaApplicationsTable = pgTable("visa_applications", {
   passportImageUrl: text("passport_image_url"),
   personalPhotoUrl: text("personal_photo_url"),
   status: text("status").notNull().default("received"),
+  // OCR-enriched passport fields
+  passportType: text("passport_type"),
+  issuingCountry: text("issuing_country"),
+  passportIssueDate: date("passport_issue_date", { mode: "string" }),
+  placeOfBirth: text("place_of_birth"),
+  mrz: text("mrz"),
+  ocrConfidence: integer("ocr_confidence"),
+  ocrVerified: boolean("ocr_verified").notNull().default(false),
+  statusHistory: jsonb("status_history")
+    .notNull()
+    .default([])
+    .$type<Array<{ status: string; timestamp: string; note?: string }>>(),
+  /** Documents the admin explicitly requested — set when status → awaiting_documents */
+  requestedDocuments: jsonb("requested_documents")
+    .notNull()
+    .default([])
+    .$type<Array<{ name: string }>>(),
+  /** Files the client uploaded in response to a document request */
+  additionalDocumentUrls: jsonb("additional_document_urls")
+    .notNull()
+    .default([])
+    .$type<Array<{ name: string; url: string; uploadedAt: string }>>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
