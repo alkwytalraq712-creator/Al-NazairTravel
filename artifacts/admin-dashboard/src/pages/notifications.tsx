@@ -37,6 +37,10 @@ const DEEP_LINKS = [
   { label: 'الرحلات الجوية',         value: '/my-flights' },
   { label: 'الملف الشخصي',           value: '/my-profile' },
   { label: 'الإشعارات',              value: '/notifications' },
+  // Dynamic examples — replace the number with the actual booking/visa ID
+  { label: 'تذكرة رحلة (مثال)',      value: '/e-ticket/1' },
+  { label: 'طلب تأشيرة (مثال)',      value: '/visa-application/1' },
+  { label: 'باقة سياحية (مثال)',     value: '/package/1' },
 ];
 
 // ─── Type icons ───────────────────────────────────────────────────────────────
@@ -404,19 +408,36 @@ function NotificationForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
         <FormField control={form.control} name="route" render={({ field }) => (
           <FormItem>
             <FormLabel>الصفحة التي تفتح عند الضغط</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value ?? ''}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الصفحة (اختياري)" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {DEEP_LINKS.map((l) => (
-                  <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormDescription className="text-xs">عند الضغط على الإشعار سيتم فتح هذه الصفحة مباشرة</FormDescription>
+            {/* Quick-pick presets */}
+            <div className="flex flex-wrap gap-1.5 pb-1">
+              {DEEP_LINKS.map((l) => (
+                <button
+                  key={l.value}
+                  type="button"
+                  onClick={() => field.onChange(l.value)}
+                  className={`text-xs px-2 py-1 rounded border transition-colors ${
+                    field.value === l.value
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted hover:bg-muted/80 border-border text-muted-foreground'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+            {/* Free-text input for dynamic routes (e.g. /e-ticket/42) */}
+            <FormControl>
+              <Input
+                dir="ltr"
+                placeholder="مثال: /e-ticket/42  أو  /visa-application/7"
+                {...field}
+                value={field.value ?? ''}
+              />
+            </FormControl>
+            <FormDescription className="text-xs">
+              اختر من الاختصارات أعلاه أو اكتب المسار مباشرة. عند الضغط على الإشعار سيتم فتح هذه الصفحة.
+            </FormDescription>
+            <FormMessage />
           </FormItem>
         )} />
 

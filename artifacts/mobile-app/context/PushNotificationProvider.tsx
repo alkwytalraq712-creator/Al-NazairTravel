@@ -76,6 +76,49 @@ async function registerPushToken() {
   }
 }
 
+// ─── Known valid route patterns ──────────────────────────────────────────────
+// Static routes (exact match)
+const STATIC_ROUTES = new Set([
+  '/notifications',
+  '/bookings',
+  '/my-flights',
+  '/my-profile',
+  '/visa',
+  '/packages',
+]);
+
+// Dynamic route patterns — must be /segment/<positive-integer>
+const DYNAMIC_ROUTE_PATTERNS = [
+  /^\/e-ticket\/\d+$/,           // flight booking detail
+  /^\/visa-application\/\d+$/,   // visa application detail
+  /^\/package\/\d+$/,            // package booking detail
+  /^\/visa\/\d+$/,               // visa detail
+  /^\/book-package\/\d+$/,       // book package screen
+];
+
+function isValidRoute(route: string): boolean {
+  if (STATIC_ROUTES.has(route)) return true;
+  return DYNAMIC_ROUTE_PATTERNS.some((re) => re.test(route));
+}
+
+/**
+ * Safely navigate to a notification deep-link route.
+ * Falls back to /notifications for any invalid, missing, or crashing route.
+ */
+function navigateFromNotification(route: string | undefined): void {
+  const target = route && isValidRoute(route) ? route : '/notifications';
+  try {
+    router.push(target as any);
+  } catch {
+    // Last-resort fallback — e.g. if router is not yet mounted
+    try {
+      router.push('/notifications' as any);
+    } catch {
+      // Nothing more we can do
+    }
+  }
+}
+
 // ─── Context (no-op; used only for tree structure) ───────────────────────────
 const PushContext = createContext(null);
 
@@ -113,14 +156,7 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
       sub = Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response.notification.request.content.data as any;
         const route = data?.route as string | undefined;
-        if (route) {
-          try {
-            router.push(route as any);
-          } catch {}
-        } else {
-          // Default: open notifications screen
-          router.push('/notifications' as any);
-        }
+        navigateFromNotification(route);
       });
 
       listenerRef.current = sub;
