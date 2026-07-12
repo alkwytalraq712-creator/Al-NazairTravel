@@ -1,12 +1,8 @@
-/**
- * Register Screen — professional dark-luxury design.
- * Fields: full name, phone (any country), email (optional),
- *         nationality (all world countries in Arabic), password.
- */
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -26,24 +22,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import CountryPickerModal from '@/components/CountryPickerModal';
 import { DEFAULT_COUNTRY, NATIONALITIES, type Country } from '@/lib/countries';
+import { useColors } from '@/hooks/useColors';
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
 const GOLD   = '#C9A060';
 const GOLD2  = '#E8C07A';
-const DARK   = '#0B1628';
-const DARK2  = '#0F1E36';
-const DARK3  = '#162035';
-const BORDER = 'rgba(201,160,96,0.15)';
-const MUTED  = 'rgba(255,255,255,0.48)';
-const WHITE  = '#FFFFFF';
-const INPUT_BG = 'rgba(255,255,255,0.06)';
-const ERROR  = '#EF4444';
 
-// ─── Nationality picker modal ──────────────────────────────────────────────────
 function NationalityPickerModal({
   visible, selected, onSelect, onClose,
 }: { visible: boolean; selected: string; onSelect: (n: string) => void; onClose: () => void }) {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
   const [query, setQuery] = useState('');
 
   const filtered = query.trim()
@@ -55,27 +43,27 @@ function NationalityPickerModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={natStyles.backdrop} onPress={onClose} />
-      <View style={[natStyles.sheet, { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 16 }]}>
-        <View style={natStyles.header}>
-          <TouchableOpacity onPress={onClose} style={natStyles.closeBtn}>
-            <Ionicons name="close" size={22} color={MUTED} />
+      <View style={[natStyles.sheet, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Platform.OS === 'ios' ? insets.bottom : 16 }]}>
+        <View style={[natStyles.header, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={onClose} style={[natStyles.closeBtn, { backgroundColor: colors.input }]}>
+            <Ionicons name="close" size={24} color={colors.foreground} />
           </TouchableOpacity>
-          <Text style={natStyles.title}>اختر الجنسية</Text>
-          <View style={{ width: 36 }} />
+          <Text style={[natStyles.title, { color: colors.foreground }]}>اختر الجنسية</Text>
+          <View style={{ width: 44 }} />
         </View>
-        <View style={natStyles.searchWrap}>
-          <Ionicons name="search" size={16} color={MUTED} style={{ marginLeft: 8 }} />
+        <View style={[natStyles.searchWrap, { backgroundColor: colors.input, borderColor: colors.border }]}>
+          <Ionicons name="search" size={20} color={colors.mutedForeground} style={{ marginLeft: 10 }} />
           <TextInput
-            style={natStyles.searchInput}
+            style={[natStyles.searchInput, { color: colors.foreground }]}
             placeholder="ابحث عن الجنسية..."
-            placeholderTextColor={MUTED}
+            placeholderTextColor={colors.mutedForeground}
             value={query}
             onChangeText={setQuery}
             textAlign="right"
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')} style={{ paddingHorizontal: 8 }}>
-              <Ionicons name="close-circle" size={16} color={MUTED} />
+            <TouchableOpacity onPress={() => setQuery('')} style={{ paddingHorizontal: 12 }}>
+              <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
@@ -86,19 +74,19 @@ function NationalityPickerModal({
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={[natStyles.item, selected === item && natStyles.itemActive]}
+              style={[natStyles.item, { borderBottomColor: colors.border }, selected === item && { backgroundColor: colors.accent }]}
               onPress={() => pick(item)}
               activeOpacity={0.7}
             >
               {selected === item && (
-                <Ionicons name="checkmark" size={16} color={GOLD} style={{ marginLeft: 4 }} />
+                <Ionicons name="checkmark" size={20} color={colors.primary} style={{ marginLeft: 8 }} />
               )}
-              <Text style={natStyles.itemText}>{item}</Text>
+              <Text style={[natStyles.itemText, { color: selected === item ? colors.primary : colors.foreground }]}>{item}</Text>
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            <View style={{ padding: 32, alignItems: 'center' }}>
-              <Text style={{ color: MUTED, fontFamily: 'Tajawal_400Regular', fontSize: 14 }}>لا توجد نتائج</Text>
+            <View style={{ padding: 40, alignItems: 'center' }}>
+              <Text style={{ color: colors.mutedForeground, fontFamily: 'Tajawal_500Medium', fontSize: 16 }}>لا توجد نتائج</Text>
             </View>
           }
         />
@@ -107,9 +95,9 @@ function NationalityPickerModal({
   );
 }
 
-// ─── Main screen ───────────────────────────────────────────────────────────────
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
   const { register } = useAuth();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
@@ -129,8 +117,18 @@ export default function RegisterScreen() {
   const [errors,       setErrors]       = useState<Record<string, string>>({});
   const [agreedTerms,  setAgreedTerms]  = useState(false);
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, speed: 12, bounciness: 4, useNativeDriver: true })
+    ]).start();
+  }, [fadeAnim, slideAnim]);
+
   const inputBorder = (field: string) =>
-    errors[field] ? ERROR + '80' : focusedField === field ? 'rgba(201,160,96,0.4)' : BORDER;
+    errors[field] ? colors.destructive : focusedField === field ? colors.primary : colors.border;
 
   function validate(): boolean {
     const e: Record<string, string> = {};
@@ -170,36 +168,37 @@ export default function RegisterScreen() {
   }
 
   return (
-    <LinearGradient colors={[DARK, DARK2, '#111E35']} style={[styles.screen, { paddingTop }]}>
+    <View style={[styles.screen, { backgroundColor: colors.background, paddingTop }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView
+        <Animated.ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
         >
-          {/* ── Brand ──────────────────────────────────────────────────────── */}
+          {/* Brand */}
           <View style={styles.brandWrap}>
             <View style={styles.logoCircle}>
               <LinearGradient colors={[GOLD, GOLD2]} style={styles.logoGradient}>
-                <Ionicons name="person-add" size={26} color={DARK} />
+                <Ionicons name="person-add" size={30} color="#0B1628" />
               </LinearGradient>
             </View>
-            <Text style={styles.brandName}>إنشاء حساب جديد</Text>
-            <Text style={styles.brandSub}>انضم إلى قمة للسفر والسياحة</Text>
+            <Text style={[styles.brandName, { color: colors.foreground }]}>إنشاء حساب جديد</Text>
+            <Text style={[styles.brandSub, { color: colors.mutedForeground }]}>انضم إلى قمة للسفر والسياحة</Text>
           </View>
 
-          {/* ── Card ───────────────────────────────────────────────────────── */}
-          <View style={styles.card}>
+          {/* Card */}
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
 
             {/* Full Name */}
             <View style={styles.fieldWrap}>
-              <Text style={styles.label}>الاسم الكامل <Text style={styles.required}>*</Text></Text>
-              <View style={[styles.inputWrap, { borderColor: inputBorder('fullName') }]}>
-                <Ionicons name="person-outline" size={18} color={MUTED} style={styles.inputIcon} />
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>الاسم الكامل <Text style={{ color: colors.destructive }}>*</Text></Text>
+              <View style={[styles.inputWrap, { backgroundColor: colors.input, borderColor: inputBorder('fullName') }]}>
+                <Ionicons name="person-outline" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.foreground }]}
                   placeholder="الاسم الكامل"
-                  placeholderTextColor={MUTED}
+                  placeholderTextColor={colors.mutedForeground}
                   value={fullName}
                   onChangeText={v => { setFullName(v); clearError('fullName'); }}
                   textAlign="right"
@@ -207,27 +206,27 @@ export default function RegisterScreen() {
                   onBlur={() => setFocusedField(null)}
                 />
               </View>
-              {errors.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
+              {errors.fullName && <Text style={[styles.errorText, { color: colors.destructive }]}>{errors.fullName}</Text>}
             </View>
 
             {/* Phone */}
             <View style={styles.fieldWrap}>
-              <Text style={styles.label}>رقم الهاتف <Text style={styles.required}>*</Text></Text>
-              <View style={[styles.phoneRow, { borderColor: inputBorder('phone') }]}>
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>رقم الهاتف <Text style={{ color: colors.destructive }}>*</Text></Text>
+              <View style={[styles.phoneRow, { backgroundColor: colors.input, borderColor: inputBorder('phone') }]}>
                 <TouchableOpacity
                   style={styles.countryBtn}
                   onPress={() => setShowDialPicker(true)}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.countryFlag}>{country.flag}</Text>
-                  <Text style={styles.countryDial}>{country.dial}</Text>
-                  <Ionicons name="chevron-down" size={12} color={MUTED} />
+                  <Text style={[styles.countryDial, { color: colors.primary }]}>{country.dial}</Text>
+                  <Ionicons name="chevron-down" size={14} color={colors.mutedForeground} />
                 </TouchableOpacity>
-                <View style={styles.phoneDivider} />
+                <View style={[styles.phoneDivider, { backgroundColor: colors.border }]} />
                 <TextInput
-                  style={styles.phoneInput}
+                  style={[styles.phoneInput, { color: colors.foreground }]}
                   placeholder="رقم الهاتف"
-                  placeholderTextColor={MUTED}
+                  placeholderTextColor={colors.mutedForeground}
                   value={phone}
                   onChangeText={v => { setPhone(v); clearError('phone'); }}
                   keyboardType="phone-pad"
@@ -236,18 +235,18 @@ export default function RegisterScreen() {
                   onBlur={() => setFocusedField(null)}
                 />
               </View>
-              {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+              {errors.phone && <Text style={[styles.errorText, { color: colors.destructive }]}>{errors.phone}</Text>}
             </View>
 
-            {/* Email (optional) */}
+            {/* Email */}
             <View style={styles.fieldWrap}>
-              <Text style={styles.label}>البريد الإلكتروني <Text style={styles.optional}>(اختياري)</Text></Text>
-              <View style={[styles.inputWrap, { borderColor: inputBorder('email') }]}>
-                <Ionicons name="mail-outline" size={18} color={MUTED} style={styles.inputIcon} />
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>البريد الإلكتروني <Text style={{ fontSize: 12, color: colors.mutedForeground }}>(اختياري)</Text></Text>
+              <View style={[styles.inputWrap, { backgroundColor: colors.input, borderColor: inputBorder('email') }]}>
+                <Ionicons name="mail-outline" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.foreground }]}
                   placeholder="example@email.com"
-                  placeholderTextColor={MUTED}
+                  placeholderTextColor={colors.mutedForeground}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -261,32 +260,32 @@ export default function RegisterScreen() {
 
             {/* Nationality */}
             <View style={styles.fieldWrap}>
-              <Text style={styles.label}>الجنسية <Text style={styles.required}>*</Text></Text>
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>الجنسية <Text style={{ color: colors.destructive }}>*</Text></Text>
               <TouchableOpacity
-                style={[styles.selectorWrap, { borderColor: inputBorder('nationality') }]}
+                style={[styles.selectorWrap, { backgroundColor: colors.input, borderColor: inputBorder('nationality') }]}
                 onPress={() => setShowNatPicker(true)}
                 activeOpacity={0.8}
               >
-                <Ionicons name="chevron-down" size={16} color={MUTED} style={{ marginLeft: 8 }} />
-                <Text style={[styles.selectorText, !nationality && { color: MUTED }]}>
+                <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} style={{ marginLeft: 10 }} />
+                <Text style={[styles.selectorText, { color: nationality ? colors.foreground : colors.mutedForeground }]}>
                   {nationality || 'اختر جنسيتك'}
                 </Text>
-                <Ionicons name="flag-outline" size={18} color={MUTED} style={styles.inputIcon} />
+                <Ionicons name="flag-outline" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
               </TouchableOpacity>
-              {errors.nationality && <Text style={styles.errorText}>{errors.nationality}</Text>}
+              {errors.nationality && <Text style={[styles.errorText, { color: colors.destructive }]}>{errors.nationality}</Text>}
             </View>
 
             {/* Password */}
             <View style={styles.fieldWrap}>
-              <Text style={styles.label}>كلمة المرور <Text style={styles.required}>*</Text></Text>
-              <View style={[styles.inputWrap, { borderColor: inputBorder('password') }]}>
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>كلمة المرور <Text style={{ color: colors.destructive }}>*</Text></Text>
+              <View style={[styles.inputWrap, { backgroundColor: colors.input, borderColor: inputBorder('password') }]}>
                 <TouchableOpacity onPress={() => setShowPass(v => !v)} style={styles.eyeBtn}>
-                  <Ionicons name={showPass ? 'eye-off-outline' : 'eye-outline'} size={20} color={MUTED} />
+                  <Ionicons name={showPass ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.mutedForeground} />
                 </TouchableOpacity>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.foreground }]}
                   placeholder="6 أحرف على الأقل"
-                  placeholderTextColor={MUTED}
+                  placeholderTextColor={colors.mutedForeground}
                   value={password}
                   onChangeText={v => { setPassword(v); clearError('password'); }}
                   secureTextEntry={!showPass}
@@ -295,7 +294,6 @@ export default function RegisterScreen() {
                   onBlur={() => setFocusedField(null)}
                 />
               </View>
-              {/* Strength indicator */}
               {password.length > 0 && (
                 <View style={styles.strengthRow}>
                   {[1,2,3,4].map(i => (
@@ -306,33 +304,33 @@ export default function RegisterScreen() {
                         {
                           backgroundColor:
                             password.length >= i * 3
-                              ? password.length >= 10 ? '#22c55e'
-                                : password.length >= 7 ? GOLD
-                                : ERROR
-                              : 'rgba(255,255,255,0.08)',
+                              ? password.length >= 10 ? colors.success
+                                : password.length >= 7 ? colors.warning
+                                : colors.destructive
+                              : colors.input,
                         },
                       ]}
                     />
                   ))}
-                  <Text style={styles.strengthLabel}>
+                  <Text style={[styles.strengthLabel, { color: colors.mutedForeground }]}>
                     {password.length >= 10 ? 'قوية' : password.length >= 7 ? 'جيدة' : 'ضعيفة'}
                   </Text>
                 </View>
               )}
-              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+              {errors.password && <Text style={[styles.errorText, { color: colors.destructive }]}>{errors.password}</Text>}
             </View>
 
             {/* Confirm password */}
             <View style={styles.fieldWrap}>
-              <Text style={styles.label}>تأكيد كلمة المرور <Text style={styles.required}>*</Text></Text>
-              <View style={[styles.inputWrap, { borderColor: inputBorder('confirmPass') }]}>
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>تأكيد كلمة المرور <Text style={{ color: colors.destructive }}>*</Text></Text>
+              <View style={[styles.inputWrap, { backgroundColor: colors.input, borderColor: inputBorder('confirmPass') }]}>
                 <TouchableOpacity onPress={() => setShowConfirm(v => !v)} style={styles.eyeBtn}>
-                  <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} color={MUTED} />
+                  <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.mutedForeground} />
                 </TouchableOpacity>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.foreground }]}
                   placeholder="أعد إدخال كلمة المرور"
-                  placeholderTextColor={MUTED}
+                  placeholderTextColor={colors.mutedForeground}
                   value={confirmPass}
                   onChangeText={v => { setConfirmPass(v); clearError('confirmPass'); }}
                   secureTextEntry={!showConfirm}
@@ -341,40 +339,40 @@ export default function RegisterScreen() {
                   onBlur={() => setFocusedField(null)}
                 />
               </View>
-              {errors.confirmPass && <Text style={styles.errorText}>{errors.confirmPass}</Text>}
+              {errors.confirmPass && <Text style={[styles.errorText, { color: colors.destructive }]}>{errors.confirmPass}</Text>}
             </View>
 
-            {/* ── Terms checkbox (mandatory) ─────────────────────────── */}
+            {/* Terms checkbox */}
             <TouchableOpacity
-              style={[styles.checkboxRow, errors.terms && styles.checkboxRowError]}
+              style={[
+                styles.checkboxRow,
+                { backgroundColor: colors.card, borderColor: errors.terms ? colors.destructive : colors.border }
+              ]}
               onPress={() => { setAgreedTerms(v => !v); if (errors.terms) setErrors(p => { const n={...p}; delete n.terms; return n; }); }}
               activeOpacity={0.75}
             >
-              {/* Box */}
-              <View style={[styles.checkbox, agreedTerms && styles.checkboxChecked]}>
-                {agreedTerms && <Ionicons name="checkmark" size={13} color={DARK} />}
+              <View style={[styles.checkbox, { backgroundColor: colors.input, borderColor: colors.border }, agreedTerms && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                {agreedTerms && <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />}
               </View>
-              {/* Label */}
-              <Text style={styles.checkboxLabel}>
+              <Text style={[styles.checkboxLabel, { color: colors.foreground }]}>
                 أوافق على{' '}
                 <Text
-                  style={styles.checkboxLink}
+                  style={[styles.checkboxLink, { color: colors.primary }]}
                   onPress={(e) => { e.stopPropagation?.(); router.push('/legal/terms' as any); }}
                 >
                   شروط الاستخدام
                 </Text>
                 {' '}و{' '}
                 <Text
-                  style={styles.checkboxLink}
+                  style={[styles.checkboxLink, { color: colors.primary }]}
                   onPress={(e) => { e.stopPropagation?.(); router.push('/legal/privacy' as any); }}
                 >
                   سياسة الخصوصية
                 </Text>
-                {' '}الخاصة بالتطبيق
               </Text>
             </TouchableOpacity>
             {errors.terms && (
-              <Text style={[styles.errorText, { textAlign: 'center', marginTop: -4, marginBottom: 8 }]}>
+              <Text style={[styles.errorText, { textAlign: 'center', marginTop: -4, marginBottom: 12, color: colors.destructive }]}>
                 {errors.terms}
               </Text>
             )}
@@ -392,240 +390,132 @@ export default function RegisterScreen() {
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               >
                 {loading
-                  ? <ActivityIndicator size="small" color={DARK} />
+                  ? <ActivityIndicator size="small" color="#0B1628" />
                   : (
                     <>
-                      <Ionicons name="person-add-outline" size={20} color={agreedTerms ? DARK : 'rgba(255,255,255,0.5)'} />
+                      <Ionicons name="person-add-outline" size={22} color={agreedTerms ? '#0B1628' : 'rgba(255,255,255,0.5)'} />
                       <Text style={[styles.submitBtnText, !agreedTerms && { color: 'rgba(255,255,255,0.5)' }]}>إنشاء الحساب</Text>
                     </>
                   )}
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* Consent line below button */}
-            <Text style={styles.consentLine}>
+            <Text style={[styles.consentLine, { color: colors.mutedForeground }]}>
               بإنشائك حسابًا، فإنك توافق على{' '}
               <Text
-                style={styles.consentLink}
+                style={[styles.consentLink, { color: colors.primary }]}
                 onPress={() => router.push('/legal/terms' as any)}
               >
                 شروط الاستخدام
               </Text>
               {' '}و{' '}
               <Text
-                style={styles.consentLink}
+                style={[styles.consentLink, { color: colors.primary }]}
                 onPress={() => router.push('/legal/privacy' as any)}
               >
                 سياسة الخصوصية
               </Text>
-              {' '}الخاصة بتطبيق قمة النظائر للسفريات والسياحة.
             </Text>
 
             {/* Divider */}
             <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>أو</Text>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>أو</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
             {/* Google */}
             <TouchableOpacity
-              style={styles.googleBtn}
+              style={[styles.googleBtn, { backgroundColor: colors.input, borderColor: colors.border }]}
               activeOpacity={0.8}
-              onPress={() => Alert.alert('قريباً', 'تسجيل الدخول بجوجل قيد الإعداد')}
+              onPress={() => Alert.alert('قريباً', 'التسجيل بجوجل قيد الإعداد')}
             >
               <Text style={styles.googleIcon}>G</Text>
-              <Text style={styles.googleText}>المتابعة عبر Google</Text>
+              <Text style={[styles.googleText, { color: colors.foreground }]}>المتابعة عبر Google</Text>
             </TouchableOpacity>
 
             {/* Login link */}
             <View style={styles.loginRow}>
               <TouchableOpacity onPress={() => router.replace('/auth/login')} activeOpacity={0.7}>
-                <Text style={styles.loginLink}>تسجيل الدخول</Text>
+                <Text style={[styles.loginLink, { color: colors.primary }]}>تسجيل الدخول</Text>
               </TouchableOpacity>
-              <Text style={styles.loginHint}>لديك حساب بالفعل؟</Text>
+              <Text style={[styles.loginHint, { color: colors.mutedForeground }]}>لديك حساب بالفعل؟</Text>
             </View>
           </View>
-        </ScrollView>
+        </Animated.ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Country dial picker */}
       <CountryPickerModal
         visible={showDialPicker}
         selected={country}
         onSelect={setCountry}
         onClose={() => setShowDialPicker(false)}
       />
-      {/* Nationality picker */}
       <NationalityPickerModal
         visible={showNatPicker}
         selected={nationality}
         onSelect={setNationality}
         onClose={() => setShowNatPicker(false)}
       />
-    </LinearGradient>
+    </View>
   );
 }
 
-// ─── Nationality modal styles ──────────────────────────────────────────────────
 const natStyles = StyleSheet.create({
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)' },
-  sheet: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: DARK2, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    borderTopWidth: 1, borderTopColor: BORDER, maxHeight: '85%',
-  },
-  header: {
-    flexDirection: 'row-reverse', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
-  },
-  closeBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  title: { flex: 1, textAlign: 'center', color: WHITE, fontFamily: 'Tajawal_700Bold', fontSize: 16 },
-  searchWrap: {
-    flexDirection: 'row-reverse', alignItems: 'center',
-    backgroundColor: DARK3, borderRadius: 12, borderWidth: 1, borderColor: BORDER, margin: 12,
-  },
-  searchInput: { flex: 1, paddingVertical: 12, paddingHorizontal: 10, color: WHITE, fontFamily: 'Tajawal_400Regular', fontSize: 14 },
-  item: {
-    flexDirection: 'row-reverse', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 13,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
-  },
-  itemActive: { backgroundColor: 'rgba(201,160,96,0.08)' },
-  itemText: { flex: 1, color: WHITE, fontFamily: 'Tajawal_500Medium', fontSize: 14, textAlign: 'right' },
+  sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopLeftRadius: 24, borderTopRightRadius: 24, borderTopWidth: 1, maxHeight: '85%' },
+  header: { flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 18, borderBottomWidth: 1 },
+  closeBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  title: { flex: 1, textAlign: 'center', fontFamily: 'Tajawal_800ExtraBold', fontSize: 18 },
+  searchWrap: { flexDirection: 'row-reverse', alignItems: 'center', borderRadius: 16, borderWidth: 1, margin: 16, paddingVertical: 4 },
+  searchInput: { flex: 1, paddingVertical: 14, paddingHorizontal: 12, fontFamily: 'Tajawal_500Medium', fontSize: 16 },
+  item: { flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1 },
+  itemText: { flex: 1, fontFamily: 'Tajawal_700Bold', fontSize: 16, textAlign: 'right' },
 });
 
-// ─── Screen styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   scroll: { flexGrow: 1, padding: 20, paddingBottom: 40 },
-
-  brandWrap: { alignItems: 'center', paddingVertical: 20 },
-  logoCircle: { marginBottom: 12 },
-  logoGradient: {
-    width: 66, height: 66, borderRadius: 33,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: GOLD, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,
-  },
-  brandName: { color: WHITE, fontSize: 20, fontFamily: 'Tajawal_800ExtraBold', textAlign: 'center' },
-  brandSub: { color: MUTED, fontSize: 12, fontFamily: 'Tajawal_400Regular', textAlign: 'center', marginTop: 2 },
-
-  card: {
-    backgroundColor: 'rgba(15,30,54,0.85)',
-    borderRadius: 24, borderWidth: 1, borderColor: BORDER, padding: 22,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.2, shadowRadius: 24, elevation: 8,
-  },
-
-  fieldWrap: { marginBottom: 12 },
-  label: { color: MUTED, fontSize: 12, fontFamily: 'Tajawal_500Medium', textAlign: 'right', marginBottom: 7 },
-  required: { color: '#EF4444' },
-  optional: { fontSize: 11, color: 'rgba(255,255,255,0.3)' },
-  errorText: { color: '#EF4444', fontFamily: 'Tajawal_400Regular', fontSize: 11, textAlign: 'right', marginTop: 4 },
-
-  inputWrap: {
-    flexDirection: 'row-reverse', alignItems: 'center',
-    backgroundColor: INPUT_BG, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14,
-  },
-  inputIcon: { marginLeft: 8 },
-  eyeBtn: { padding: 4, marginLeft: 4 },
-  input: { flex: 1, paddingVertical: 14, color: WHITE, fontFamily: 'Tajawal_400Regular', fontSize: 15 },
-
-  phoneRow: {
-    flexDirection: 'row-reverse', backgroundColor: INPUT_BG,
-    borderRadius: 14, borderWidth: 1, overflow: 'hidden',
-  },
-  countryBtn: {
-    flexDirection: 'row-reverse', alignItems: 'center', gap: 4,
-    paddingHorizontal: 10, paddingVertical: 14,
-  },
-  countryFlag: { fontSize: 20 },
-  countryDial: { color: GOLD, fontFamily: 'Tajawal_700Bold', fontSize: 12 },
-  phoneDivider: { width: 1, backgroundColor: BORDER },
-  phoneInput: { flex: 1, paddingHorizontal: 14, paddingVertical: 14, color: WHITE, fontFamily: 'Tajawal_400Regular', fontSize: 15 },
-
-  selectorWrap: {
-    flexDirection: 'row-reverse', alignItems: 'center',
-    backgroundColor: INPUT_BG, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 14,
-  },
-  selectorText: { flex: 1, color: WHITE, fontFamily: 'Tajawal_400Regular', fontSize: 15, textAlign: 'right' },
-
-  // Password strength
-  strengthRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 6 },
-  strengthBar: { flex: 1, height: 4, borderRadius: 2 },
-  strengthLabel: { color: MUTED, fontFamily: 'Tajawal_400Regular', fontSize: 11, marginRight: 4 },
-
-  // Checkbox row
-  checkboxRow: {
-    flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10,
-    backgroundColor: 'rgba(201,160,96,0.06)',
-    borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(201,160,96,0.18)',
-    padding: 14, marginBottom: 10,
-  },
-  checkboxRowError: {
-    borderColor: ERROR + '80', backgroundColor: 'rgba(239,68,68,0.05)',
-  },
-  checkbox: {
-    width: 22, height: 22, borderRadius: 6,
-    borderWidth: 2, borderColor: 'rgba(201,160,96,0.45)',
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    flexShrink: 0, marginTop: 1,
-  },
-  checkboxChecked: {
-    backgroundColor: GOLD, borderColor: GOLD,
-  },
-  checkboxLabel: {
-    flex: 1, color: 'rgba(255,255,255,0.75)',
-    fontFamily: 'Tajawal_500Medium', fontSize: 13.5,
-    textAlign: 'right', lineHeight: 22,
-  },
-  checkboxLink: {
-    color: GOLD, fontFamily: 'Tajawal_700Bold',
-    textDecorationLine: 'underline',
-  },
-
-  // Consent line below button
-  consentLine: {
-    color: 'rgba(255,255,255,0.38)',
-    fontFamily: 'Tajawal_400Regular',
-    fontSize: 11.5, textAlign: 'center', lineHeight: 19,
-    marginTop: -10, marginBottom: 14,
-  },
-  consentLink: {
-    color: 'rgba(201,160,96,0.7)',
-    fontFamily: 'Tajawal_500Medium',
-    textDecorationLine: 'underline',
-  },
-
-  // Submit
-  submitBtn: { borderRadius: 14, overflow: 'hidden', marginBottom: 10 },
-  btnGradient: {
-    flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 16,
-  },
-  submitBtnText: { color: DARK, fontFamily: 'Tajawal_800ExtraBold', fontSize: 17 },
-
-  // Divider
-  divider: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginBottom: 14 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: BORDER },
-  dividerText: { color: MUTED, fontFamily: 'Tajawal_400Regular', fontSize: 12 },
-
-  // Google
-  googleBtn: {
-    flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center',
-    gap: 10, paddingVertical: 13, borderRadius: 14,
-    borderWidth: 1.5, borderColor: BORDER, backgroundColor: 'rgba(255,255,255,0.04)', marginBottom: 18,
-  },
-  googleIcon: { color: '#EA4335', fontFamily: 'Tajawal_800ExtraBold', fontSize: 18, width: 24, textAlign: 'center' },
-  googleText: { color: WHITE, fontFamily: 'Tajawal_700Bold', fontSize: 15 },
-
-  // Login link
-  loginRow: { flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', gap: 6 },
-  loginHint: { color: MUTED, fontFamily: 'Tajawal_400Regular', fontSize: 14 },
-  loginLink: { color: GOLD, fontFamily: 'Tajawal_700Bold', fontSize: 14 },
+  brandWrap: { alignItems: 'center', paddingVertical: 24 },
+  logoCircle: { marginBottom: 16 },
+  logoGradient: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center', shadowColor: GOLD, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 },
+  brandName: { fontSize: 24, fontFamily: 'Tajawal_800ExtraBold', textAlign: 'center' },
+  brandSub: { fontSize: 14, fontFamily: 'Tajawal_500Medium', textAlign: 'center', marginTop: 4 },
+  card: { borderRadius: 24, borderWidth: 1, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.15, shadowRadius: 32, elevation: 10 },
+  fieldWrap: { marginBottom: 16 },
+  label: { fontSize: 13, fontFamily: 'Tajawal_700Bold', textAlign: 'right', marginBottom: 8 },
+  errorText: { fontFamily: 'Tajawal_500Medium', fontSize: 12, textAlign: 'right', marginTop: 6 },
+  inputWrap: { flexDirection: 'row-reverse', alignItems: 'center', borderRadius: 16, borderWidth: 1, paddingHorizontal: 16 },
+  inputIcon: { marginLeft: 10 },
+  eyeBtn: { padding: 8, marginLeft: 4 },
+  input: { flex: 1, paddingVertical: 16, fontFamily: 'Tajawal_500Medium', fontSize: 16 },
+  phoneRow: { flexDirection: 'row-reverse', borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
+  countryBtn: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 16 },
+  countryFlag: { fontSize: 22 },
+  countryDial: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 15 },
+  phoneDivider: { width: 1 },
+  phoneInput: { flex: 1, paddingHorizontal: 16, paddingVertical: 16, fontFamily: 'Tajawal_500Medium', fontSize: 16 },
+  selectorWrap: { flexDirection: 'row-reverse', alignItems: 'center', borderRadius: 16, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 16 },
+  selectorText: { flex: 1, fontFamily: 'Tajawal_500Medium', fontSize: 16, textAlign: 'right' },
+  strengthRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginTop: 10 },
+  strengthBar: { flex: 1, height: 6, borderRadius: 3 },
+  strengthLabel: { fontFamily: 'Tajawal_700Bold', fontSize: 13, marginRight: 6 },
+  checkboxRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 1.5, padding: 16, marginBottom: 12 },
+  checkbox: { width: 26, height: 26, borderRadius: 8, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  checkboxLabel: { flex: 1, fontFamily: 'Tajawal_500Medium', fontSize: 14, textAlign: 'right', lineHeight: 22 },
+  checkboxLink: { fontFamily: 'Tajawal_800ExtraBold', textDecorationLine: 'underline' },
+  consentLine: { fontFamily: 'Tajawal_500Medium', fontSize: 13, textAlign: 'center', lineHeight: 20, marginTop: -6, marginBottom: 20 },
+  consentLink: { fontFamily: 'Tajawal_700Bold', textDecorationLine: 'underline' },
+  submitBtn: { borderRadius: 16, overflow: 'hidden', marginBottom: 16 },
+  btnGradient: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 18 },
+  submitBtnText: { color: '#0B1628', fontFamily: 'Tajawal_800ExtraBold', fontSize: 18 },
+  divider: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12, marginBottom: 20 },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontFamily: 'Tajawal_500Medium', fontSize: 14 },
+  googleBtn: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 16, borderRadius: 16, borderWidth: 1, marginBottom: 24 },
+  googleIcon: { color: '#EA4335', fontFamily: 'Tajawal_800ExtraBold', fontSize: 20, width: 28, textAlign: 'center' },
+  googleText: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 16 },
+  loginRow: { flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  loginHint: { fontFamily: 'Tajawal_500Medium', fontSize: 15 },
+  loginLink: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 15 },
 });
