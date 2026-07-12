@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import rateLimit from "express-rate-limit";
 import { eq, or } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import {
@@ -18,7 +19,49 @@ import { visaConsentTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
-router.post("/auth/signup", async (req, res): Promise<void> => {
+// ── Rate limiters ────────────────────────────────────────────────────────────
+// Key by IP address. xForwardedForHeader validation disabled because Replit's
+// proxy already normalises the header and we trust `trust proxy 1` in app.ts.
+const authRateLimitOptions = {
+  validate: { xForwardedForHeader: false },
+  standardHeaders: true,
+  legacyHeaders: false,
+};
+
+/** 5 attempts per 15 minutes — login & signup */
+const loginLimiter = rateLimit({
+  ...authRateLimitOptions,
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many attempts. Please try again in 15 minutes." },
+  handler(_req, res, _next, options) {
+    res.status(429).json(options.message);
+  },
+});
+
+/** 3 requests per 15 minutes — password reset probe prevention */
+const forgotPasswordLimiter = rateLimit({
+  ...authRateLimitOptions,
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { error: "Too many requests. Please try again in 15 minutes." },
+  handler(_req, res, _next, options) {
+    res.status(429).json(options.message);
+  },
+});
+
+/** 10 attempts per 15 minutes — change-password (already requires a session) */
+const changePasswordLimiter = rateLimit({
+  ...authRateLimitOptions,
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many password change attempts. Please try again in 15 minutes." },
+  handler(_req, res, _next, options) {
+    res.status(429).json(options.message);
+  },
+});
+
+router.post("/auth/signup", loginLimiter, async (req, res): Promise<void> => {
   const parsed = SignupBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -66,7 +109,7 @@ function normalizePhone(raw: string): string[] {
   return Array.from(variants);
 }
 
-router.post("/auth/login", async (req, res): Promise<void> => {
+router.post("/auth/login", loginLimiter, async (req, res): Promise<void> => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -182,7 +225,7 @@ router.post("/auth/accept-visa-terms", requireAuth, async (req, res): Promise<vo
   res.json({ acceptedAt: consent.acceptedAt.toISOString() });
 });
 
-router.post("/auth/change-password", async (req, res): Promise<void> => {
+router.post("/auth/change-password", changePasswordLimiter, async (req, res): Promise<void> => {
   if (!req.session.userId) {
     res.status(401).json({ error: "Not authenticated" });
     return;
@@ -214,7 +257,7 @@ router.post("/auth/change-password", async (req, res): Promise<void> => {
   res.json({ message: "تم تغيير كلمة المرور بنجاح" });
 });
 
-router.post("/auth/forgot-password", async (req, res): Promise<void> => {
+router.post("/auth/forgot-password", forgotPasswordLimiter, async (req, res): Promise<void> => {
   const parsed = RequestPasswordResetBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

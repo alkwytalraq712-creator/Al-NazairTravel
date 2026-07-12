@@ -43,7 +43,49 @@ app.use(
     },
   }),
 );
-app.use(cors({ credentials: true, origin: true }));
+// CORS: only allow credentialed requests from this repl's own exact origins.
+// `origin: true` (reflect any origin) + `credentials: true` is forbidden by
+// the CORS spec and enables full CSRF — any attacker site can make
+// authenticated API calls on behalf of logged-in users.
+//
+// Trusted origins are derived from Replit environment variables that are
+// unique to this specific repl — another project cannot share these hostnames.
+//   REPLIT_DEV_DOMAIN  — main dev hostname (admin dashboard, web preview)
+//   REPLIT_EXPO_DEV_DOMAIN — Expo dev-client hostname (mobile web bundle)
+//   CORS_ALLOWED_ORIGINS — comma-separated extra origins for production
+function buildTrustedOrigins(): Set<string> {
+  const origins = new Set<string>();
+
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    origins.add(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+  }
+  if (process.env.REPLIT_EXPO_DEV_DOMAIN) {
+    origins.add(`https://${process.env.REPLIT_EXPO_DEV_DOMAIN}`);
+  }
+
+  // Extra origins for production custom domains, e.g.:
+  //   CORS_ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
+  for (const o of (process.env.CORS_ALLOWED_ORIGINS ?? "").split(",")) {
+    const trimmed = o.trim();
+    if (trimmed) origins.add(trimmed);
+  }
+
+  return origins;
+}
+
+const TRUSTED_ORIGINS = buildTrustedOrigins();
+
+app.use(
+  cors({
+    credentials: true,
+    origin(origin, callback) {
+      // Allow server-to-server / same-origin requests (no Origin header)
+      if (!origin) return callback(null, true);
+      if (TRUSTED_ORIGINS.has(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin '${origin}' not allowed`));
+    },
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

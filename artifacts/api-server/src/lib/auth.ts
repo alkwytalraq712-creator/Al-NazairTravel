@@ -6,7 +6,12 @@ import { usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import type { User } from "@workspace/db";
 
-const JWT_SECRET = process.env.SESSION_SECRET ?? "changeme";
+// Fail loudly at module load time if the secret is absent — a silent fallback
+// to a known string like "changeme" would let anyone forge valid JWT tokens.
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is required for JWT signing.");
+}
+const JWT_SECRET: string = process.env.SESSION_SECRET;
 
 export function generateToken(userId: number): string {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "30d" });
