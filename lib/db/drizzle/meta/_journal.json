@@ -22,6 +22,13 @@
       "when": 1783900001000,
       "tag": "0002_visas_numeric_to_double",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783900002000,
+      "tag": "0003_payments_invoices_numeric_to_double",
+      "breakpoints": true
     }
   ]
 }

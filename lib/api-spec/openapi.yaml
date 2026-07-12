@@ -2187,7 +2187,7 @@ components:
         visaApplicationId: { type: ["integer", "null"] }
         customerName: { type: string }
         customerPhone: { type: string }
-        amount: { type: string }
+        amount: { type: number }
         currency: { type: string }
         method:
           $ref: "#/components/schemas/PaymentMethod"
@@ -2208,7 +2208,7 @@ components:
         visaApplicationId: { type: ["integer", "null"] }
         customerName: { type: string, minLength: 1 }
         customerPhone: { type: string, minLength: 3 }
-        amount: { type: string }
+        amount: { type: number }
         currency: { type: string }
         method:
           $ref: "#/components/schemas/PaymentMethod"
@@ -2227,7 +2227,7 @@ components:
         visaApplicationId: { type: ["integer", "null"] }
         customerName: { type: string, minLength: 1 }
         customerPhone: { type: string, minLength: 3 }
-        amount: { type: string }
+        amount: { type: number }
         currency: { type: string }
         method:
           $ref: "#/components/schemas/PaymentMethod"
@@ -2275,9 +2275,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvoiceItem"
-        subtotal: { type: string }
-        tax: { type: string }
-        total: { type: string }
+        subtotal: { type: number }
+        tax: { type: number }
+        total: { type: number }
         currency: { type: string }
         status:
           $ref: "#/components/schemas/InvoiceStatus"
@@ -2298,9 +2298,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvoiceItem"
-        subtotal: { type: string }
-        tax: { type: string }
-        total: { type: string }
+        subtotal: { type: number }
+        tax: { type: number }
+        total: { type: number }
         currency: { type: string }
         status:
           $ref: "#/components/schemas/InvoiceStatus"
@@ -2318,9 +2318,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvoiceItem"
-        subtotal: { type: string }
-        tax: { type: string }
-        total: { type: string }
+        subtotal: { type: number }
+        tax: { type: number }
+        total: { type: number }
         currency: { type: string }
         status:
           $ref: "#/components/schemas/InvoiceStatus"

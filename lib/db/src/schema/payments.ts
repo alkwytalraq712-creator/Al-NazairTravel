@@ -1,6 +1,6 @@
 import {
+  doublePrecision,
   integer,
-  numeric,
   pgTable,
   serial,
   text,
@@ -27,7 +27,7 @@ export const paymentsTable = pgTable("payments", {
   ),
   customerName: text("customer_name").notNull(),
   customerPhone: text("customer_phone").notNull(),
-  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  amount: doublePrecision("amount").notNull(),
   currency: text("currency").notNull().default("IQD"),
   method: text("method").notNull().default("cash"), // cash | bank_transfer | card | other
   status: text("status").notNull().default("pending"), // pending | paid | refunded | failed
