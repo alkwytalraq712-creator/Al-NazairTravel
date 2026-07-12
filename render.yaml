@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: qema-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # Render free tier — upgrade to "standard" for always-on
+    plan: free
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      # ── Database ────────────────────────────────────────────────────────────
+      # Set DATABASE_URL in the Render dashboard → Environment
+      - key: DATABASE_URL
+        sync: false
+      # ── Auth ────────────────────────────────────────────────────────────────
+      - key: SESSION_SECRET
+        generateValue: true
+      # ── AI (OpenAI via Replit integration or direct key) ────────────────────
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AI_INTEGRATIONS_OPENAI_BASE_URL
+        sync: false
+      - key: AI_INTEGRATIONS_OPENAI_API_KEY
+        sync: false
+      # ── Object storage ──────────────────────────────────────────────────────
+      - key: DEFAULT_OBJECT_STORAGE_BUCKET_ID
+        sync: false
+      - key: PRIVATE_OBJECT_DIR
+        sync: false
+      - key: PUBLIC_OBJECT_SEARCH_PATHS
+        sync: false
+      # ── CORS: add your Render domain once deployed ──────────────────────────
+      # e.g. CORS_ALLOWED_ORIGINS=https://qema-api.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      # ── Duffel (flights) ────────────────────────────────────────────────────
+      - key: DUFFEL_API_KEY
+        sync: false

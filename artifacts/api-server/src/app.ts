@@ -121,6 +121,21 @@ app.use(loadCurrentUser);
 
 app.use("/api", router);
 
+// ─── Serve admin dashboard static files (production / Render) ────────────────
+// In production the Dockerfile copies admin-dashboard/dist/public → dist/public
+// so we can serve the SPA from the same origin as the API.
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
+const publicDir = join(__dirname, "public");
+if (existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+  // SPA fallback — any route that didn't match /api/* serves index.html
+  app.get("*", (_req, res) => {
+    res.sendFile(join(publicDir, "index.html"));
+  });
+}
+
 // Start background job to auto-expire held bookings
 startHoldExpiryJob();
 
