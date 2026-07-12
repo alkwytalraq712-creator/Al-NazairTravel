@@ -139,7 +139,9 @@ export default function FlightReviewScreen() {
       });
       reset();
       setShowHoldModal(false);
-      router.replace(`/e-ticket/${result.id}` as any);
+      // fromBooking=1 hides the back button so the user can't return to
+      // the review screen and accidentally place a duplicate hold.
+      router.replace(`/e-ticket/${result.id}?fromBooking=1` as any);
     } catch (e: any) {
       const rawMsg = e?.data?.error ?? e?.message ?? 'حدث خطأ غير متوقع';
       Alert.alert('تعذر إنشاء الحجز المؤقت', rawMsg, [{ text: 'حسناً' }]);

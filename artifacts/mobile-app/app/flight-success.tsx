@@ -170,7 +170,7 @@ export default function FlightSuccessScreen() {
         {params.bookingId && (
           <TouchableOpacity
             style={styles.ctaBtn}
-            onPress={() => router.replace(`/e-ticket/${params.bookingId}` as any)}
+            onPress={() => router.replace(`/e-ticket/${params.bookingId}?fromBooking=1` as any)}
             activeOpacity={0.88}
           >
             <Ionicons name="document-text-outline" size={20} color={DARK} />

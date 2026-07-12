@@ -740,7 +740,10 @@ body{
 export default function ETicketScreen() {
   const colors      = useColors();
   const insets      = useSafeAreaInsets();
-  const { id }      = useLocalSearchParams<{ id: string }>();
+  const { id, fromBooking } = useLocalSearchParams<{ id: string; fromBooking?: string }>();
+  // When the user just completed a booking/hold-payment flow, hide the back
+  // button so they cannot return to the review screen and create a duplicate.
+  const hideBack = fromBooking === '1';
   const paddingTop  = Platform.OS === 'web' ? 67 : insets.top;
   const [exporting, setExporting]   = useState(false);
   const [completing, setCompleting] = useState(false);
@@ -917,9 +920,14 @@ export default function ETicketScreen() {
 
       {/* ── Header ── */}
       <View style={[styles.header, { paddingTop: paddingTop + 10, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
-          <Ionicons name="chevron-forward" size={22} color={colors.foreground} />
-        </TouchableOpacity>
+        {hideBack ? (
+          // Spacer keeps the title centred when back button is hidden
+          <View style={styles.headerBtn} />
+        ) : (
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
+            <Ionicons name="chevron-forward" size={22} color={colors.foreground} />
+          </TouchableOpacity>
+        )}
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>التذكرة الإلكترونية</Text>
           <View style={[styles.headerBadge, { backgroundColor: ticketColor + '18', borderColor: ticketColor + '44' }]}>
