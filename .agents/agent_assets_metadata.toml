@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "jUgveO04iGIyPAOD7IzHZ"
+uri = "file://exports/qema-source.zip"
+type = "unspecified"
+title = "كود مشروع قمة النظائر (للتصدير)"
