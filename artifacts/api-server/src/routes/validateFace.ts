@@ -23,11 +23,11 @@ const upload = multer({
 });
 
 function getOpenAIConfig(): { baseURL?: string; apiKey: string } | null {
-  if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL && process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
-    return {
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-    };
+  const integrationBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  const integrationKey  = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  // Only use integration if BASE_URL is actually a valid URL (not accidentally set to a key).
+  if (integrationBase && integrationKey && integrationBase.startsWith('http')) {
+    return { baseURL: integrationBase, apiKey: integrationKey };
   }
   if (process.env.OPENAI_API_KEY) {
     return { apiKey: process.env.OPENAI_API_KEY };
