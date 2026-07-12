@@ -33,29 +33,6 @@ const NAVY2  = '#0C1628';
 const NAVY3  = '#121F38';
 
 // ── Stat bubble ───────────────────────────────────────────────────────────────
-function StatBubble({
-  value, label, icon, grad, onPress, delay,
-}: {
-  value: number; label: string; icon: string;
-  grad: readonly [string, string]; onPress?: () => void; delay: number;
-}) {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.spring(anim, { toValue: 1, delay, useNativeDriver: true, speed: 14, bounciness: 5 }).start();
-  }, []);
-  return (
-    <Animated.View style={{ opacity: anim, transform: [{ scale: anim }] }}>
-      <TouchableOpacity onPress={onPress} activeOpacity={onPress ? 0.75 : 1} style={styles.statBubble}>
-        <LinearGradient colors={grad} style={styles.statBubbleGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <Ionicons name={icon as any} size={20} color="#fff" />
-        </LinearGradient>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
 // ── Menu row ─────────────────────────────────────────────────────────────────
 function MenuRow({
   icon, label, route, grad, badge, badgeText, disabled, last, sublabel,
@@ -178,14 +155,10 @@ export default function AccountScreen() {
   const [loggingOut, setLoggingOut] = useState(false);
 
   const heroFade  = useRef(new Animated.Value(0)).current;
-  const cardSlide = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     if (!isLoading) {
-      Animated.parallel([
-        Animated.timing(heroFade,  { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.spring(cardSlide, { toValue: 0, speed: 12, bounciness: 4, useNativeDriver: true }),
-      ]).start();
+      Animated.timing(heroFade, { toValue: 1, duration: 700, useNativeDriver: true }).start();
     }
   }, [isLoading]);
 
@@ -198,9 +171,7 @@ export default function AccountScreen() {
   const visas    = Array.isArray(visasData)    ? visasData    : [];
   const packages = Array.isArray(packagesData) ? packagesData : [];
 
-  const totalOrders      = flights.length + visas.length + packages.length;
-  const completedFlights = flights.filter((f: any) => ['ticketed', 'completed'].includes(f.status)).length;
-  const upcomingFlights  = flights.filter((f: any) => ['confirmed', 'pending', 'held'].includes(f.status)).length;
+  const totalOrders = flights.length + visas.length + packages.length;
   const pct        = completion?.percentage ?? 0;
   const isComplete = completion?.isComplete ?? false;
 
@@ -332,47 +303,6 @@ export default function AccountScreen() {
 
           </Animated.View>
         </LinearGradient>
-
-        {/* ══════════ FLOATING STATS CARD ══════════ */}
-        <Animated.View style={[styles.statsCard, { backgroundColor: colors.card, borderColor: colors.border, transform: [{ translateY: cardSlide }], opacity: heroFade }]}>
-          <View style={styles.statsRow}>
-            <StatBubble
-              value={totalOrders}
-              label="إجمالي الطلبات"
-              icon="document-text"
-              grad={['#6366F1', '#8B5CF6']}
-              delay={0}
-              onPress={() => router.push('/bookings' as any)}
-            />
-            <View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
-            <StatBubble
-              value={completedFlights}
-              label="رحلات مكتملة"
-              icon="checkmark-circle"
-              grad={['#10B981', '#059669']}
-              delay={80}
-              onPress={() => router.push('/bookings' as any)}
-            />
-            <View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
-            <StatBubble
-              value={upcomingFlights}
-              label="رحلات قادمة"
-              icon="airplane"
-              grad={[GOLD, GOLD2]}
-              delay={160}
-              onPress={() => router.push('/bookings' as any)}
-            />
-            <View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
-            <StatBubble
-              value={visas.length}
-              label="طلبات التأشيرة"
-              icon="earth"
-              grad={['#3B82F6', '#2563EB']}
-              delay={240}
-              onPress={() => router.push('/bookings' as any)}
-            />
-          </View>
-        </Animated.View>
 
         {/* ══════════ MENU SECTIONS ══════════ */}
         <View style={{ marginTop: 8 }}>
@@ -609,39 +539,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   completionDoneText: { fontFamily: 'Tajawal_500Medium', fontSize: 13, color: '#4ADE80' },
-
-  // ── Floating stats card ──
-  statsCard: {
-    marginHorizontal: 16,
-    marginTop: -20,
-    borderRadius: 22,
-    borderWidth: 1,
-    paddingVertical: 18,
-    paddingHorizontal: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 10,
-    zIndex: 10,
-  },
-  statsRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  statsDivider: { width: 1, height: 44, opacity: 0.5 },
-  statBubble: { alignItems: 'center', gap: 6, flex: 1 },
-  statBubbleGrad: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 2,
-  },
-  statValue: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 20, color: '#FFFFFF' },
-  statLabel: { fontFamily: 'Tajawal_400Regular', fontSize: 10, color: 'rgba(255,255,255,0.55)', textAlign: 'center' },
 
   // ── Menu sections ──
   sectionOuter: { paddingHorizontal: 16, marginTop: 18 },
