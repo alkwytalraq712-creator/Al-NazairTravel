@@ -102,7 +102,8 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
       // Foreground notification handler — show notification as alert
       Notifications.setNotificationHandler({
         handleNotification: async () => ({
-          shouldShowAlert: true,
+          shouldShowBanner: true,
+          shouldShowList: true,
           shouldPlaySound: true,
           shouldSetBadge: true,
         }),
