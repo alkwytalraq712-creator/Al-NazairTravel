@@ -89,7 +89,7 @@ export default function PackagesScreen() {
               ]}
               activeOpacity={0.8}
             >
-              <Text style={[styles.chipLabel, { color: active ? '#fff' : colors.foreground }]}>
+              <Text style={[styles.chipLabel, { color: active ? colors.primaryForeground : colors.foreground }]}>
                 {r.label}
               </Text>
             </TouchableOpacity>
@@ -134,7 +134,7 @@ export default function PackagesScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: { paddingHorizontal: 20, paddingBottom: 16, alignItems: 'flex-end' },
-  headerTitle: { fontSize: 22, fontFamily: 'Tajawal_800ExtraBold', color: '#fff' },
+  headerTitle: { fontSize: 22, fontFamily: 'Tajawal_800ExtraBold' },
   searchBar: {
     flexDirection: 'row-reverse',
     alignItems: 'center',

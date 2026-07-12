@@ -19,7 +19,6 @@ import type { VisaType } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { VisaCard } from '@/components/VisaCard';
 
-const GOLD = '#C9A060';
 
 type Filter = VisaType | 'all';
 
@@ -116,16 +115,16 @@ export default function VisasScreen() {
                 style={[
                   s.chip,
                   active
-                    ? { backgroundColor: GOLD, borderColor: GOLD }
+                    ? { backgroundColor: colors.primary, borderColor: colors.primary }
                     : { backgroundColor: colors.muted, borderColor: 'transparent' },
                 ]}
               >
                 <Ionicons
                   name={`${f.icon}-outline` as any}
                   size={14}
-                  color={active ? '#fff' : colors.mutedForeground}
+                  color={active ? colors.primaryForeground : colors.mutedForeground}
                 />
-                <Text style={[s.chipLabel, { color: active ? '#fff' : colors.foreground }]}>
+                <Text style={[s.chipLabel, { color: active ? colors.primaryForeground : colors.foreground }]}>
                   {f.label}
                 </Text>
               </TouchableOpacity>
@@ -148,7 +147,7 @@ export default function VisasScreen() {
       {/* ── Content ── */}
       {isLoading ? (
         <View style={s.center}>
-          <ActivityIndicator size="large" color={GOLD} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[s.emptyText, { color: colors.mutedForeground }]}>جاري التحميل...</Text>
         </View>
       ) : filtered.length === 0 ? (
@@ -168,10 +167,10 @@ export default function VisasScreen() {
           </Text>
           {search ? (
             <TouchableOpacity
-              style={[s.clearAllBtn, { backgroundColor: GOLD + '18', borderColor: GOLD + '40' }]}
+              style={[s.clearAllBtn, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40' }]}
               onPress={() => setSearch('')}
             >
-              <Text style={[s.clearAllText, { color: GOLD }]}>مسح البحث</Text>
+              <Text style={[s.clearAllText, { color: colors.primary }]}>مسح البحث</Text>
             </TouchableOpacity>
           ) : null}
         </View>

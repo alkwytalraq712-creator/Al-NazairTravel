@@ -22,7 +22,7 @@ import {
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/context/AuthContext';
 
-const GOLD = '#C9A060';
+const GOLD = '#C9A060'; // semantic flight color — intentional, not theme-dependent
 
 // ─── Status maps ──────────────────────────────────────────────────────────────
 const VISA_STATUS: Record<string, { label: string; color: string }> = {

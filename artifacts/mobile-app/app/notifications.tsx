@@ -24,15 +24,13 @@ import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 
-const GOLD = '#C9A060';
-
 // ─── Notification type config ────────────────────────────────────────────────
 type NotifType = 'all' | 'visa_application' | 'package_booking' | 'flight_booking' | 'general' | 'promotion' | 'payment' | 'system';
 
 const TYPE_CONFIG: Record<string, { icon: string; color: string; label: string }> = {
   visa_application:  { icon: 'earth',              color: '#3B82F6', label: 'التأشيرات'   },
   package_booking:   { icon: 'briefcase',           color: '#8B5CF6', label: 'الباقات'     },
-  flight_booking:    { icon: 'airplane',            color: GOLD,      label: 'الرحلات'     },
+  flight_booking:    { icon: 'airplane',            color: '#C9A060', label: 'الرحلات'     },
   general:           { icon: 'notifications',       color: '#6366F1', label: 'عام'          },
   promotion:         { icon: 'pricetag',            color: '#F59E0B', label: 'العروض'      },
   payment:           { icon: 'card',                color: '#10B981', label: 'المدفوعات'   },
