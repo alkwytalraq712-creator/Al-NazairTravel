@@ -172,3 +172,60 @@ export async function requireAdmin(
     res.status(500).json({ error: "Internal server error" });
   }
 }
+
+/**
+ * Middleware factory — enforces a specific granular permission key.
+ * Admin (role = 'admin', permissions = null) always passes.
+ * Staff must have the exact key, a sub-key, OR the legacy module root key.
+ *
+ * Usage: router.delete('/...', requireAdmin, requirePermission('visa_applications.delete'), handler)
+ */
+export function requirePermission(permKey: string) {
+  return async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    if (!req.session.userId) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+    try {
+      const [user] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, req.session.userId));
+
+      if (!user) {
+        res.status(401).json({ error: "User not found" });
+        return;
+      }
+
+      // Admin = full access
+      if (user.role === "admin") {
+        next();
+        return;
+      }
+
+      // Staff — check granular permissions
+      const perms = (user as any).permissions as string[] | null;
+      if (!perms) {
+        res.status(403).json({ error: `ليس لديك صلاحية للقيام بهذا الإجراء` });
+        return;
+      }
+
+      // Exact match
+      if (perms.includes(permKey)) { next(); return; }
+
+      // Legacy: module root key grants all actions in that module
+      const root = permKey.includes(".") ? permKey.split(".")[0] : permKey;
+      if (perms.includes(root)) { next(); return; }
+
+      res.status(403).json({
+        error: `ليس لديك صلاحية للقيام بهذا الإجراء (${permKey})`,
+      });
+    } catch {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+}

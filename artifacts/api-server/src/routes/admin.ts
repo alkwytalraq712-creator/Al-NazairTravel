@@ -36,8 +36,7 @@ import {
   UpdateInvoiceResponse,
   DeleteInvoiceParams,
 } from "@workspace/api-zod";
-import { requireAdmin, hashPassword } from "../lib/auth";
-import { serializeUser } from "../lib/auth";
+import { requireAdmin, requirePermission, hashPassword, serializeUser } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -192,6 +191,13 @@ router.post("/admin/employees", requireAdmin, async (req, res): Promise<void> =>
   }
 
   const passwordHash = await hashPassword(parsed.data.password);
+
+  // Accept optional permissions array from the request body (new granular system)
+  const initialPermissions: string[] =
+    Array.isArray((req.body as any).permissions)
+      ? (req.body as any).permissions
+      : [];
+
   const [employee] = await db
     .insert(usersTable)
     .values({
@@ -200,8 +206,7 @@ router.post("/admin/employees", requireAdmin, async (req, res): Promise<void> =>
       email: parsed.data.email,
       passwordHash,
       role: "staff",
-      // New employees start with empty permissions (no access until admin assigns tasks)
-      permissions: [],
+      permissions: initialPermissions,
     } as any)
     .returning();
 
@@ -307,6 +312,7 @@ router.patch(
 router.delete(
   "/admin/employees/:id",
   requireAdmin,
+  requirePermission("employees.delete"),
   async (req, res): Promise<void> => {
     const params = DeleteEmployeeParams.safeParse(req.params);
     if (!params.success) {
@@ -409,6 +415,7 @@ router.patch(
 router.delete(
   "/admin/payments/:id",
   requireAdmin,
+  requirePermission("payments.view"),
   async (req, res): Promise<void> => {
     const params = DeletePaymentParams.safeParse(req.params);
     if (!params.success) {
@@ -500,6 +507,7 @@ router.patch(
 router.delete(
   "/admin/invoices/:id",
   requireAdmin,
+  requirePermission("payments.view"),
   async (req, res): Promise<void> => {
     const params = DeleteInvoiceParams.safeParse(req.params);
     if (!params.success) {
