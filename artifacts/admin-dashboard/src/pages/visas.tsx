@@ -263,13 +263,135 @@ const VALID_VISA_OPTIONS = [
 const EMPTY_RULE = {
   name: '',
   isDefault: false,
-  nationalities: '',     // one per line textarea
+  nationalities: [] as string[],   // array of Arabic country names
   allowDirect: false,
   requiresGulfResidence: false,
   requiresValidVisaCountries: [] as string[],
   requiresInvitationLetter: false,
   sortOrder: 0,
 };
+
+// ─── Nationality Multi-Select ─────────────────────────────────────────────────
+function NationalityMultiSelect({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (val: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filtered = search.trim()
+    ? COUNTRIES.filter(
+        c =>
+          c.nameAr.includes(search) ||
+          c.nameEn.toLowerCase().includes(search.toLowerCase()),
+      )
+    : COUNTRIES;
+
+  const toggle = (nameAr: string) => {
+    onChange(
+      selected.includes(nameAr)
+        ? selected.filter(n => n !== nameAr)
+        : [...selected, nameAr],
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      {/* Selected chips */}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map(n => {
+            const c = COUNTRIES.find(x => x.nameAr === n);
+            return (
+              <span
+                key={n}
+                className="inline-flex items-center gap-1 text-xs bg-blue-50 dark:bg-blue-950/50 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-800 rounded-full px-2.5 py-1"
+              >
+                {c && (
+                  <img
+                    src={getFlagUrl(c.code)}
+                    alt=""
+                    className="w-4 h-3 rounded-sm object-cover"
+                  />
+                )}
+                {n}
+                <button
+                  onClick={() => toggle(n)}
+                  className="hover:text-blue-600 ml-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Toggle button */}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full justify-between text-sm"
+        onClick={() => setOpen(true)}
+      >
+        <span className="text-muted-foreground">
+          {selected.length === 0
+            ? 'اختر الجنسيات المشمولة بهذه القاعدة...'
+            : `${selected.length} جنسية محددة`}
+        </span>
+        <Search className="w-3.5 h-3.5 text-muted-foreground" />
+      </Button>
+
+      {/* Dialog picker */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm max-h-[80dvh] flex flex-col p-0">
+          <div className="p-4 border-b space-y-1">
+            <p className="text-sm font-semibold">اختر الجنسيات</p>
+            <Input
+              autoFocus
+              placeholder="بحث عن دولة..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="text-right"
+            />
+          </div>
+          <div className="overflow-y-auto flex-1">
+            {filtered.map(c => (
+              <div
+                key={c.code}
+                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-muted/60 transition-colors ${selected.includes(c.nameAr) ? 'bg-primary/8' : ''}`}
+                onClick={() => toggle(c.nameAr)}
+              >
+                <Checkbox
+                  checked={selected.includes(c.nameAr)}
+                  onCheckedChange={() => toggle(c.nameAr)}
+                />
+                <img
+                  src={getFlagUrl(c.code)}
+                  alt={c.nameEn}
+                  className="w-6 h-4 rounded-sm object-cover flex-shrink-0"
+                />
+                <span className="flex-1 text-sm">{c.nameAr}</span>
+                <span className="text-xs text-muted-foreground">{c.nameEn}</span>
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <p className="text-center text-muted-foreground py-8 text-sm">لا توجد نتائج</p>
+            )}
+          </div>
+          <div className="p-3 border-t flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">{selected.length} محددة</span>
+            <Button size="sm" onClick={() => setOpen(false)}>تم</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 function RuleDialog({
   open, onClose, rule, visaId,
@@ -283,7 +405,7 @@ function RuleDialog({
     rule ? {
       name: rule.name,
       isDefault: rule.isDefault,
-      nationalities: rule.nationalities.join('\n'),
+      nationalities: [...rule.nationalities],
       allowDirect: rule.allowDirect,
       requiresGulfResidence: rule.requiresGulfResidence,
       requiresValidVisaCountries: [...rule.requiresValidVisaCountries],
@@ -304,7 +426,7 @@ function RuleDialog({
   const handleSave = () => {
     const data = {
       ...form,
-      nationalities: form.isDefault ? [] : form.nationalities.split('\n').map(s => s.trim()).filter(Boolean),
+      nationalities: form.isDefault ? [] : form.nationalities,
     };
     const opts = {
       onSuccess: () => {
@@ -348,14 +470,14 @@ function RuleDialog({
           {/* Nationalities */}
           {!form.isDefault && (
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">الجنسيات (جنسية واحدة في كل سطر)</label>
-              <Textarea
-                rows={4} className="resize-none font-mono text-sm"
-                value={form.nationalities}
-                onChange={e => set('nationalities')(e.target.value)}
-                placeholder={'Yemeni\nIndian\nPakistani\nBangladeshi'}
+              <label className="text-sm font-medium">الجنسيات المشمولة بهذه القاعدة</label>
+              <NationalityMultiSelect
+                selected={form.nationalities}
+                onChange={set('nationalities')}
               />
-              <p className="text-xs text-muted-foreground">استخدم الاسم الإنجليزي للجنسية كما يدخله المستخدم في ملفه الشخصي</p>
+              <p className="text-xs text-muted-foreground">
+                حدد الجنسيات التي تنطبق عليها هذه القاعدة — تُطابق مع جنسية المستخدم المسجلة في ملفه الشخصي.
+              </p>
             </div>
           )}
 

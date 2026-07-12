@@ -47,6 +47,16 @@ export const visaApplicationsTable = pgTable("visa_applications", {
     .notNull()
     .default([])
     .$type<Array<{ status: string; timestamp: string; note?: string }>>(),
+  /** Documents the admin explicitly requested — set when status → awaiting_documents */
+  requestedDocuments: jsonb("requested_documents")
+    .notNull()
+    .default([])
+    .$type<Array<{ name: string }>>(),
+  /** Files the client uploaded in response to a document request */
+  additionalDocumentUrls: jsonb("additional_document_urls")
+    .notNull()
+    .default([])
+    .$type<Array<{ name: string; url: string; uploadedAt: string }>>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

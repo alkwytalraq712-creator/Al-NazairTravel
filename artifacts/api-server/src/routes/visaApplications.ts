@@ -225,9 +225,22 @@ router.patch(
       { status: parsed.data.status, timestamp: new Date().toISOString() },
     ];
 
+    // requestedDocuments is an extension beyond the zod schema — extract directly
+    const incomingDocs = req.body?.requestedDocuments;
+    const requestedDocuments: Array<{ name: string }> | undefined =
+      parsed.data.status === 'awaiting_documents' &&
+      Array.isArray(incomingDocs) &&
+      incomingDocs.length > 0
+        ? incomingDocs
+        : undefined;
+
     const [application] = await db
       .update(visaApplicationsTable)
-      .set({ status: parsed.data.status, statusHistory: updatedHistory })
+      .set({
+        status: parsed.data.status,
+        statusHistory: updatedHistory,
+        ...(requestedDocuments ? { requestedDocuments } : {}),
+      })
       .where(eq(visaApplicationsTable.id, params.data.id))
       .returning();
 
@@ -238,6 +251,63 @@ router.patch(
 
     const [visa] = await db.select().from(visasTable).where(eq(visasTable.id, application.visaId));
     res.json(UpdateVisaApplicationStatusResponse.parse(withVisa(application, visa)));
+  },
+);
+
+// PATCH /visa-applications/:id/additional-documents
+// Client uploads documents requested by admin
+router.patch(
+  "/visa-applications/:id/additional-documents",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const id = Number(req.params.id);
+    if (!id || isNaN(id)) {
+      res.status(400).json({ error: "Invalid application id" });
+      return;
+    }
+
+    const { documents } = req.body ?? {};
+    if (!Array.isArray(documents)) {
+      res.status(400).json({ error: "documents must be an array" });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(visaApplicationsTable)
+      .where(eq(visaApplicationsTable.id, id));
+
+    if (!existing) {
+      res.status(404).json({ error: "Visa application not found" });
+      return;
+    }
+
+    if (existing.userId !== req.session.userId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    // Merge with existing uploads (avoid duplicates by name)
+    const existing_urls: Array<{ name: string; url: string; uploadedAt: string }> =
+      (existing.additionalDocumentUrls as any) ?? [];
+
+    const merged = [...existing_urls];
+    for (const doc of documents) {
+      if (!doc.name || !doc.url) continue;
+      const idx = merged.findIndex(u => u.name === doc.name);
+      const entry = { name: doc.name, url: doc.url, uploadedAt: new Date().toISOString() };
+      if (idx >= 0) merged[idx] = entry;
+      else merged.push(entry);
+    }
+
+    const [updated] = await db
+      .update(visaApplicationsTable)
+      .set({ additionalDocumentUrls: merged })
+      .where(eq(visaApplicationsTable.id, id))
+      .returning();
+
+    const [visa] = await db.select().from(visasTable).where(eq(visasTable.id, updated.visaId));
+    res.json(withVisa(updated, visa));
   },
 );
 
