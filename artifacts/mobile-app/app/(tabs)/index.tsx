@@ -43,12 +43,10 @@ export default function HomeScreen() {
       {/* Header + Hero */}
       <View style={[styles.heroWrap, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
         <View style={styles.header}>
-          <View>
-            <TouchableOpacity onPress={() => router.push('/notifications')}>
-              <Ionicons name="notifications-outline" size={24} color="#fff" />
-            </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/notifications')} style={{ position: 'relative' }}>
+            <Ionicons name="notifications-outline" size={24} color="#fff" />
             <View style={styles.notifDot} />
-          </View>
+          </TouchableOpacity>
           <Image
             source={require('@/assets/images/logo_transparent.png')}
             style={styles.logo}
