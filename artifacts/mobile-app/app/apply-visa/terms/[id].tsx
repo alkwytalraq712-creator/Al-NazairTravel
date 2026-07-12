@@ -607,7 +607,7 @@ export default function VisaTermsScreen() {
                       <Ionicons name={icon} size={13} color="rgba(255,255,255,0.4)" />
                       <Text style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'right' }}>{label}</Text>
                     </View>
-                    <Text style={{ color: highlight ? '#C9A060' : '#fff', fontFamily: highlight ? 'Tajawal_800ExtraBold' : 'Tajawal_600SemiBold', fontSize: 13, textAlign: 'left' }}>{value}</Text>
+                    <Text style={{ color: highlight ? '#C9A060' : '#fff', fontFamily: highlight ? 'Tajawal_800ExtraBold' : 'Tajawal_700Bold', fontSize: 13, textAlign: 'left' }}>{value}</Text>
                   </View>
                 ))}
               </View>
@@ -631,7 +631,7 @@ export default function VisaTermsScreen() {
                       <Ionicons name={icon} size={13} color="rgba(255,255,255,0.4)" />
                       <Text style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'right' }}>{label}</Text>
                     </View>
-                    <Text style={{ color: '#fff', fontFamily: 'Tajawal_600SemiBold', fontSize: 13, textAlign: 'left', maxWidth: 180 }} numberOfLines={1}>{value}</Text>
+                    <Text style={{ color: '#fff', fontFamily: 'Tajawal_700Bold', fontSize: 13, textAlign: 'left', maxWidth: 180 }} numberOfLines={1}>{value}</Text>
                   </View>
                 ))}
               </View>
@@ -668,7 +668,7 @@ export default function VisaTermsScreen() {
                 activeOpacity={0.8}
                 style={{ flex: 1, borderRadius: 14, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.border }}
               >
-                <Text style={{ color: colors.foreground, fontFamily: 'Tajawal_600SemiBold', fontSize: 15 }}>
+                <Text style={{ color: colors.foreground, fontFamily: 'Tajawal_700Bold', fontSize: 15 }}>
                   إلغاء
                 </Text>
               </TouchableOpacity>

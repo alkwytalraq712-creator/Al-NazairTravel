@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -43,10 +44,14 @@ export default function HomeScreen() {
       {/* Header + Hero */}
       <View style={[styles.heroWrap, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.push('/notifications')} style={{ position: 'relative' }}>
+          <Pressable
+            onPress={() => router.push('/notifications')}
+            hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+            style={{ position: 'relative' }}
+          >
             <Ionicons name="notifications-outline" size={24} color="#fff" />
             <View style={styles.notifDot} />
-          </TouchableOpacity>
+          </Pressable>
           <Image
             source={require('@/assets/images/logo_transparent.png')}
             style={styles.logo}
