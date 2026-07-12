@@ -1,6 +1,6 @@
 import {
   boolean,
-  numeric,
+  doublePrecision,
   pgTable,
   serial,
   text,
@@ -18,7 +18,7 @@ export const visasTable = pgTable("visas", {
   visaType: text("visa_type").notNull(),
   processingTime: text("processing_time").notNull(),
   stayDuration: text("stay_duration").notNull(),
-  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  price: doublePrecision("price").notNull(),
   currency: text("currency").notNull(),
   description: text("description").notNull(),
   requiredDocuments: text("required_documents").array().notNull(),

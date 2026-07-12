@@ -190,7 +190,7 @@ router.post("/visas", requireAdmin, async (req, res): Promise<void> => {
 
   const [visa] = await db
     .insert(visasTable)
-    .values({ ...parsed.data, price: String(parsed.data.price) })
+    .values({ ...parsed.data, price: parsed.data.price })
     .returning();
 
   res.status(201).json(CreateVisaResponse.parse(coerceVisa(visa)));
@@ -234,7 +234,7 @@ router.patch("/visas/:id", requireAdmin, async (req, res): Promise<void> => {
     .set({
       ...parsed.data,
       price:
-        parsed.data.price !== undefined ? String(parsed.data.price) : undefined,
+        parsed.data.price !== undefined ? parsed.data.price : undefined,
     })
     .where(eq(visasTable.id, params.data.id))
     .returning();

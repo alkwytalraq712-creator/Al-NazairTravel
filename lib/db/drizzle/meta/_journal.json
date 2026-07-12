@@ -8,6 +8,20 @@
       "when": 1783817291814,
       "tag": "0000_add_hold_bookings",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783900000000,
+      "tag": "0001_packages_numeric_to_double",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783900001000,
+      "tag": "0002_visas_numeric_to_double",
+      "breakpoints": true
     }
   ]
 }

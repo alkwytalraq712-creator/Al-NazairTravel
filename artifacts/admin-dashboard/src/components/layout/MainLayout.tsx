@@ -18,7 +18,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    if (!isLoading && (!user || (user.role !== 'admin' && user.role !== 'staff'))) {
+    const role = user?.role as string | undefined;
+    if (!isLoading && (!user || (role !== 'admin' && role !== 'staff'))) {
       setLocation('/login');
     }
   }, [user, isLoading, setLocation]);
@@ -31,7 +32,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user || (user.role !== 'admin' && user.role !== 'staff')) {
+  const role = user?.role as string | undefined;
+  if (!user || (role !== 'admin' && role !== 'staff')) {
     return null;
   }
 

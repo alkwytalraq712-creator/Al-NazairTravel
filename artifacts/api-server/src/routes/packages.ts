@@ -30,10 +30,10 @@ router.get("/packages", async (req, res): Promise<void> => {
     conditions.push(eq(packagesTable.country, query.data.country));
   }
   if (query.data.minPrice !== undefined) {
-    conditions.push(gte(packagesTable.priceFrom, String(query.data.minPrice)));
+    conditions.push(gte(packagesTable.priceFrom, query.data.minPrice));
   }
   if (query.data.maxPrice !== undefined) {
-    conditions.push(lte(packagesTable.priceFrom, String(query.data.maxPrice)));
+    conditions.push(lte(packagesTable.priceFrom, query.data.maxPrice));
   }
 
   const rows = await db
@@ -56,9 +56,9 @@ router.post("/packages", requireAdmin, async (req, res): Promise<void> => {
     .insert(packagesTable)
     .values({
       ...parsed.data,
-      priceFrom: String(parsed.data.priceFrom),
+      priceFrom: parsed.data.priceFrom,
       rating:
-        parsed.data.rating !== undefined ? String(parsed.data.rating) : undefined,
+        parsed.data.rating !== undefined ? parsed.data.rating : undefined,
     })
     .returning();
 
@@ -104,10 +104,10 @@ router.patch("/packages/:id", requireAdmin, async (req, res): Promise<void> => {
       ...parsed.data,
       priceFrom:
         parsed.data.priceFrom !== undefined
-          ? String(parsed.data.priceFrom)
+          ? parsed.data.priceFrom
           : undefined,
       rating:
-        parsed.data.rating !== undefined ? String(parsed.data.rating) : undefined,
+        parsed.data.rating !== undefined ? parsed.data.rating : undefined,
     })
     .where(eq(packagesTable.id, params.data.id))
     .returning();
