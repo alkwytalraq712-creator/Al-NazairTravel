@@ -10,7 +10,7 @@ import {
   UpdateTestimonialResponse,
   DeleteTestimonialParams,
 } from "@workspace/api-zod";
-import { requireAdmin } from "../lib/auth";
+import { requireAdmin, requirePermission } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -26,6 +26,7 @@ router.get("/testimonials", async (_req, res): Promise<void> => {
 router.post(
   "/admin/testimonials",
   requireAdmin,
+  requirePermission("testimonials.create"),
   async (req, res): Promise<void> => {
     const parsed = CreateTestimonialBody.safeParse(req.body);
     if (!parsed.success) {
@@ -45,6 +46,7 @@ router.post(
 router.patch(
   "/admin/testimonials/:id",
   requireAdmin,
+  requirePermission("testimonials.edit"),
   async (req, res): Promise<void> => {
     const params = UpdateTestimonialParams.safeParse(req.params);
     if (!params.success) {
@@ -76,6 +78,7 @@ router.patch(
 router.delete(
   "/admin/testimonials/:id",
   requireAdmin,
+  requirePermission("testimonials.delete"),
   async (req, res): Promise<void> => {
     const params = DeleteTestimonialParams.safeParse(req.params);
     if (!params.success) {

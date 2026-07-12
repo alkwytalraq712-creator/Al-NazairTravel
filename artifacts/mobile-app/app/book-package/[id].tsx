@@ -315,26 +315,26 @@ export default function BookPackageScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.pkgName} numberOfLines={1}>{pkg.name}</Text>
-                {pkg.destination && <Text style={styles.pkgDest}>{pkg.destination}</Text>}
+                {(pkg as any).destination && <Text style={styles.pkgDest}>{(pkg as any).destination}</Text>}
               </View>
-              {pkg.price != null && (
+              {(pkg as any).price != null && (
                 <View style={styles.pkgPriceBadge}>
-                  <Text style={styles.pkgPrice}>${pkg.price}</Text>
+                  <Text style={styles.pkgPrice}>${(pkg as any).price}</Text>
                 </View>
               )}
             </View>
-            {(pkg.durationDays || pkg.maxGroupSize) && (
+            {((pkg as any).durationDays || (pkg as any).maxGroupSize) && (
               <View style={styles.pkgMeta}>
-                {pkg.durationDays ? (
+                {(pkg as any).durationDays ? (
                   <View style={styles.pkgMetaItem}>
                     <Ionicons name="time-outline" size={13} color={MUTED} />
-                    <Text style={styles.pkgMetaText}>{pkg.durationDays} أيام</Text>
+                    <Text style={styles.pkgMetaText}>{(pkg as any).durationDays} أيام</Text>
                   </View>
                 ) : null}
-                {pkg.maxGroupSize ? (
+                {(pkg as any).maxGroupSize ? (
                   <View style={styles.pkgMetaItem}>
                     <Ionicons name="people-outline" size={13} color={MUTED} />
-                    <Text style={styles.pkgMetaText}>حتى {pkg.maxGroupSize} مسافر</Text>
+                    <Text style={styles.pkgMetaText}>حتى {(pkg as any).maxGroupSize} مسافر</Text>
                   </View>
                 ) : null}
               </View>

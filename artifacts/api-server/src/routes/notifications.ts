@@ -9,7 +9,7 @@ import {
   SendNotificationBody,
   SendNotificationResponse,
 } from "@workspace/api-zod";
-import { requireAdmin, requireAuth } from "../lib/auth";
+import { requireAdmin, requireAuth, requirePermission } from "../lib/auth";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -204,6 +204,7 @@ router.delete(
 router.get(
   "/admin/notifications",
   requireAdmin,
+  requirePermission("notifications.view"),
   async (_req, res): Promise<void> => {
     const rows = await db
       .select()
@@ -218,6 +219,7 @@ router.get(
 router.get(
   "/admin/notifications/push-stats",
   requireAdmin,
+  requirePermission("notifications.view"),
   async (_req, res): Promise<void> => {
     const users = await db
       .select({ id: usersTable.id, token: (usersTable as any).expoPushToken })
@@ -232,6 +234,7 @@ router.get(
 router.post(
   "/admin/notifications",
   requireAdmin,
+  requirePermission("notifications.create"),
   async (req, res): Promise<void> => {
     const parsed = SendNotificationBody.safeParse(req.body);
     if (!parsed.success) {

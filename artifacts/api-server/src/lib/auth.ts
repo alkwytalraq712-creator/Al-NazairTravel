@@ -177,7 +177,7 @@ export async function requireAdmin(
       .select({ role: usersTable.role })
       .from(usersTable)
       .where(eq(usersTable.id, req.session.userId));
-    // Allow both admin (full access) and staff (permission-restricted, enforced at UI level)
+    // Allow both admin (full access) and staff (permission-restricted, enforced server-side via requirePermission)
     if (!user || (user.role !== "admin" && user.role !== "staff")) {
       res.status(403).json({ error: "Forbidden" });
       return;

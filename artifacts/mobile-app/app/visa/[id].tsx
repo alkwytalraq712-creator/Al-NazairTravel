@@ -151,7 +151,7 @@ export default function VisaDetailScreen() {
 
         {/* Stats Row */}
         <Animated.View style={animatedStyle(1)}>
-          <ScrollView horizontal inverted showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 20, marginTop: 20, paddingBottom: 10 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 20, marginTop: 20, paddingBottom: 10 }}>
             <StatPill icon="time" label="مدة الإنجاز" value={visa.processingTime} gradient={['#4facfe', '#00f2fe']} anim={staggers[1]} colorsHook={colors} />
             <StatPill icon="calendar" label="مدة الإقامة" value={visa.stayDuration} gradient={['#fa709a', '#fee140']} anim={staggers[2]} colorsHook={colors} />
             <StatPill icon="shield-checkmark" label="الصلاحية" value={visa.validity} gradient={['#43e97b', '#38f9d7']} anim={staggers[3]} colorsHook={colors} />

@@ -13,7 +13,7 @@ import {
   UpdatePackageBookingStatusBody,
   UpdatePackageBookingStatusResponse,
 } from "@workspace/api-zod";
-import { requireAdmin, requireAuth } from "../lib/auth";
+import { requireAdmin, requireAuth, requirePermission } from "../lib/auth";
 import { generateReferenceNumber } from "../lib/reference";
 import { coercePkg } from "../lib/coerce";
 
@@ -108,6 +108,7 @@ router.get(
 router.get(
   "/admin/package-bookings",
   requireAdmin,
+  requirePermission("package_bookings.view"),
   async (req, res): Promise<void> => {
     const query = ListAllPackageBookingsQueryParams.safeParse(req.query);
     if (!query.success) {
@@ -137,6 +138,7 @@ router.get(
 router.patch(
   "/admin/package-bookings/:id/status",
   requireAdmin,
+  requirePermission("package_bookings.edit"),
   async (req, res): Promise<void> => {
     const params = UpdatePackageBookingStatusParams.safeParse(req.params);
     if (!params.success) {

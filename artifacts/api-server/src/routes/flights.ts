@@ -16,7 +16,7 @@ import {
   UpdateFlightBookingStatusBody,
   UpdateFlightBookingStatusResponse,
 } from "@workspace/api-zod";
-import { requireAdmin, requireAuth } from "../lib/auth";
+import { requireAdmin, requireAuth, requirePermission } from "../lib/auth";
 import { generateReferenceNumber } from "../lib/reference";
 import {
   createFlightOrder,
@@ -473,6 +473,7 @@ router.post(
 router.get(
   "/admin/flight-bookings",
   requireAdmin,
+  requirePermission("flight_bookings.view"),
   async (req, res): Promise<void> => {
     const query = ListAllFlightBookingsQueryParams.safeParse(req.query);
     if (!query.success) {
@@ -497,6 +498,7 @@ router.get(
 router.patch(
   "/admin/flight-bookings/:id/status",
   requireAdmin,
+  requirePermission("flight_bookings.edit"),
   async (req, res): Promise<void> => {
     const params = UpdateFlightBookingStatusParams.safeParse(req.params);
     if (!params.success) {

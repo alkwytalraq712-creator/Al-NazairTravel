@@ -14,7 +14,7 @@ import {
   UpdateVisaResponse,
   DeleteVisaParams,
 } from "@workspace/api-zod";
-import { requireAdmin, requireAuth } from "../lib/auth";
+import { requireAdmin, requireAuth, requirePermission } from "../lib/auth";
 import { coerceVisa } from "../lib/coerce";
 
 // ─── Schengen countries ───────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ router.get("/visas", async (req, res): Promise<void> => {
   res.json(ListVisasResponse.parse(rows.map(coerceVisa)));
 });
 
-router.post("/visas", requireAdmin, async (req, res): Promise<void> => {
+router.post("/visas", requireAdmin, requirePermission("visas.create"), async (req, res): Promise<void> => {
   const parsed = CreateVisaBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -216,7 +216,7 @@ router.get("/visas/:id", async (req, res): Promise<void> => {
   res.json(GetVisaResponse.parse(coerceVisa(visa)));
 });
 
-router.patch("/visas/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/visas/:id", requireAdmin, requirePermission("visas.edit"), async (req, res): Promise<void> => {
   const params = UpdateVisaParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -247,7 +247,7 @@ router.patch("/visas/:id", requireAdmin, async (req, res): Promise<void> => {
   res.json(UpdateVisaResponse.parse(coerceVisa(visa)));
 });
 
-router.delete("/visas/:id", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/visas/:id", requireAdmin, requirePermission("visas.delete"), async (req, res): Promise<void> => {
   const params = DeleteVisaParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -271,7 +271,7 @@ router.delete("/visas/:id", requireAdmin, async (req, res): Promise<void> => {
 
 // ─── Eligibility Rules CRUD (admin) ──────────────────────────────────────────
 
-router.get("/visas/:id/rules", requireAdmin, async (req, res): Promise<void> => {
+router.get("/visas/:id/rules", requireAdmin, requirePermission("visas.view"), async (req, res): Promise<void> => {
   const visaId = Number(req.params.id);
   if (isNaN(visaId)) { res.status(400).json({ error: "Invalid visa id" }); return; }
   const rules = await db
@@ -282,7 +282,7 @@ router.get("/visas/:id/rules", requireAdmin, async (req, res): Promise<void> => 
   res.json(rules);
 });
 
-router.post("/visas/:id/rules", requireAdmin, async (req, res): Promise<void> => {
+router.post("/visas/:id/rules", requireAdmin, requirePermission("visas.edit"), async (req, res): Promise<void> => {
   const visaId = Number(req.params.id);
   if (isNaN(visaId)) { res.status(400).json({ error: "Invalid visa id" }); return; }
   const [rule] = await db
@@ -292,7 +292,7 @@ router.post("/visas/:id/rules", requireAdmin, async (req, res): Promise<void> =>
   res.status(201).json(rule);
 });
 
-router.put("/visas/:id/rules/:ruleId", requireAdmin, async (req, res): Promise<void> => {
+router.put("/visas/:id/rules/:ruleId", requireAdmin, requirePermission("visas.edit"), async (req, res): Promise<void> => {
   const visaId = Number(req.params.id);
   const ruleId = Number(req.params.ruleId);
   if (isNaN(visaId) || isNaN(ruleId)) { res.status(400).json({ error: "Invalid id" }); return; }
@@ -305,7 +305,7 @@ router.put("/visas/:id/rules/:ruleId", requireAdmin, async (req, res): Promise<v
   res.json(rule);
 });
 
-router.delete("/visas/:id/rules/:ruleId", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/visas/:id/rules/:ruleId", requireAdmin, requirePermission("visas.delete"), async (req, res): Promise<void> => {
   const visaId = Number(req.params.id);
   const ruleId = Number(req.params.ruleId);
   if (isNaN(visaId) || isNaN(ruleId)) { res.status(400).json({ error: "Invalid id" }); return; }

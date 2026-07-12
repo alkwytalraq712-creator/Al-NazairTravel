@@ -13,7 +13,7 @@ import {
   UpdatePackageResponse,
   DeletePackageParams,
 } from "@workspace/api-zod";
-import { requireAdmin } from "../lib/auth";
+import { requireAdmin, requirePermission } from "../lib/auth";
 import { coercePkg } from "../lib/coerce";
 
 const router: IRouter = Router();
@@ -45,7 +45,7 @@ router.get("/packages", async (req, res): Promise<void> => {
   res.json(ListPackagesResponse.parse(rows.map(coercePkg)));
 });
 
-router.post("/packages", requireAdmin, async (req, res): Promise<void> => {
+router.post("/packages", requireAdmin, requirePermission("packages.create"), async (req, res): Promise<void> => {
   const parsed = CreatePackageBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -85,7 +85,7 @@ router.get("/packages/:id", async (req, res): Promise<void> => {
   res.json(GetPackageResponse.parse(coercePkg(pkg)));
 });
 
-router.patch("/packages/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/packages/:id", requireAdmin, requirePermission("packages.edit"), async (req, res): Promise<void> => {
   const params = UpdatePackageParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -123,6 +123,7 @@ router.patch("/packages/:id", requireAdmin, async (req, res): Promise<void> => {
 router.delete(
   "/packages/:id",
   requireAdmin,
+  requirePermission("packages.delete"),
   async (req, res): Promise<void> => {
     const params = DeletePackageParams.safeParse(req.params);
     if (!params.success) {

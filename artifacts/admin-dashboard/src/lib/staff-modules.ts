@@ -169,6 +169,30 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: 'banners.delete', label: 'حذف اللافتات', isRestrictive: true },
     ],
   },
+  {
+    key: 'packages',
+    label: 'الباقات السياحية',
+    icon: 'Package',
+    path: '/packages',
+    items: [
+      { key: 'packages.view',   label: 'عرض الباقات' },
+      { key: 'packages.create', label: 'إضافة باقة جديدة' },
+      { key: 'packages.edit',   label: 'تعديل الباقات' },
+      { key: 'packages.delete', label: 'حذف الباقات', isRestrictive: true },
+    ],
+  },
+  {
+    key: 'testimonials',
+    label: 'آراء العملاء',
+    icon: 'MessageSquare',
+    path: '/testimonials',
+    items: [
+      { key: 'testimonials.view',   label: 'عرض الآراء' },
+      { key: 'testimonials.create', label: 'إضافة رأي' },
+      { key: 'testimonials.edit',   label: 'تعديل الآراء' },
+      { key: 'testimonials.delete', label: 'حذف الآراء', isRestrictive: true },
+    ],
+  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

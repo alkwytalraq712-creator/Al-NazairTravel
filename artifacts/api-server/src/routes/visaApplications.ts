@@ -13,7 +13,7 @@ import {
   UpdateVisaApplicationStatusBody,
   UpdateVisaApplicationStatusResponse,
 } from "@workspace/api-zod";
-import { requireAdmin, requireAuth, getProfileCompletion } from "../lib/auth";
+import { requireAdmin, requireAuth, requirePermission, getProfileCompletion } from "../lib/auth";
 import { generateReferenceNumber } from "../lib/reference";
 import { coerceVisa } from "../lib/coerce";
 
@@ -176,6 +176,7 @@ router.get(
 router.get(
   "/admin/visa-applications",
   requireAdmin,
+  requirePermission("visa_applications.view"),
   async (req, res): Promise<void> => {
     const query = ListAllVisaApplicationsQueryParams.safeParse(req.query);
     if (!query.success) {
@@ -197,6 +198,7 @@ router.get(
 router.patch(
   "/admin/visa-applications/:id/status",
   requireAdmin,
+  requirePermission("visa_applications.update_status"),
   async (req, res): Promise<void> => {
     const params = UpdateVisaApplicationStatusParams.safeParse(req.params);
     if (!params.success) {

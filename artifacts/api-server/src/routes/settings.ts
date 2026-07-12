@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { asc, eq } from "drizzle-orm";
 import { db, companySettingsTable, branchTable, holdSettingsTable, serviceSettingsTable } from "@workspace/db";
-import { requireAdmin } from "../lib/auth";
+import { requireAdmin, requirePermission } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -18,7 +18,7 @@ router.get("/settings/company", async (_req, res): Promise<void> => {
   res.json(settings);
 });
 
-router.patch("/settings/company", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/settings/company", requireAdmin, requirePermission("settings.company"), async (req, res): Promise<void> => {
   const [updated] = await db
     .update(companySettingsTable)
     .set({ ...req.body, updatedAt: new Date() })
@@ -47,7 +47,7 @@ router.get("/settings/hold", async (_req, res): Promise<void> => {
   res.json(settings);
 });
 
-router.patch("/admin/settings/hold", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/settings/hold", requireAdmin, requirePermission("settings.company"), async (req, res): Promise<void> => {
   const allowedKeys = ["holdEnabled", "holdFeeAmount", "holdDurationHours"] as const;
   const update: Record<string, unknown> = {};
   for (const key of allowedKeys) {
@@ -82,7 +82,7 @@ router.get("/settings/services", async (_req, res): Promise<void> => {
   res.json(row);
 });
 
-router.patch("/admin/settings/services", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/settings/services", requireAdmin, requirePermission("settings.company"), async (req, res): Promise<void> => {
   const allowed = ["flightsEnabled", "packagesEnabled", "visasEnabled"] as const;
   const update: Record<string, unknown> = {};
   for (const key of allowed) {
@@ -115,12 +115,12 @@ router.get("/settings/branches", async (_req, res): Promise<void> => {
   res.json(branches);
 });
 
-router.post("/settings/branches", requireAdmin, async (req, res): Promise<void> => {
+router.post("/settings/branches", requireAdmin, requirePermission("settings.company"), async (req, res): Promise<void> => {
   const [branch] = await db.insert(branchTable).values(req.body).returning();
   res.status(201).json(branch);
 });
 
-router.put("/settings/branches/:id", requireAdmin, async (req, res): Promise<void> => {
+router.put("/settings/branches/:id", requireAdmin, requirePermission("settings.company"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -138,7 +138,7 @@ router.put("/settings/branches/:id", requireAdmin, async (req, res): Promise<voi
   res.json(branch);
 });
 
-router.delete("/settings/branches/:id", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/settings/branches/:id", requireAdmin, requirePermission("settings.company"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   await db.delete(branchTable).where(eq(branchTable.id, id));

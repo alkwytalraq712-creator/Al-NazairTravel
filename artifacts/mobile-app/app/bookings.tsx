@@ -92,7 +92,7 @@ function TypeBadge({ type, colors }: { type: 'flight' | 'visa' | 'package', colo
   }[type];
   return (
     <LinearGradient
-      colors={cfg.grad}
+      colors={cfg.grad as [string, string]}
       start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       style={{ width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
     >
