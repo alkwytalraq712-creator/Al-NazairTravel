@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { Router, type IRouter } from "express";
 import rateLimit from "express-rate-limit";
 import { eq, or } from "drizzle-orm";
@@ -268,6 +269,54 @@ router.post("/auth/forgot-password", forgotPasswordLimiter, async (req, res): Pr
 
 router.post("/auth/reset-password", async (_req, res): Promise<void> => {
   res.status(501).json({ error: "Password reset via identifier is not available. Please contact support." });
+});
+
+/**
+ * One-time admin recovery endpoint.
+ *
+ * Disabled unless ADMIN_BOOTSTRAP_TOKEN is set in the environment. When enabled,
+ * a caller who presents the exact token may reset the password of a single fixed
+ * admin account (admin@qema.iq). Guarded by a constant-time token comparison so
+ * it is safe to leave in place; remove the ADMIN_BOOTSTRAP_TOKEN env var to
+ * disable it entirely once recovery is complete.
+ */
+router.post("/auth/admin-recovery", async (req, res): Promise<void> => {
+  const expected = process.env.ADMIN_BOOTSTRAP_TOKEN;
+  if (!expected) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const provided = typeof req.body?.token === "string" ? req.body.token : "";
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    res.status(401).json({ error: "Invalid token" });
+    return;
+  }
+
+  const newPassword =
+    typeof req.body?.newPassword === "string" && req.body.newPassword.length >= 6
+      ? req.body.newPassword
+      : "";
+  if (!newPassword) {
+    res.status(400).json({ error: "newPassword (min 6 chars) is required" });
+    return;
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  const [updated] = await db
+    .update(usersTable)
+    .set({ passwordHash, role: "admin" })
+    .where(eq(usersTable.email, "admin@qema.iq"))
+    .returning({ id: usersTable.id, email: usersTable.email });
+
+  if (!updated) {
+    res.status(404).json({ error: "Admin account not found" });
+    return;
+  }
+
+  res.json({ message: "Admin password reset", email: updated.email });
 });
 
 export default router;

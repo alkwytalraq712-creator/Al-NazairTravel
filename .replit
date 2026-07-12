@@ -71,3 +71,8 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+ADMIN_BOOTSTRAP_TOKEN = "63b26f7a781f8f66f8e6450d2350bfcecdefd626d69331c6"
