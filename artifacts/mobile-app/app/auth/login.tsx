@@ -2,9 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Image,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -136,11 +136,11 @@ export default function LoginScreen() {
         >
           {/* Brand */}
           <View style={styles.brandWrap}>
-            <View style={styles.logoCircle}>
-              <LinearGradient colors={[GOLD, GOLD2]} style={styles.logoGradient}>
-                <Ionicons name="airplane" size={30} color="#0B1628" />
-              </LinearGradient>
-            </View>
+            <Image
+              source={require('@/assets/images/company-logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={[styles.brandName, { color: colors.foreground }]}>قمة للسفر والسياحة</Text>
             <Text style={[styles.brandSub, { color: colors.mutedForeground }]}>QEMA TRAVEL &amp; TOURISM</Text>
           </View>
@@ -333,13 +333,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   scroll: { flexGrow: 1, padding: 20, paddingBottom: 40 },
   brandWrap: { alignItems: 'center', paddingVertical: 32 },
-  logoCircle: { marginBottom: 16 },
-  logoGradient: {
-    width: 76, height: 76, borderRadius: 38,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: GOLD, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3, shadowRadius: 16, elevation: 8,
-  },
+  logo: { width: 150, height: 128, marginBottom: 16 },
   brandName: { fontSize: 24, fontFamily: 'Tajawal_800ExtraBold', textAlign: 'center' },
   brandSub: { fontSize: 13, fontFamily: 'Tajawal_500Medium', textAlign: 'center', letterSpacing: 1.5, marginTop: 4 },
   card: {

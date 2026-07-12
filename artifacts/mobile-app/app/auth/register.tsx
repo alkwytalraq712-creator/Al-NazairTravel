@@ -4,11 +4,11 @@ import {
   Alert,
   Animated,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -178,11 +178,11 @@ export default function RegisterScreen() {
         >
           {/* Brand */}
           <View style={styles.brandWrap}>
-            <View style={styles.logoCircle}>
-              <LinearGradient colors={[GOLD, GOLD2]} style={styles.logoGradient}>
-                <Ionicons name="person-add" size={30} color="#0B1628" />
-              </LinearGradient>
-            </View>
+            <Image
+              source={require('@/assets/images/company-logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={[styles.brandName, { color: colors.foreground }]}>إنشاء حساب جديد</Text>
             <Text style={[styles.brandSub, { color: colors.mutedForeground }]}>انضم إلى قمة للسفر والسياحة</Text>
           </View>
@@ -477,8 +477,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   scroll: { flexGrow: 1, padding: 20, paddingBottom: 40 },
   brandWrap: { alignItems: 'center', paddingVertical: 24 },
-  logoCircle: { marginBottom: 16 },
-  logoGradient: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center', shadowColor: GOLD, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 },
+  logo: { width: 150, height: 128, marginBottom: 16 },
   brandName: { fontSize: 24, fontFamily: 'Tajawal_800ExtraBold', textAlign: 'center' },
   brandSub: { fontSize: 14, fontFamily: 'Tajawal_500Medium', textAlign: 'center', marginTop: 4 },
   card: { borderRadius: 24, borderWidth: 1, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.15, shadowRadius: 32, elevation: 10 },
