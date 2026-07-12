@@ -101,7 +101,7 @@ function NotifCard({ item, onRead, onDelete, index }: { item: any; onRead: () =>
         ]}
       >
         <LinearGradient
-          colors={cfg.grad}
+          colors={cfg.grad as any}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={s.iconWrap}
         >
@@ -153,12 +153,6 @@ export default function NotificationsScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') {
-      Notifications.setBadgeCountAsync(0).catch(() => {});
-    }
-  }, []);
-
   const { data: notifs, isLoading } = useListMyNotifications({
     query: { queryKey: getListMyNotificationsQueryKey(), enabled: isAuthenticated } as any,
   });
@@ -189,16 +183,30 @@ export default function NotificationsScreen() {
 
   const unreadCount = Array.isArray(notifs) ? notifs.filter((n) => !n.isRead).length : 0;
 
+  // Sync OS badge to real server-side unread count whenever notification data loads/refreshes
+  useEffect(() => {
+    if (Platform.OS !== 'web' && notifs !== undefined) {
+      Notifications.setBadgeCountAsync(unreadCount).catch(() => {});
+    }
+  }, [notifs, unreadCount]);
+
   async function handleMarkRead(id: number) {
     try {
       await markRead.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getListMyNotificationsQueryKey() });
+      if (Platform.OS !== 'web') {
+        const current = await Notifications.getBadgeCountAsync();
+        Notifications.setBadgeCountAsync(Math.max(0, current - 1)).catch(() => {});
+      }
     } catch {}
   }
 
   async function handleMarkAllRead() {
     try {
       await markAllRead.mutateAsync();
+      if (Platform.OS !== 'web') {
+        Notifications.setBadgeCountAsync(0).catch(() => {});
+      }
     } catch {}
   }
 
@@ -212,7 +220,16 @@ export default function NotificationsScreen() {
       'هل أنت متأكد أنك تريد حذف جميع إشعاراتك الشخصية؟',
       [
         { text: 'إلغاء', style: 'cancel' },
-        { text: 'حذف الكل', style: 'destructive', onPress: () => deleteAll.mutate() },
+        {
+          text: 'حذف الكل',
+          style: 'destructive',
+          onPress: () => {
+            deleteAll.mutate();
+            if (Platform.OS !== 'web') {
+              Notifications.setBadgeCountAsync(0).catch(() => {});
+            }
+          },
+        },
       ],
     );
   }
