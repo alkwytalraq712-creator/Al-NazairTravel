@@ -4,11 +4,17 @@
   },
   "build": {
     "preview": {
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "qmh-ln-zyr-llsfryt-wlsy-h--alkwytalraq712.replit.app"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "qmh-ln-zyr-llsfryt-wlsy-h--alkwytalraq712.replit.app"
+      },
       "android": {
         "buildType": "app-bundle"
       },
