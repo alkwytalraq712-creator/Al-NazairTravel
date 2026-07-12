@@ -49,8 +49,8 @@ export default function VisasScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
-        <Text style={styles.headerTitle}>التأشيرات</Text>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: paddingTop + 12 }]}>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>التأشيرات</Text>
       </View>
 
       {/* Search */}

@@ -16,6 +16,7 @@ import { useFlightBookingContext } from '@/context/FlightBookingContext';
 import DatePickerField from '@/components/DatePickerField';
 import CountryPickerFlight from '@/components/CountryPickerFlight';
 import type { FlightOffer, PassengerInput } from '@/lib/flightService';
+import { useColors } from '@/hooks/useColors';
 
 const GOLD = '#C9A060';
 const DARK = '#0B1628';
@@ -90,6 +91,7 @@ function NameInput({
 // ─── Main Screen ───────────────────────────────────────────────────────────────
 export default function FlightTravelersScreen() {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
   const params = useLocalSearchParams<{ offer?: string; adults?: string; children?: string }>();
   const { state, setOffer, setPassengers, setContact } = useFlightBookingContext();
 
@@ -182,12 +184,12 @@ export default function FlightTravelersScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <View style={[styles.header, { paddingTop: paddingTop + 12 }]}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border, paddingTop: paddingTop + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="chevron-forward" size={24} color={WHITE} />
+          <Ionicons name="chevron-forward" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>بيانات المسافرين</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>بيانات المسافرين</Text>
       </View>
 
       {/* English name notice */}

@@ -287,18 +287,18 @@ export default function VisaApplicationTrackScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: paddingTop + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-forward" size={24} color="#fff" />
+          <Ionicons name="chevron-forward" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>متابعة الطلب</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>متابعة الطلب</Text>
         <View style={{ width: 32 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* Status Hero Card */}
-        <View style={[styles.heroCard, { backgroundColor: '#0D1526' }]}>
+        <View style={[styles.heroCard, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           {visa?.countryFlagUrl ? (
             <Image source={{ uri: visa.countryFlagUrl }} style={styles.flag} contentFit="cover" />
           ) : (

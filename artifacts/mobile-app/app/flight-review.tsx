@@ -16,6 +16,7 @@ import { useFlightBooking, formatTime, formatDuration, formatDateAr, CABIN_LABEL
 import { useGetHoldSettings, useCreateHoldBooking } from '@workspace/api-client-react';
 import { codeToEnglishName } from '@/lib/countriesEn';
 import type { FlightOffer } from '@/lib/flightService';
+import { useColors } from '@/hooks/useColors';
 
 const GOLD = '#C9A060';
 const DARK = '#0B1628';
@@ -26,6 +27,7 @@ const WHITE = '#FFFFFF';
 
 export default function FlightReviewScreen() {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
   const params = useLocalSearchParams<{ offer?: string; adults?: string; children?: string }>();
   const { state, reset } = useFlightBookingContext();
   const bookingMutation = useFlightBooking();
@@ -151,12 +153,12 @@ export default function FlightReviewScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <View style={[styles.header, { paddingTop: paddingTop + 12 }]}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border, paddingTop: paddingTop + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="chevron-forward" size={24} color={WHITE} />
+          <Ionicons name="chevron-forward" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>مراجعة الحجز</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>مراجعة الحجز</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 140 : 160 }}>

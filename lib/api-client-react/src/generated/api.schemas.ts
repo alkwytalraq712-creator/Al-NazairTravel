@@ -1082,6 +1082,8 @@ export const NotificationType = {
   flight_booking: 'flight_booking',
   general: 'general',
   promotion: 'promotion',
+  payment: 'payment',
+  system: 'system',
 } as const;
 
 export interface Notification {
@@ -1093,6 +1095,10 @@ export interface Notification {
   type: NotificationType;
   isRead: boolean;
   createdAt: string;
+  /** @nullable */
+  imageUrl?: string | null;
+  /** @nullable */
+  data?: Record<string, unknown> | null;
 }
 
 export interface NotificationInput {

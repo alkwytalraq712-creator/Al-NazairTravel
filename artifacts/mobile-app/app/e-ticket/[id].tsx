@@ -16,7 +16,7 @@ import { Image } from 'expo-image';
 import QRCode from 'react-native-qrcode-svg';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import {
   useGetFlightBooking,
   getGetFlightBookingQueryKey,
@@ -245,7 +245,7 @@ function buildTicketHtml(booking: any, segments: any[], offer: any, departStr: s
     const bw = 2;
     let bx = 0;
     const bars: string[] = [];
-    Array.from(barVal).forEach((c) => {
+    Array.from(barVal as string).forEach((c: string) => {
       const code = c.charCodeAt(0);
       [3,1,2,1,3,1,1].forEach((m, i) => {
         const bww = (i % 2 === 0 ? (code >> (4 - Math.min(i, 4)) & 1 ? 3 : 1) : 1) * bw;
@@ -751,7 +751,7 @@ export default function ETicketScreen() {
     try {
       const { uri } = await Print.printToFileAsync({ html, base64: false });
       // Rename to proper filename
-      const dir     = FileSystem.documentDirectory!;
+      const dir     = FileSystem.documentDirectory ?? '';
       const newUri  = dir + filename;
       try { await FileSystem.deleteAsync(newUri, { idempotent: true }); } catch {}
       await FileSystem.moveAsync({ from: uri, to: newUri });
@@ -785,7 +785,7 @@ export default function ETicketScreen() {
           onPress: async () => {
             setCompleting(true);
             try {
-              await completeMutation.mutateAsync({ id: booking.id });
+              await completeMutation.mutateAsync({ id: booking!.id });
               Alert.alert(
                 '✅ تم استلام طلب الدفع',
                 'تم تحويل حجزك إلى قيد الانتظار. سيقوم فريقنا بالتواصل معك لإتمام عملية الدفع وإصدار التذكرة الإلكترونية.',

@@ -240,6 +240,7 @@ const styles = StyleSheet.create({
   routeMiddle: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' },
   arrowWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 10, gap: 4 },
+  card: { borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 12 },
   center: { alignItems: 'center', paddingVertical: 60, gap: 14 },
   centerText: { fontFamily: 'Tajawal_500Medium', fontSize: 15, textAlign: 'center' },
   retryBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14, borderWidth: 1 },

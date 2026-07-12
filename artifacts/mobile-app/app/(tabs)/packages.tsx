@@ -46,8 +46,8 @@ export default function PackagesScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
-        <Text style={styles.headerTitle}>الباقات السياحية</Text>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: paddingTop + 12 }]}>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>الباقات السياحية</Text>
       </View>
 
       {/* Search */}

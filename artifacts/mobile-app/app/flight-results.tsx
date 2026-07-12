@@ -151,20 +151,20 @@ export default function FlightResultsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: paddingTop + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="chevron-forward" size={24} color="#fff" />
+          <Ionicons name="chevron-forward" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>{params.from} ← {params.to}</Text>
-          <Text style={styles.headerSub}>{params.departDate} • {params.adults ?? 1} مسافر</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>{params.from} ← {params.to}</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>{params.departDate} • {params.adults ?? 1} مسافر</Text>
         </View>
         <TouchableOpacity
           onPress={() => setShowFilters(v => !v)}
-          style={[styles.filterBtn, showFilters && { backgroundColor: '#C9A060' }]}
+          style={[styles.filterBtn, { borderColor: colors.border, backgroundColor: showFilters ? '#C9A060' : colors.muted }, showFilters && { backgroundColor: '#C9A060' }]}
           activeOpacity={0.8}
         >
-          <Ionicons name="options-outline" size={20} color={showFilters ? '#0B1628' : '#fff'} />
+          <Ionicons name="options-outline" size={20} color={showFilters ? '#0B1628' : colors.foreground} />
           {activeFilterCount > 0 && (
             <View style={styles.filterBadge}>
               <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>

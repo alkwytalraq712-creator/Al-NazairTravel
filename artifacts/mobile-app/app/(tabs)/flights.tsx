@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { CabinClass } from '@workspace/api-client-react';
 import { AIRPORT_DB, AIRPORT_MAP, searchAirports } from '../../lib/airports';
 import type { Airport } from '../../lib/airports';
+import { useColors } from '@/hooks/useColors';
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const DARK = '#0B1628';
@@ -462,6 +463,7 @@ type ActiveAirport = 'from' | 'to' | null;
 
 export default function FlightsScreen() {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   const [tripType, setTripType] = useState<TripType>('round_trip');
@@ -515,7 +517,7 @@ export default function FlightsScreen() {
   const totalPassengers = adults + children + infants;
 
   return (
-    <View style={S.screen}>
+    <View style={[S.screen, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 40 : 120 }}

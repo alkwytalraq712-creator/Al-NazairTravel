@@ -74,9 +74,9 @@ export default function BookPackageScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
-        <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-forward" size={24} color="#fff" /></TouchableOpacity>
-        <Text style={styles.headerTitle}>{pkg?.name ?? 'حجز الباقة'}</Text>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: paddingTop + 12 }]}>
+        <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-forward" size={24} color={colors.foreground} /></TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>{pkg?.name ?? 'حجز الباقة'}</Text>
       </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
         {/* Travelers Count */}

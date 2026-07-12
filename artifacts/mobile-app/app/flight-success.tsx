@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDateAr } from '@/lib/flightService';
+import { useColors } from '@/hooks/useColors';
 
 const GOLD = '#C9A060';
 const DARK = '#0B1628';
@@ -53,13 +54,14 @@ export default function FlightSuccessScreen() {
     return () => sub.remove();
   }, []);
 
+  const colors = useColors();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   const hasPNR = !!params.bookingReference;
   const hasRoute = !!(params.fromAirport && params.toAirport);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <View style={[styles.content, { paddingTop: paddingTop + 32 }]}>
 
         {/* Animated check */}

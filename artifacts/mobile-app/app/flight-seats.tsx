@@ -57,6 +57,7 @@ export default function FlightSeatsScreen() {
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   // Current passenger index being seated (0-indexed)
+  const colors = useColors();
   const [currentPax, setCurrentPax] = useState(0);
   // selections: passengerId → seat string
   const [selections, setSelections] = useState<Record<number, SeatMapSeat>>({});
@@ -122,13 +123,13 @@ export default function FlightSeatsScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: paddingTop + 12 }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border, paddingTop: paddingTop + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="chevron-forward" size={24} color={WHITE} />
+          <Ionicons name="chevron-forward" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>اختيار المقاعد</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>اختيار المقاعد</Text>
       </View>
 
       {/* Passenger switcher */}

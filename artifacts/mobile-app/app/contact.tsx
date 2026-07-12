@@ -216,11 +216,11 @@ export default function ContactScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border, paddingTop: paddingTop + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-forward" size={24} color="#fff" />
+          <Ionicons name="chevron-forward" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>اتصل بنا</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>اتصل بنا</Text>
         <View style={{ width: 32 }} />
       </View>
 

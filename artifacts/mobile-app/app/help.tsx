@@ -53,11 +53,11 @@ export default function HelpScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: '#0D1526', paddingTop: paddingTop + 12 }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border, paddingTop: paddingTop + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-forward" size={24} color="#fff" />
+          <Ionicons name="chevron-forward" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>المساعدة والدعم</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>المساعدة والدعم</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>

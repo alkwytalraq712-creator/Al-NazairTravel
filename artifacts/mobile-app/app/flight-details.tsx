@@ -66,13 +66,13 @@ export default function FlightDetailsScreen() {
   const arriveDate = offer.arriveTime.slice(0, 10);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: paddingTop + 12 }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border, paddingTop: paddingTop + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="chevron-forward" size={24} color={WHITE} />
+          <Ionicons name="chevron-forward" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>تفاصيل الرحلة</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>تفاصيل الرحلة</Text>
       </View>
 
       <ScrollView
