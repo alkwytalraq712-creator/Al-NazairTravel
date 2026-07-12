@@ -127,6 +127,7 @@ export default function RegisterScreen() {
   const [showNatPicker,  setShowNatPicker]  = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [errors,       setErrors]       = useState<Record<string, string>>({});
+  const [agreedTerms,  setAgreedTerms]  = useState(false);
 
   const inputBorder = (field: string) =>
     errors[field] ? ERROR + '80' : focusedField === field ? 'rgba(201,160,96,0.4)' : BORDER;
@@ -139,6 +140,7 @@ export default function RegisterScreen() {
     if (!password)             e.password = 'كلمة المرور مطلوبة';
     if (password.length < 6)   e.password = 'يجب أن تكون 6 أحرف على الأقل';
     if (password !== confirmPass) e.confirmPass = 'كلمتا المرور غير متطابقتين';
+    if (!agreedTerms)          e.terms = 'يجب الموافقة على شروط الاستخدام وسياسة الخصوصية للمتابعة';
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -342,34 +344,82 @@ export default function RegisterScreen() {
               {errors.confirmPass && <Text style={styles.errorText}>{errors.confirmPass}</Text>}
             </View>
 
-            {/* Terms note */}
-            <View style={styles.termsWrap}>
-              <Text style={styles.termsText}>
-                بإنشائك حساباً فأنت توافق على{' '}
-                <Text style={{ color: GOLD }}>شروط الاستخدام</Text>
+            {/* ── Terms checkbox (mandatory) ─────────────────────────── */}
+            <TouchableOpacity
+              style={[styles.checkboxRow, errors.terms && styles.checkboxRowError]}
+              onPress={() => { setAgreedTerms(v => !v); if (errors.terms) setErrors(p => { const n={...p}; delete n.terms; return n; }); }}
+              activeOpacity={0.75}
+            >
+              {/* Box */}
+              <View style={[styles.checkbox, agreedTerms && styles.checkboxChecked]}>
+                {agreedTerms && <Ionicons name="checkmark" size={13} color={DARK} />}
+              </View>
+              {/* Label */}
+              <Text style={styles.checkboxLabel}>
+                أوافق على{' '}
+                <Text
+                  style={styles.checkboxLink}
+                  onPress={(e) => { e.stopPropagation?.(); router.push('/legal/terms' as any); }}
+                >
+                  شروط الاستخدام
+                </Text>
                 {' '}و{' '}
-                <Text style={{ color: GOLD }}>سياسة الخصوصية</Text>
+                <Text
+                  style={styles.checkboxLink}
+                  onPress={(e) => { e.stopPropagation?.(); router.push('/legal/privacy' as any); }}
+                >
+                  سياسة الخصوصية
+                </Text>
+                {' '}الخاصة بالتطبيق
               </Text>
-            </View>
+            </TouchableOpacity>
+            {errors.terms && (
+              <Text style={[styles.errorText, { textAlign: 'center', marginTop: -4, marginBottom: 8 }]}>
+                {errors.terms}
+              </Text>
+            )}
 
             {/* Submit button */}
             <TouchableOpacity
-              style={[styles.submitBtn, loading && { opacity: 0.75 }]}
+              style={[styles.submitBtn, (loading || !agreedTerms) && { opacity: agreedTerms ? 0.75 : 0.45 }]}
               onPress={handleRegister}
               activeOpacity={0.85}
               disabled={loading}
             >
-              <LinearGradient colors={[GOLD, GOLD2]} style={styles.btnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              <LinearGradient
+                colors={agreedTerms ? [GOLD, GOLD2] : ['#555', '#444']}
+                style={styles.btnGradient}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              >
                 {loading
                   ? <ActivityIndicator size="small" color={DARK} />
                   : (
                     <>
-                      <Ionicons name="person-add-outline" size={20} color={DARK} />
-                      <Text style={styles.submitBtnText}>إنشاء الحساب</Text>
+                      <Ionicons name="person-add-outline" size={20} color={agreedTerms ? DARK : 'rgba(255,255,255,0.5)'} />
+                      <Text style={[styles.submitBtnText, !agreedTerms && { color: 'rgba(255,255,255,0.5)' }]}>إنشاء الحساب</Text>
                     </>
                   )}
               </LinearGradient>
             </TouchableOpacity>
+
+            {/* Consent line below button */}
+            <Text style={styles.consentLine}>
+              بإنشائك حسابًا، فإنك توافق على{' '}
+              <Text
+                style={styles.consentLink}
+                onPress={() => router.push('/legal/terms' as any)}
+              >
+                شروط الاستخدام
+              </Text>
+              {' '}و{' '}
+              <Text
+                style={styles.consentLink}
+                onPress={() => router.push('/legal/privacy' as any)}
+              >
+                سياسة الخصوصية
+              </Text>
+              {' '}الخاصة بتطبيق قمة النظائر للسفريات والسياحة.
+            </Text>
 
             {/* Divider */}
             <View style={styles.divider}>
@@ -509,12 +559,51 @@ const styles = StyleSheet.create({
   strengthBar: { flex: 1, height: 4, borderRadius: 2 },
   strengthLabel: { color: MUTED, fontFamily: 'Tajawal_400Regular', fontSize: 11, marginRight: 4 },
 
-  // Terms
-  termsWrap: { marginVertical: 12 },
-  termsText: { color: MUTED, fontSize: 12, fontFamily: 'Tajawal_400Regular', textAlign: 'center', lineHeight: 19 },
+  // Checkbox row
+  checkboxRow: {
+    flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10,
+    backgroundColor: 'rgba(201,160,96,0.06)',
+    borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(201,160,96,0.18)',
+    padding: 14, marginBottom: 10,
+  },
+  checkboxRowError: {
+    borderColor: ERROR + '80', backgroundColor: 'rgba(239,68,68,0.05)',
+  },
+  checkbox: {
+    width: 22, height: 22, borderRadius: 6,
+    borderWidth: 2, borderColor: 'rgba(201,160,96,0.45)',
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    flexShrink: 0, marginTop: 1,
+  },
+  checkboxChecked: {
+    backgroundColor: GOLD, borderColor: GOLD,
+  },
+  checkboxLabel: {
+    flex: 1, color: 'rgba(255,255,255,0.75)',
+    fontFamily: 'Tajawal_500Medium', fontSize: 13.5,
+    textAlign: 'right', lineHeight: 22,
+  },
+  checkboxLink: {
+    color: GOLD, fontFamily: 'Tajawal_700Bold',
+    textDecorationLine: 'underline',
+  },
+
+  // Consent line below button
+  consentLine: {
+    color: 'rgba(255,255,255,0.38)',
+    fontFamily: 'Tajawal_400Regular',
+    fontSize: 11.5, textAlign: 'center', lineHeight: 19,
+    marginTop: -10, marginBottom: 14,
+  },
+  consentLink: {
+    color: 'rgba(201,160,96,0.7)',
+    fontFamily: 'Tajawal_500Medium',
+    textDecorationLine: 'underline',
+  },
 
   // Submit
-  submitBtn: { borderRadius: 14, overflow: 'hidden', marginBottom: 18 },
+  submitBtn: { borderRadius: 14, overflow: 'hidden', marginBottom: 10 },
   btnGradient: {
     flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 16,
