@@ -5,7 +5,7 @@
  */
 import React, { useRef, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, Platform, ScrollView,
+  ActivityIndicator, Alert, Animated, Linking, Platform, ScrollView,
   StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
@@ -35,9 +35,10 @@ const TICKET_SECONDARY = '#F7F8FC';
 
 const COMPANY_AR    = 'قمة النظائر للسفريات والسياحة';
 const COMPANY_EN    = 'QEMA AL-NAZAER FOR TRAVEL & TOURISM';
-const COMPANY_PHONE = '+967 1 234 5678';
-const COMPANY_EMAIL = 'info@qema-travel.com';
-const COMPANY_CITY  = 'صنعاء، الجمهورية اليمنية';
+const COMPANY_PHONE  = '+964 780 101 6390';
+const COMPANY_PHONE2 = '+964 773 326 6663';
+const COMPANY_EMAIL  = 'alnathair2@gmail.com';
+const COMPANY_CITY   = 'العراق - البصرة - الجزائر - العباسية / شارع كيا سابقاً';
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<string, string> = {
@@ -207,7 +208,7 @@ function HoldCountdownBanner({ expiresAt }: { expiresAt: string }) {
 }
 
 // ─── PDF HTML Builder ─────────────────────────────────────────────────────────
-function buildTicketHtml(booking: any, segments: any[], offer: any, departStr: string, arriveStr: string): string {
+function buildTicketHtml(booking: any, segments: any[], offer: any, departStr: string, arriveStr: string, logoDataUrl?: string): string {
   const pnr          = booking.bookingReference ?? '—';
   const isConfirmedDoc = isConfirmed(booking.status);
   const docTitle     = isConfirmedDoc ? 'التذكرة الإلكترونية · ELECTRONIC TICKET' : 'تأكيد الحجز المؤقت · TEMPORARY BOOKING CONFIRMATION';
@@ -375,11 +376,9 @@ body{font-family:'Cairo',Arial,sans-serif;background:#E8EAF0;color:#1A2035;font-
 .doc-header{background:linear-gradient(135deg,#0B1628 0%,#132039 60%,#0F1E36 100%);padding:20px 24px 16px}
 .header-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
 .company-block{text-align:right}
-.company-logo-circle{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:42px;height:42px;border-radius:50%;
-  background:linear-gradient(135deg,#C9A060,#E8C07A);
-  font-size:18px;font-weight:900;color:#0B1628;margin-bottom:6px;
+.company-logo-img{
+  display:block;height:56px;width:auto;max-width:140px;
+  object-fit:contain;margin-bottom:6px;
 }
 .company-ar{font-size:18px;font-weight:900;color:#C9A060;line-height:1.2}
 .company-en{font-size:9px;color:rgba(255,255,255,0.40);letter-spacing:0.6px;margin-top:2px}
@@ -527,10 +526,14 @@ body{font-family:'Cairo',Arial,sans-serif;background:#E8EAF0;color:#1A2035;font-
   <div class="doc-header">
     <div class="header-top">
       <div class="company-block">
-        <div class="company-logo-circle">Q</div>
+        ${logoDataUrl
+          ? `<img src="${logoDataUrl}" class="company-logo-img" alt="${COMPANY_AR}" />`
+          : `<div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#C9A060,#E8C07A);font-size:22px;font-weight:900;color:#0B1628;margin-bottom:6px">Q</div>`
+        }
         <div class="company-ar">${COMPANY_AR}</div>
         <div class="company-en">${COMPANY_EN}</div>
-        <div class="company-contact">${COMPANY_PHONE} · ${COMPANY_EMAIL}</div>
+        <div class="company-contact">${COMPANY_PHONE} &nbsp;|&nbsp; ${COMPANY_PHONE2}</div>
+        <div class="company-contact">${COMPANY_EMAIL}</div>
         <div class="company-contact">${COMPANY_CITY}</div>
       </div>
       <div class="doc-meta">
@@ -607,18 +610,20 @@ body{font-family:'Cairo',Arial,sans-serif;background:#E8EAF0;color:#1A2035;font-
     <div class="note">• Please check airline's check-in procedures and baggage policy for this itinerary.</div>
     <div class="note">• هذه التذكرة شخصية وغير قابلة للتحويل · This ticket is non-transferable.</div>
     <div class="note">• تأكد من صلاحية جواز سفرك قبل السفر · Ensure your passport is valid before travel.</div>
-    <div class="note">• للاستفسار والمساعدة: ${COMPANY_PHONE} · ${COMPANY_EMAIL}</div>
+    <div class="note">• للاستفسار والمساعدة: ${COMPANY_PHONE} · ${COMPANY_PHONE2} · ${COMPANY_EMAIL}</div>
   </div>
 
   <!-- Footer -->
   <div class="doc-footer">
     <div>
-      <div class="footer-company">${COMPANY_EN}</div>
-      <div class="footer-sub">${COMPANY_PHONE} · ${COMPANY_EMAIL} · ${COMPANY_CITY}</div>
+      <div class="footer-company">${COMPANY_AR}</div>
+      <div class="footer-company" style="font-size:9px;font-weight:600;margin-top:2px">${COMPANY_EN}</div>
+      <div class="footer-sub">${COMPANY_PHONE} &nbsp;·&nbsp; ${COMPANY_PHONE2} &nbsp;·&nbsp; ${COMPANY_EMAIL}</div>
+      <div class="footer-sub">${COMPANY_CITY}</div>
     </div>
     <div class="footer-disc">
-      Your personal data is processed in accordance with applicable privacy policies.
-      This document is issued by ${COMPANY_AR} on behalf of the passenger.
+      تم إصدار هذه التذكرة الإلكترونية بواسطة شركة قمة النظائر للسفريات والسياحة، وهي وثيقة إلكترونية معتمدة. لأي استفسارات أو دعم أو تعديل على الحجز، يرجى التواصل معنا عبر أرقام الهاتف أو البريد الإلكتروني أو زيارة مقر الشركة.<br/>
+      This electronic ticket has been officially issued by QEMA AL-NAZAER FOR TRAVEL &amp; TOURISM. For inquiries, support, or booking modifications, please contact us using the phone numbers or email listed above.
     </div>
   </div>
 
@@ -722,7 +727,22 @@ export default function ETicketScreen() {
 
   // ─── PDF Export ──────────────────────────────────────────────────────────────
   async function handleExportPDF() {
-    const html     = buildTicketHtml(booking, segments, offer, departStr, arriveStr);
+    // Load company logo as base64 for embedding in PDF
+    let logoDataUrl = '';
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { Asset } = require('expo-asset') as { Asset: { fromModule: (m: any) => { downloadAsync(): Promise<any>; localUri: string | null } } };
+      const logoAsset = Asset.fromModule(require('@/assets/images/logo_transparent.png'));
+      await logoAsset.downloadAsync();
+      if (logoAsset.localUri) {
+        const base64 = await FileSystem.readAsStringAsync(logoAsset.localUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        logoDataUrl = `data:image/png;base64,${base64}`;
+      }
+    } catch {}
+
+    const html     = buildTicketHtml(booking, segments, offer, departStr, arriveStr, logoDataUrl);
     const filename = `Electronic_Ticket_${pnr}.pdf`;
 
     if (Platform.OS === 'web') {
@@ -849,11 +869,13 @@ export default function ETicketScreen() {
 
             {/* Company header */}
             <View style={styles.companyHeader}>
-              {/* Logo badge */}
-              <View style={styles.logoCircle}>
-                <Text style={styles.logoLetter}>Q</Text>
-              </View>
-              <View style={{ flex: 1, marginRight: 12 }}>
+              {/* Official company logo */}
+              <Image
+                source={require('@/assets/images/logo_transparent.png')}
+                style={styles.logoImage}
+                contentFit="contain"
+              />
+              <View style={{ flex: 1, marginRight: 10 }}>
                 <Text style={styles.companyAr}>{COMPANY_AR}</Text>
                 <Text style={styles.companyEn}>{COMPANY_EN}</Text>
               </View>
@@ -1041,6 +1063,52 @@ export default function ETicketScreen() {
             <TField label="Issue Date"                value={new Date().toLocaleDateString('ar-SA')} />
           </View>
 
+          {/* ════════ COMPANY CONTACT ════════ */}
+          <View style={styles.card}>
+            <SectionTitle title="التواصل مع الشركة" icon="call-outline" color={GOLD} />
+
+            {/* Company logo */}
+            <View style={{ alignItems: 'center', marginBottom: 14 }}>
+              <Image
+                source={require('@/assets/images/logo_transparent.png')}
+                style={{ width: 110, height: 60 }}
+                contentFit="contain"
+              />
+            </View>
+
+            {/* Company names */}
+            <Text style={{ fontFamily: 'Tajawal_800ExtraBold', fontSize: 14, color: '#1A2035', textAlign: 'center', marginBottom: 2 }}>
+              {COMPANY_AR}
+            </Text>
+            <Text style={{ fontFamily: 'Tajawal_400Regular', fontSize: 10, color: '#99AABB', textAlign: 'center', letterSpacing: 0.4, marginBottom: 14 }}>
+              {COMPANY_EN}
+            </Text>
+
+            {/* Address */}
+            <View style={styles.contactRow}>
+              <Ionicons name="location-outline" size={16} color={GOLD} />
+              <Text style={styles.contactText}>{COMPANY_CITY}</Text>
+            </View>
+
+            {/* Phone 1 — clickable */}
+            <TouchableOpacity style={styles.contactRow} onPress={() => Linking.openURL(`tel:${COMPANY_PHONE.replace(/\s/g, '')}`)}>
+              <Ionicons name="call-outline" size={16} color={GOLD} />
+              <Text style={[styles.contactText, styles.contactLink]}>{COMPANY_PHONE}</Text>
+            </TouchableOpacity>
+
+            {/* Phone 2 — clickable */}
+            <TouchableOpacity style={styles.contactRow} onPress={() => Linking.openURL(`tel:${COMPANY_PHONE2.replace(/\s/g, '')}`)}>
+              <Ionicons name="call-outline" size={16} color={GOLD} />
+              <Text style={[styles.contactText, styles.contactLink]}>{COMPANY_PHONE2}</Text>
+            </TouchableOpacity>
+
+            {/* Email — clickable */}
+            <TouchableOpacity style={styles.contactRow} onPress={() => Linking.openURL(`mailto:${COMPANY_EMAIL}`)}>
+              <Ionicons name="mail-outline" size={16} color={GOLD} />
+              <Text style={[styles.contactText, styles.contactLink]}>{COMPANY_EMAIL}</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* ════════ QR + BARCODE (confirmed only) ════════ */}
           {isConf && (
             <View style={[styles.card, styles.qrCard]}>
@@ -1163,12 +1231,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse', alignItems: 'center',
     padding: 16, borderBottomWidth: 1, borderBottomColor: '#EEF0F6',
   },
-  logoCircle: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: DARK_BG, alignItems: 'center', justifyContent: 'center',
+  logoImage: {
+    width: 70, height: 44,
     marginLeft: 12,
   },
-  logoLetter: { color: GOLD, fontFamily: 'Tajawal_800ExtraBold', fontSize: 22 },
   companyAr: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 13, color: '#1A2035' },
   companyEn: { fontFamily: 'Tajawal_400Regular', fontSize: 9, color: '#99AABB', marginTop: 2, letterSpacing: 0.3 },
   pnrLabel: { fontFamily: 'Tajawal_400Regular', fontSize: 9, color: '#99AABB', textAlign: 'left' },
@@ -1288,5 +1354,19 @@ const styles = StyleSheet.create({
   outlineBtn: {
     flexDirection: 'row-reverse', alignItems: 'center', gap: 8,
     paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14, borderWidth: 1,
+  },
+
+  // Contact section
+  contactRow: {
+    flexDirection: 'row-reverse', alignItems: 'center', gap: 8,
+    paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#EEF0F6',
+  },
+  contactText: {
+    flex: 1, fontFamily: 'Tajawal_400Regular', fontSize: 13,
+    color: '#445566', textAlign: 'right',
+  },
+  contactLink: {
+    color: '#1A56DB', fontFamily: 'Tajawal_700Bold',
+    textDecorationLine: 'underline',
   },
 });
