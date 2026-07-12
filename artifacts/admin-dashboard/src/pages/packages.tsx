@@ -268,7 +268,7 @@ function PackageForm({ pkg, onSuccess, onCancel }: { pkg: Package | null, onSucc
           queryClient.invalidateQueries({ queryKey: getListPackagesQueryKey() });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: (e.data as { error?: string })?.error, variant: "destructive" })
+        onError: (e) => toast({ title: "خطأ", description: (e.data as { error?: string })?.error ?? e.message, variant: "destructive" })
       });
     } else {
       createMutation.mutate({ data }, {
@@ -277,7 +277,7 @@ function PackageForm({ pkg, onSuccess, onCancel }: { pkg: Package | null, onSucc
           queryClient.invalidateQueries({ queryKey: getListPackagesQueryKey() });
           onSuccess();
         },
-        onError: (e) => toast({ title: "خطأ", description: (e.data as { error?: string })?.error, variant: "destructive" })
+        onError: (e) => toast({ title: "خطأ", description: (e.data as { error?: string })?.error ?? e.message, variant: "destructive" })
       });
     }
   };

@@ -304,7 +304,7 @@ function NotificationForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
         queryClient.invalidateQueries({ queryKey: getListAllNotificationsQueryKey() });
         onSuccess();
       },
-      onError: (e: any) => toast({ title: 'خطأ في الإرسال', description: e?.message ?? e?.error, variant: 'destructive' }),
+      onError: (e: any) => toast({ title: 'خطأ في الإرسال', description: e?.data?.error ?? e?.message, variant: 'destructive' }),
     });
   };
 

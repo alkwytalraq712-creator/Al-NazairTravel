@@ -264,7 +264,7 @@ function StatusUpdater({ booking }: { booking: PackageBooking }) {
             }
           );
         },
-        onError: (e) => toast({ title: "فشل التحديث", description: (e.data as { error?: string })?.error, variant: "destructive" })
+        onError: (e) => toast({ title: "فشل التحديث", description: (e.data as { error?: string })?.error ?? e.message, variant: "destructive" })
       }
     );
   };

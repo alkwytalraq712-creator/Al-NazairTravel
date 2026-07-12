@@ -403,8 +403,8 @@ function DeleteEmployeeButton({ employee }: { employee: User }) {
         queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
         setOpen(false);
       },
-      onError: (error) => {
-        toast({ title: 'خطأ في حذف الموظف', description: (error as any).error, variant: 'destructive' });
+      onError: (error: any) => {
+        toast({ title: 'خطأ في حذف الموظف', description: error?.data?.error ?? error?.message, variant: 'destructive' });
       },
     });
   };
