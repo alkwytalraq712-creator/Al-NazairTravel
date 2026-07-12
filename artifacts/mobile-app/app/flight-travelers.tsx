@@ -1,6 +1,8 @@
 /**
  * Traveler Details Screen — dynamic form for N passengers.
- * Uses DatePickerField for DOB and passport dates.
+ * - First name & last name: English-only (Latin characters)
+ * - Nationality: country picker (ISO 2-letter code stored, English name shown)
+ * - Passport issue country: same picker
  */
 import React, { useState } from 'react';
 import {
@@ -12,6 +14,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFlightBookingContext } from '@/context/FlightBookingContext';
 import DatePickerField from '@/components/DatePickerField';
+import CountryPickerFlight from '@/components/CountryPickerFlight';
 import type { FlightOffer, PassengerInput } from '@/lib/flightService';
 
 const GOLD = '#C9A060';
@@ -20,27 +23,22 @@ const DARK2 = '#0F1E36';
 const BORDER = 'rgba(255,255,255,0.09)';
 const MUTED = 'rgba(255,255,255,0.50)';
 const WHITE = '#FFFFFF';
-const CARD_BG = 'rgba(255,255,255,0.05)';
 const INPUT_BG = 'rgba(255,255,255,0.07)';
 const ERROR_COLOR = '#EF4444';
 
 const TODAY = new Date().toISOString().slice(0, 10);
-
-// Minimum DOB: 130 years ago
 const MIN_DOB = `${new Date().getFullYear() - 130}-01-01`;
-// Maximum DOB: today (must be born by today)
 const MAX_DOB = TODAY;
-// Minimum passport expiry: tomorrow
 function minExpiry(): string {
   const d = new Date();
   d.setDate(d.getDate() + 1);
   return d.toISOString().slice(0, 10);
 }
-// Max passport expiry: 20 years ahead
 const MAX_EXPIRY = `${new Date().getFullYear() + 20}-12-31`;
-
-// Passport issue: 20 years ago to today
 const MIN_ISSUE = `${new Date().getFullYear() - 20}-01-01`;
+
+/** English-only (Latin + spaces + hyphens + apostrophes) */
+const ENGLISH_RE = /^[A-Za-z\s'\-]+$/;
 
 function isFutureDate(d: string): boolean {
   return d > TODAY;
@@ -55,6 +53,41 @@ function emptyPassenger(): PassengerInput {
   };
 }
 
+// ─── English-only field ────────────────────────────────────────────────────────
+function NameInput({
+  label, value, onChange, error, placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  error?: string;
+  placeholder?: string;
+}) {
+  return (
+    <>
+      <Text style={styles.fieldLabel}>{label} <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
+      <View style={[styles.nameInputWrap, !!error && styles.inputError]}>
+        <TextInput
+          style={styles.nameInput}
+          placeholder={placeholder ?? 'As in passport'}
+          placeholderTextColor={MUTED}
+          value={value}
+          onChangeText={onChange}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          textAlign="left"
+          selectionColor={GOLD}
+        />
+        <View style={styles.engBadge}>
+          <Text style={styles.engBadgeText}>EN</Text>
+        </View>
+      </View>
+      {!!error && <Text style={styles.errorText}>{error}</Text>}
+    </>
+  );
+}
+
+// ─── Main Screen ───────────────────────────────────────────────────────────────
 export default function FlightTravelersScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ offer?: string; adults?: string; children?: string }>();
@@ -91,18 +124,31 @@ export default function FlightTravelersScreen() {
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
-    const required: (keyof PassengerInput)[] = ['firstName', 'lastName', 'nationality', 'gender', 'dob', 'passportNumber', 'passportExpiry'];
     passengers.forEach((p, i) => {
-      required.forEach(k => {
-        if (!p[k]?.trim()) errs[`${i}.${k}`] = 'مطلوب';
-      });
-      if (p.dob && !isFutureDate(p.dob) === false) {
-        // dob must be in the past
-        if (p.dob >= TODAY) errs[`${i}.dob`] = 'تاريخ الميلاد يجب أن يكون في الماضي';
+      // Name — must be non-empty AND English-only
+      if (!p.firstName.trim()) {
+        errs[`${i}.firstName`] = 'مطلوب';
+      } else if (!ENGLISH_RE.test(p.firstName.trim())) {
+        errs[`${i}.firstName`] = 'الاسم الأول يجب أن يكون بالإنجليزية فقط كما في جواز السفر';
       }
-      if (p.passportExpiry && !isFutureDate(p.passportExpiry)) {
+
+      if (!p.lastName.trim()) {
+        errs[`${i}.lastName`] = 'مطلوب';
+      } else if (!ENGLISH_RE.test(p.lastName.trim())) {
+        errs[`${i}.lastName`] = 'اسم العائلة يجب أن يكون بالإنجليزية فقط كما في جواز السفر';
+      }
+
+      if (!p.nationality) errs[`${i}.nationality`] = 'الجنسية مطلوبة';
+      if (!p.gender)      errs[`${i}.gender`]      = 'مطلوب';
+      if (!p.dob)         errs[`${i}.dob`]         = 'مطلوب';
+      if (!p.passportNumber.trim()) errs[`${i}.passportNumber`] = 'مطلوب';
+      if (!p.passportExpiry) errs[`${i}.passportExpiry`] = 'مطلوب';
+
+      if (p.dob && p.dob >= TODAY)
+        errs[`${i}.dob`] = 'تاريخ الميلاد يجب أن يكون في الماضي';
+
+      if (p.passportExpiry && !isFutureDate(p.passportExpiry))
         errs[`${i}.passportExpiry`] = 'جواز السفر منتهي الصلاحية';
-      }
     });
     if (!phone.trim()) errs['phone'] = 'مطلوب';
     if (!email.trim()) errs['email'] = 'مطلوب';
@@ -112,7 +158,7 @@ export default function FlightTravelersScreen() {
 
   function handleContinue() {
     if (!validate()) {
-      Alert.alert('بيانات ناقصة أو غير صحيحة', 'يرجى مراجعة الحقول المميزة');
+      Alert.alert('بيانات ناقصة', 'يرجى مراجعة الحقول المميزة باللون الأحمر وتصحيحها');
       return;
     }
     if (offer) setOffer(offer);
@@ -142,6 +188,14 @@ export default function FlightTravelersScreen() {
           <Ionicons name="chevron-forward" size={24} color={WHITE} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>بيانات المسافرين</Text>
+      </View>
+
+      {/* English name notice */}
+      <View style={styles.noticeBanner}>
+        <Ionicons name="information-circle-outline" size={16} color={GOLD} />
+        <Text style={styles.noticeText}>
+          يجب إدخال الاسم بالإنجليزية فقط كما هو مكتوب في جواز السفر
+        </Text>
       </View>
 
       <ScrollView
@@ -177,35 +231,33 @@ export default function FlightTravelersScreen() {
             </View>
             {errors[`${i}.gender`] && <Text style={styles.errorText}>{errors[`${i}.gender`]}</Text>}
 
-            {/* First name */}
-            <Text style={styles.fieldLabel}>الاسم الأول <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
-            <TextInput
-              style={[styles.input, errors[`${i}.firstName`] && styles.inputError]}
-              placeholder="كما في جواز السفر" placeholderTextColor={MUTED}
-              value={pax.firstName} onChangeText={v => updatePassenger(i, 'firstName', v)}
-              textAlign="right" selectionColor={GOLD}
+            {/* First name — English only */}
+            <NameInput
+              label="الاسم الأول"
+              value={pax.firstName}
+              onChange={v => updatePassenger(i, 'firstName', v)}
+              error={errors[`${i}.firstName`]}
+              placeholder="FIRST NAME"
             />
-            {errors[`${i}.firstName`] && <Text style={styles.errorText}>{errors[`${i}.firstName`]}</Text>}
 
-            {/* Last name */}
-            <Text style={styles.fieldLabel}>اسم العائلة <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
-            <TextInput
-              style={[styles.input, errors[`${i}.lastName`] && styles.inputError]}
-              placeholder="كما في جواز السفر" placeholderTextColor={MUTED}
-              value={pax.lastName} onChangeText={v => updatePassenger(i, 'lastName', v)}
-              textAlign="right" selectionColor={GOLD}
+            {/* Last name — English only */}
+            <NameInput
+              label="اسم العائلة"
+              value={pax.lastName}
+              onChange={v => updatePassenger(i, 'lastName', v)}
+              error={errors[`${i}.lastName`]}
+              placeholder="LAST NAME"
             />
-            {errors[`${i}.lastName`] && <Text style={styles.errorText}>{errors[`${i}.lastName`]}</Text>}
 
-            {/* Nationality */}
-            <Text style={styles.fieldLabel}>الجنسية <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
-            <TextInput
-              style={[styles.input, errors[`${i}.nationality`] && styles.inputError]}
-              placeholder="مثال: عراقي" placeholderTextColor={MUTED}
-              value={pax.nationality} onChangeText={v => updatePassenger(i, 'nationality', v)}
-              textAlign="right" selectionColor={GOLD}
+            {/* Nationality — country picker */}
+            <CountryPickerFlight
+              label="الجنسية"
+              value={pax.nationality}
+              onChange={(code) => updatePassenger(i, 'nationality', code)}
+              required
+              hasError={!!errors[`${i}.nationality`]}
+              errorText={errors[`${i}.nationality`]}
             />
-            {errors[`${i}.nationality`] && <Text style={styles.errorText}>{errors[`${i}.nationality`]}</Text>}
 
             {/* DOB — date picker */}
             <DatePickerField
@@ -223,9 +275,14 @@ export default function FlightTravelersScreen() {
             <Text style={styles.fieldLabel}>رقم جواز السفر <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
             <TextInput
               style={[styles.input, errors[`${i}.passportNumber`] && styles.inputError]}
-              placeholder="A12345678" placeholderTextColor={MUTED}
-              value={pax.passportNumber} onChangeText={v => updatePassenger(i, 'passportNumber', v)}
-              autoCapitalize="characters" textAlign="right" selectionColor={GOLD}
+              placeholder="A12345678"
+              placeholderTextColor={MUTED}
+              value={pax.passportNumber}
+              onChangeText={v => updatePassenger(i, 'passportNumber', v)}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              textAlign="left"
+              selectionColor={GOLD}
             />
             {errors[`${i}.passportNumber`] && <Text style={styles.errorText}>{errors[`${i}.passportNumber`]}</Text>}
 
@@ -241,13 +298,12 @@ export default function FlightTravelersScreen() {
               errorText={errors[`${i}.passportExpiry`]}
             />
 
-            {/* Passport issue country (optional) */}
-            <Text style={styles.fieldLabel}>دولة الإصدار (اختياري)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="مثال: العراق" placeholderTextColor={MUTED}
-              value={pax.passportIssueCountry ?? ''} onChangeText={v => updatePassenger(i, 'passportIssueCountry', v)}
-              textAlign="right" selectionColor={GOLD}
+            {/* Passport issue country (optional) — country picker */}
+            <CountryPickerFlight
+              label="دولة إصدار الجواز"
+              value={pax.passportIssueCountry ?? ''}
+              onChange={(code) => updatePassenger(i, 'passportIssueCountry', code)}
+              optional
             />
           </View>
         ))}
@@ -258,20 +314,27 @@ export default function FlightTravelersScreen() {
           <Text style={styles.fieldLabel}>رقم الهاتف <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
           <TextInput
             style={[styles.input, errors.phone && styles.inputError]}
-            placeholder="+964 7XX XXXX" placeholderTextColor={MUTED}
+            placeholder="+967 7XX XXXX XXX"
+            placeholderTextColor={MUTED}
             value={phone}
             onChangeText={v => { setPhone(v); if (errors.phone) setErrors(e => { const n = { ...e }; delete n.phone; return n; }); }}
-            keyboardType="phone-pad" textAlign="right" selectionColor={GOLD}
+            keyboardType="phone-pad"
+            textAlign="left"
+            selectionColor={GOLD}
           />
           {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
           <Text style={styles.fieldLabel}>البريد الإلكتروني <Text style={{ color: ERROR_COLOR }}>*</Text></Text>
           <TextInput
             style={[styles.input, errors.email && styles.inputError]}
-            placeholder="example@email.com" placeholderTextColor={MUTED}
+            placeholder="example@email.com"
+            placeholderTextColor={MUTED}
             value={email}
             onChangeText={v => { setEmail(v); if (errors.email) setErrors(e => { const n = { ...e }; delete n.email; return n; }); }}
-            keyboardType="email-address" autoCapitalize="none" textAlign="right" selectionColor={GOLD}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            textAlign="left"
+            selectionColor={GOLD}
           />
           {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
         </View>
@@ -296,13 +359,42 @@ const styles = StyleSheet.create({
   },
   headerTitle: { flex: 1, color: WHITE, fontSize: 17, fontFamily: 'Tajawal_800ExtraBold', textAlign: 'right' },
 
+  noticeBanner: {
+    flexDirection: 'row-reverse', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(201,160,96,0.12)', paddingHorizontal: 16, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(201,160,96,0.2)',
+  },
+  noticeText: {
+    flex: 1, color: GOLD, fontFamily: 'Tajawal_500Medium', fontSize: 12, textAlign: 'right',
+  },
+
   card: {
     backgroundColor: DARK2, borderRadius: 18, borderWidth: 1,
     borderColor: BORDER, padding: 18, marginBottom: 12,
   },
   cardTitle: { color: WHITE, fontFamily: 'Tajawal_800ExtraBold', fontSize: 15, textAlign: 'right', marginBottom: 14 },
 
-  fieldLabel: { color: MUTED, fontFamily: 'Tajawal_500Medium', fontSize: 13, textAlign: 'right', marginBottom: 6, marginTop: 10 },
+  fieldLabel: {
+    color: MUTED, fontFamily: 'Tajawal_500Medium', fontSize: 13,
+    textAlign: 'right', marginBottom: 6, marginTop: 10,
+  },
+
+  nameInputWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: INPUT_BG, borderWidth: 1, borderColor: BORDER,
+    borderRadius: 12, overflow: 'hidden',
+  },
+  nameInput: {
+    flex: 1, color: WHITE, fontFamily: 'Tajawal_400Regular', fontSize: 15,
+    paddingHorizontal: 14, paddingVertical: 13,
+    letterSpacing: 0.5,
+  },
+  engBadge: {
+    backgroundColor: 'rgba(201,160,96,0.15)', paddingHorizontal: 10, paddingVertical: 6,
+    borderLeftWidth: 1, borderLeftColor: BORDER,
+  },
+  engBadgeText: { color: GOLD, fontFamily: 'Tajawal_700Bold', fontSize: 11 },
+
   input: {
     backgroundColor: INPUT_BG, borderWidth: 1, borderColor: BORDER,
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13,

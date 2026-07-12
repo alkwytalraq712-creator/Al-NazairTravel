@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFlightBookingContext } from '@/context/FlightBookingContext';
 import { useFlightBooking, formatTime, formatDuration, formatDateAr, CABIN_LABELS_AR } from '@/lib/flightService';
+import { codeToEnglishName } from '@/lib/countriesEn';
 import type { FlightOffer } from '@/lib/flightService';
 
 const GOLD = '#C9A060';
@@ -77,7 +78,41 @@ export default function FlightReviewScreen() {
         },
       } as any);
     } catch (e: any) {
-      Alert.alert('تعذر إتمام الحجز', e?.message ?? 'حدث خطأ غير متوقع، يرجى المحاولة مجدداً');
+      // Extract the real error message from the API response shape
+      const rawMsg: string =
+        e?.data?.error ??
+        e?.response?.data?.error ??
+        e?.message ??
+        'حدث خطأ غير متوقع';
+
+      // Check whether the offer expired / is no longer available
+      const isExpired =
+        e?.status === 409 ||
+        /انتهت صلاحية|expire|no longer|not available|unavailable|sold out|another offer/i.test(rawMsg);
+
+      if (isExpired) {
+        Alert.alert(
+          '❌ انتهت صلاحية الرحلة',
+          'انتهت صلاحية عرض هذه الرحلة أو لم تعد متاحة. يرجى إعادة البحث واختيار رحلة جديدة.',
+          [
+            {
+              text: 'إعادة البحث',
+              onPress: () => {
+                reset();
+                router.replace('/(tabs)/flights' as any);
+              },
+              style: 'default',
+            },
+            { text: 'إلغاء', style: 'cancel' },
+          ],
+        );
+      } else {
+        Alert.alert(
+          'تعذر إتمام الحجز',
+          rawMsg,
+          [{ text: 'حسناً' }],
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -154,7 +189,9 @@ export default function FlightReviewScreen() {
           {state.passengers.map((p, i) => (
             <View key={i} style={i > 0 ? { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: BORDER } : undefined}>
               <Text style={styles.paxName}>{p.firstName} {p.lastName}</Text>
-              <Text style={styles.sub}>جواز {p.passportNumber} • {p.nationality}</Text>
+              <Text style={styles.sub}>
+                جواز {p.passportNumber} • {codeToEnglishName(p.nationality)}
+              </Text>
             </View>
           ))}
           <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: BORDER }}>
@@ -173,6 +210,14 @@ export default function FlightReviewScreen() {
             <Text style={styles.totalLabel}>الإجمالي</Text>
             <Text style={styles.totalValue}>{offer.currency} {total.toFixed(0)}</Text>
           </View>
+        </View>
+
+        {/* Offer validity notice */}
+        <View style={styles.noticeCard}>
+          <Ionicons name="time-outline" size={16} color={GOLD} />
+          <Text style={styles.noticeText}>
+            تنبيه: تكون أسعار الطيران متاحة لفترة محدودة، يُنصح بإتمام الحجز فور الاطلاع عليها لضمان توفر المقعد.
+          </Text>
         </View>
       </ScrollView>
 
@@ -222,6 +267,17 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' },
   totalLabel: { color: WHITE, fontFamily: 'Tajawal_700Bold', fontSize: 15 },
   totalValue: { color: GOLD, fontFamily: 'Tajawal_800ExtraBold', fontSize: 20 },
+
+  noticeCard: {
+    flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 8,
+    backgroundColor: 'rgba(201,160,96,0.08)', borderRadius: 12,
+    borderWidth: 1, borderColor: 'rgba(201,160,96,0.2)',
+    padding: 12, marginBottom: 12,
+  },
+  noticeText: {
+    flex: 1, color: 'rgba(201,160,96,0.85)', fontFamily: 'Tajawal_400Regular',
+    fontSize: 11, textAlign: 'right', lineHeight: 18,
+  },
 
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
