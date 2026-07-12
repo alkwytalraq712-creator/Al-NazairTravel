@@ -141,11 +141,21 @@ export function getProfileCompletion(user: User) {
 // ── Middleware ─────────────────────────────────────────────────────────────────
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.session.userId) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
+  // Primary: session already populated (web cookie OR loadCurrentUser already ran)
+  if (req.session.userId) {
+    return next();
   }
-  next();
+  // Secondary: mobile app sends Bearer token — check it directly as a safety net
+  // in case loadCurrentUser had a timing or async issue
+  const token = extractBearerToken(req);
+  if (token) {
+    const payload = verifyToken(token);
+    if (payload) {
+      req.session.userId = payload.userId;
+      return next();
+    }
+  }
+  res.status(401).json({ error: "Not authenticated" });
 }
 
 export async function requireAdmin(

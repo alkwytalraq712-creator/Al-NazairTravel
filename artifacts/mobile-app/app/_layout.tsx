@@ -13,7 +13,8 @@ import {
 } from '@expo-google-fonts/tajawal';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { setBaseUrl } from '@workspace/api-client-react';
+import { setBaseUrl, setAuthTokenGetter } from '@workspace/api-client-react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '@/context/AuthContext';
 import { FlightBookingProvider } from '@/context/FlightBookingContext';
 import { ThemeProvider } from '@/context/ThemeContext';
@@ -24,6 +25,13 @@ import { ServiceSettingsProvider } from '@/context/ServiceSettingsContext';
 if (process.env.EXPO_PUBLIC_DOMAIN) {
   setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 }
+
+// CRITICAL: register a persistent token getter at module-level so it survives
+// Hot Reload / Fast Refresh (which resets module-level variables in custom-fetch).
+// AuthContext also calls setAuthTokenGetter after login — that call overwrites this
+// with an in-memory getter, which is fine and faster. This acts as the fallback
+// that keeps all requests authenticated even immediately after a module reload.
+setAuthTokenGetter(() => AsyncStorage.getItem('@qema_auth_token'));
 
 SplashScreen.preventAutoHideAsync();
 

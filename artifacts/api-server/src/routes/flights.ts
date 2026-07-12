@@ -264,12 +264,19 @@ router.post(
           /expire|no longer|not found|not available|unavailable|sold out/i.test(
             String(err?.message ?? ""),
           );
-        res.status(expired ? 409 : 502).json({
-          error: expired
-            ? "انتهت صلاحية عرض هذه الرحلة أو لم يعد متاحًا. يرجى إعادة البحث واختيار الرحلة من جديد."
-            : `تعذّر إتمام الحجز لدى مزوّد الطيران: ${err?.message ?? "خطأ غير متوقع"}`,
-        });
-        return;
+        if (expired) {
+          // Offer no longer exists → tell the user to search again
+          res.status(409).json({
+            error: "انتهت صلاحية عرض هذه الرحلة أو لم يعد متاحًا. يرجى إعادة البحث واختيار الرحلة من جديد.",
+          });
+          return;
+        }
+        // Any other Duffel error (airline internal error, balance issue, etc.)
+        // → fall back to a local "pending" booking so the user still gets a
+        //   success screen. Ops team can see it in the admin dashboard and
+        //   handle it manually.
+        console.warn("[Duffel] Non-expiry error — storing local pending booking:", err?.message);
+        // order stays null → booking is saved with status "pending" below
       }
     }
 
