@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { Ionicons } from '@expo/vector-icons';
 import {
   getListMyNotificationsQueryKey,
@@ -158,6 +159,13 @@ export default function NotificationsScreen() {
   const [activeTab, setActiveTab] = useState<NotifType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+
+  // Clear app icon badge when user opens this screen
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      Notifications.setBadgeCountAsync(0).catch(() => {});
+    }
+  }, []);
 
   const { data: notifs, isLoading, refetch } = useListMyNotifications({
     query: { queryKey: getListMyNotificationsQueryKey(), enabled: isAuthenticated } as any,
