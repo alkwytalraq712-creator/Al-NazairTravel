@@ -566,9 +566,9 @@ body{
   <!-- Header -->
   <div class="doc-header">
     <div class="header-top">
-      <!-- Company block — 100% real text, no images -->
+      <!-- Company block — logo + real text -->
       <div class="company-block">
-        <span class="company-divider-line"></span>
+        <img src="${logoDataUrl}" alt="${COMPANY_AR}" style="display:block;height:64px;width:auto;max-width:160px;object-fit:contain;margin:0 0 10px auto;"/>
         <div class="company-ar">${COMPANY_AR}</div>
         <div class="company-en">${COMPANY_EN}</div>
         <hr class="company-separator"/>
