@@ -1,13 +1,14 @@
 /**
- * E-Ticket Screen — professional airline itinerary + PDF export.
- * Design modeled after standard IATA itinerary documents.
+ * E-Ticket Screen — Professional airline-grade itinerary & PDF export.
+ * Redesigned to Qatar Airways / Emirates / Oman Air standard.
  * Company: قمة النظائر للسفريات والسياحة
  */
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Platform, ScrollView,
+  ActivityIndicator, Alert, Animated, Platform, ScrollView,
   StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
+import Svg, { Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,107 +16,189 @@ import { Image } from 'expo-image';
 import QRCode from 'react-native-qrcode-svg';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { useGetFlightBooking, getGetFlightBookingQueryKey, useCompleteHoldBooking } from '@workspace/api-client-react';
-import { formatDateAr, formatTime, formatDuration, CABIN_LABELS_AR } from '@/lib/flightService';
+import * as FileSystem from 'expo-file-system';
+import {
+  useGetFlightBooking,
+  getGetFlightBookingQueryKey,
+  useCompleteHoldBooking,
+} from '@workspace/api-client-react';
+import { formatTime, formatDuration, CABIN_LABELS_AR } from '@/lib/flightService';
 import { codeToEnglishName } from '@/lib/countriesEn';
+import { useColors } from '@/hooks/useColors';
 
-const GOLD = '#C9A060';
-const DARK = '#0B1628';
-const DARK2 = '#0F1E36';
-const DARK3 = '#162035';
-const BORDER = 'rgba(255,255,255,0.09)';
-const MUTED = 'rgba(255,255,255,0.50)';
-const WHITE = '#FFFFFF';
-const GREEN = '#10B981';
+// ─── Brand & Company ──────────────────────────────────────────────────────────
+const GOLD       = '#C9A060';
+const GOLD2      = '#E8C07A';
+const DARK_BG    = '#0B1628';
+const TICKET_BG  = '#FFFFFF';
+const TICKET_SECONDARY = '#F7F8FC';
 
+const COMPANY_AR    = 'قمة النظائر للسفريات والسياحة';
+const COMPANY_EN    = 'QEMA AL-NAZAER FOR TRAVEL & TOURISM';
+const COMPANY_PHONE = '+967 1 234 5678';
+const COMPANY_EMAIL = 'info@qema-travel.com';
+const COMPANY_CITY  = 'صنعاء، الجمهورية اليمنية';
+
+// ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'قيد الانتظار',
-  confirmed: 'مؤكد',
-  ticketed: 'صدرت التذكرة ✓',
-  cancelled: 'ملغى',
-  completed: 'مكتمل',
-  held: 'حجز مؤقت ⏳',
+  pending:      'قيد الانتظار',
+  confirmed:    'مؤكد',
+  ticketed:     'صدرت التذكرة',
+  cancelled:    'ملغى',
+  completed:    'مكتمل',
+  held:         'حجز مؤقت',
   expired_hold: 'انتهى الحجز المؤقت',
 };
 const STATUS_COLORS: Record<string, string> = {
-  pending: '#F59E0B',
-  confirmed: '#3B82F6',
-  ticketed: '#10B981',
-  cancelled: '#EF4444',
-  completed: '#6B7280',
-  held: '#8B5CF6',
-  expired_hold: '#F97316',
+  pending:      '#F59E0B',
+  confirmed:    '#3B82F6',
+  ticketed:     '#10B981',
+  cancelled:    '#EF4444',
+  completed:    '#6B7280',
+  held:         '#F97316',
+  expired_hold: '#EF4444',
+};
+const GENDER_MAP: Record<string, string> = {
+  male: 'ذكر / Male', female: 'أنثى / Female', M: 'ذكر / Male', F: 'أنثى / Female',
 };
 
-// ─── Company constants ────────────────────────────────────────────────────────
-const COMPANY_AR = 'قمة النظائر للسفريات والسياحة';
-const COMPANY_EN = 'QEMA AL-NAZAER FOR TRAVEL & TOURISM';
-const COMPANY_PHONE = '+967 1 234 5678';
-const COMPANY_EMAIL = 'info@qema-travel.com';
-const COMPANY_CITY = 'صنعاء، الجمهورية اليمنية';
+function isTemporary(status: string) {
+  return status === 'held' || status === 'pending' || status === 'expired_hold';
+}
+function isConfirmed(status: string) {
+  return status === 'confirmed' || status === 'ticketed' || status === 'completed';
+}
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function InfoRow({ label, value, highlight }: { label: string; value?: string | null; highlight?: boolean }) {
-  if (!value) return null;
+function dayFull(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('ar-EG', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    });
+  } catch { return iso; }
+}
+function dateShort(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch { return iso; }
+}
+
+// ─── Visual Barcode (SVG) ─────────────────────────────────────────────────────
+function BarcodeView({ value, width = 220, height = 52, color = '#1A2035' }: {
+  value: string; width?: number; height?: number; color?: string;
+}) {
+  const src = value.padEnd(20, '1').slice(0, 20);
+  const segments: { x: number; w: number; black: boolean }[] = [];
+  let cursor = 0;
+  const unit = width / (src.length * 7);
+
+  Array.from(src).forEach((c) => {
+    const code = c.charCodeAt(0);
+    const mods = [
+      (code >> 4) & 1 ? 3 : 1,
+      (code >> 3) & 1 ? 1 : 2,
+      (code >> 2) & 1 ? 2 : 1,
+      (code >> 1) & 1 ? 1 : 3,
+      code & 1 ? 2 : 1,
+      1, 1,
+    ];
+    mods.forEach((m, i) => {
+      const bw = Math.max(m * unit, 0.8);
+      segments.push({ x: cursor, w: bw, black: i % 2 === 0 });
+      cursor += bw;
+    });
+  });
+
   return (
-    <View style={styles.infoRow}>
-      <Text style={[styles.infoValue, highlight && { color: GOLD, letterSpacing: 1 }]}>{value}</Text>
-      <Text style={styles.infoLabel}>{label}</Text>
+    <Svg width={width} height={height} viewBox={`0 0 ${cursor} ${height}`} preserveAspectRatio="none">
+      {segments.filter(s => s.black).map((s, i) => (
+        <Rect key={i} x={s.x} y={0} width={s.w} height={height} fill={color} />
+      ))}
+    </Svg>
+  );
+}
+
+// ─── Ticket field row ─────────────────────────────────────────────────────────
+function TField({ label, value, icon, gold }: {
+  label: string; value?: string | null; icon?: string; gold?: boolean;
+}) {
+  const display = value?.trim() ? value.trim() : 'غير متوفر';
+  const empty   = !value?.trim();
+  return (
+    <View style={tf.row}>
+      <View style={tf.labelWrap}>
+        {icon && <Ionicons name={icon as any} size={11} color="#99AABB" />}
+        <Text style={tf.label}>{label}</Text>
+      </View>
+      <Text style={[tf.value, gold && tf.gold, empty && tf.empty]}>{display}</Text>
+    </View>
+  );
+}
+const tf = StyleSheet.create({
+  row: {
+    flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#EEF0F6',
+  },
+  labelWrap: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5 },
+  label: { fontFamily: 'Tajawal_400Regular', fontSize: 11, color: '#778899' },
+  value: { fontFamily: 'Tajawal_700Bold', fontSize: 12, color: '#1A2035', flex: 1, textAlign: 'left', marginRight: 12 },
+  gold: { color: GOLD, letterSpacing: 1, fontFamily: 'Tajawal_800ExtraBold' },
+  empty: { color: '#C0C8D4', fontFamily: 'Tajawal_400Regular', fontStyle: 'italic' },
+});
+
+// ─── Section Header ───────────────────────────────────────────────────────────
+function SectionTitle({ title, icon, color = GOLD }: { title: string; icon: string; color?: string }) {
+  return (
+    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: color + '33', marginBottom: 4 }}>
+      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: color + '18', alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={icon as any} size={14} color={color} />
+      </View>
+      <Text style={{ fontFamily: 'Tajawal_800ExtraBold', fontSize: 13, color: '#1A2035' }}>{title}</Text>
     </View>
   );
 }
 
-function dayOfWeekAr(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  } catch { return iso; }
-}
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
+// ─── Countdown Banner ─────────────────────────────────────────────────────────
 function HoldCountdownBanner({ expiresAt }: { expiresAt: string }) {
-  const [label, setLabel] = React.useState('');
-  React.useEffect(() => {
+  const [label, setLabel] = useState('');
+  useEffect(() => {
     function update() {
       const diff = new Date(expiresAt).getTime() - Date.now();
       if (diff <= 0) { setLabel('انتهت المدة'); return; }
       const h = Math.floor(diff / 3_600_000);
       const m = Math.floor((diff % 3_600_000) / 60_000);
       const s = Math.floor((diff % 60_000) / 1_000);
-      setLabel(`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+      setLabel(`${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
     }
     update();
     const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, [expiresAt]);
 
-  const diff = new Date(expiresAt).getTime() - Date.now();
-  const isExpired = diff <= 0;
-  const isWarning = !isExpired && diff < 2 * 3_600_000;
-  const bg = isExpired ? 'rgba(239,68,68,0.12)' : isWarning ? 'rgba(245,158,11,0.12)' : 'rgba(139,92,246,0.12)';
-  const border = isExpired ? 'rgba(239,68,68,0.3)' : isWarning ? 'rgba(245,158,11,0.3)' : 'rgba(139,92,246,0.3)';
-  const col = isExpired ? '#EF4444' : isWarning ? '#F59E0B' : '#8B5CF6';
+  const diff   = new Date(expiresAt).getTime() - Date.now();
+  const expired = diff <= 0;
+  const warning = !expired && diff < 2 * 3_600_000;
+  const col    = expired ? '#EF4444' : warning ? '#F59E0B' : '#F97316';
 
   return (
-    <View style={{ backgroundColor: bg, borderRadius: 16, borderWidth: 1, borderColor: border, padding: 16, marginBottom: 14 }}>
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-        <Ionicons name={isExpired ? 'alert-circle' : 'time'} size={18} color={col} />
+    <View style={{ backgroundColor: col + '12', borderRadius: 16, borderWidth: 1.5, borderColor: col + '35', padding: 16, marginBottom: 14 }}>
+      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: expired ? 0 : 10 }}>
+        <Ionicons name={expired ? 'alert-circle' : 'timer'} size={20} color={col} />
         <Text style={{ color: col, fontFamily: 'Tajawal_700Bold', fontSize: 14 }}>
-          {isExpired ? 'انتهت مدة الحجز المؤقت' : 'الوقت المتبقي لإتمام الدفع'}
+          {expired ? 'انتهت مدة الحجز المؤقت' : 'الوقت المتبقي لإتمام الدفع'}
         </Text>
       </View>
-      {!isExpired && (
-        <Text style={{ color: col, fontFamily: 'Tajawal_800ExtraBold', fontSize: 28, textAlign: 'center', letterSpacing: 2, fontVariant: ['tabular-nums'] }}>
-          {label}
-        </Text>
+      {!expired && (
+        <>
+          <Text style={{ color: col, fontFamily: 'Tajawal_800ExtraBold', fontSize: 34, textAlign: 'center', letterSpacing: 4, fontVariant: ['tabular-nums'] }}>
+            {label}
+          </Text>
+          <Text style={{ color: col + 'BB', fontFamily: 'Tajawal_400Regular', fontSize: 11, textAlign: 'center', marginTop: 6 }}>
+            ينتهي في: {new Date(expiresAt).toLocaleString('ar-SA', { dateStyle: 'medium', timeStyle: 'short' })}
+          </Text>
+        </>
       )}
-      {!isExpired && (
-        <Text style={{ color: col, fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'center', marginTop: 4, opacity: 0.8 }}>
-          ينتهي الحجز في: {new Date(expiresAt).toLocaleString('ar-SA', { dateStyle: 'medium', timeStyle: 'short' })}
-        </Text>
-      )}
-      {isExpired && (
-        <Text style={{ color: col, fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'right', marginTop: 4, opacity: 0.8 }}>
+      {expired && (
+        <Text style={{ color: col + 'BB', fontFamily: 'Tajawal_400Regular', fontSize: 12, textAlign: 'right', marginTop: 4 }}>
           تعذر إتمام الدفع في الوقت المحدد. يرجى إنشاء حجز جديد.
         </Text>
       )}
@@ -123,532 +206,419 @@ function HoldCountdownBanner({ expiresAt }: { expiresAt: string }) {
   );
 }
 
-export default function ETicketScreen() {
-  const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
-  const [exporting, setExporting] = React.useState(false);
-  const [completing, setCompleting] = React.useState(false);
-  const completeMutation = useCompleteHoldBooking();
+// ─── PDF HTML Builder ─────────────────────────────────────────────────────────
+function buildTicketHtml(booking: any, segments: any[], offer: any, departStr: string, arriveStr: string): string {
+  const pnr          = booking.bookingReference ?? '—';
+  const isConfirmedDoc = isConfirmed(booking.status);
+  const docTitle     = isConfirmedDoc ? 'التذكرة الإلكترونية · ELECTRONIC TICKET' : 'تأكيد الحجز المؤقت · TEMPORARY BOOKING CONFIRMATION';
+  const statusColor  = STATUS_COLORS[booking.status] ?? '#888';
+  const statusLabel  = STATUS_LABELS[booking.status] ?? booking.status;
 
-  const bookingId = Number(id);
-  const { data: booking, isLoading, isError } = useGetFlightBooking(bookingId, {
-    query: {
-      enabled: !!bookingId && !isNaN(bookingId),
-      queryKey: getGetFlightBookingQueryKey(bookingId),
-    },
-  });
+  const issueDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+  const issueTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-  if (isLoading) {
-    return (
-      <View style={[styles.screen, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={GOLD} />
-        <Text style={{ color: MUTED, fontFamily: 'Tajawal_500Medium', marginTop: 12 }}>جاري التحميل...</Text>
-      </View>
-    );
-  }
+  const segsToRender = (segments && segments.length > 0)
+    ? segments
+    : [{ fromAirport: offer.fromAirport, fromAirportName: '', fromCity: '', toAirport: offer.toAirport, toAirportName: '', toCity: '', departTime: departStr, arriveTime: arriveStr, airlineName: offer.airlineName, flightNumber: offer.flightNumber, aircraft: '', durationMinutes: offer.durationMinutes, cabinClass: offer.cabinClass }];
 
-  if (isError || !booking) {
-    return (
-      <View style={[styles.screen, { justifyContent: 'center', alignItems: 'center', gap: 16 }]}>
-        <Ionicons name="alert-circle-outline" size={52} color="#EF4444" />
-        <Text style={{ color: MUTED, fontFamily: 'Tajawal_500Medium', fontSize: 15 }}>تعذر تحميل التذكرة</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtnFallback}>
-          <Text style={{ color: GOLD, fontFamily: 'Tajawal_700Bold' }}>رجوع</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const segHtml = segsToRender.map((s: any, idx: number) => {
+    const depDt  = typeof s.departTime === 'string' ? s.departTime : (s.departTime as any)?.toISOString?.() ?? '';
+    const arrDt  = typeof s.arriveTime === 'string' ? s.arriveTime : (s.arriveTime as any)?.toISOString?.() ?? '';
+    const depTime = formatTime(depDt);
+    const arrTime = formatTime(arrDt);
+    const depDate = dayFull(depDt.slice(0, 10));
+    const arrDate = dayFull(arrDt.slice(0, 10));
+    const dur    = s.durationMinutes ? formatDuration(s.durationMinutes) : '—';
+    const cabin  = CABIN_LABELS_AR[s.cabinClass ?? ''] ?? (s.cabinClass ?? offer.cabinClass ?? '—');
+    const airline = s.airlineName ?? offer.airlineName ?? '—';
+    const flNum  = s.flightNumber ?? offer.flightNumber ?? '—';
+    const fromName = s.fromAirportName ?? s.fromAirport;
+    const toName   = s.toAirportName ?? s.toAirport;
+    const fromCity = s.fromCity ? `<br><span style="font-size:10px;color:#888">${s.fromCity}</span>` : '';
+    const toCity   = s.toCity   ? `<br><span style="font-size:10px;color:#888">${s.toCity}</span>` : '';
+    const isNonstop = segsToRender.length === 1 && idx === 0;
+    const confColor = isConfirmedDoc ? '#059669' : '#F97316';
+    const confText  = isConfirmedDoc ? 'Confirmed' : 'Pending';
 
-  const offer = booking.offer;
-  const qrValue = booking.bookingReference ?? booking.referenceNumber ?? String(booking.id);
-
-  const departStr = typeof offer.departTime === 'string'
-    ? offer.departTime
-    : (offer.departTime as any)?.toISOString?.() ?? '';
-  const arriveStr = typeof offer.arriveTime === 'string'
-    ? offer.arriveTime
-    : (offer.arriveTime as any)?.toISOString?.() ?? '';
-
-  // Prefer real Duffel segment data when available
-  const segments = booking.segments ?? [];
-  const seg0 = segments[0];
-  const fromAirport = seg0?.fromAirport ?? offer.fromAirport;
-  const toAirport = seg0?.toAirport ?? offer.toAirport;
-  const fromCity = seg0?.fromCity ?? '';
-  const toCity = seg0?.toCity ?? '';
-  const aircraft = seg0?.aircraft ?? '';
-  const duration = seg0?.durationMinutes ?? offer.durationMinutes;
-  const statusColor = STATUS_COLORS[booking.status] ?? MUTED;
-  const statusLabel = STATUS_LABELS[booking.status] ?? booking.status;
-
-  // ─── PDF Builder ────────────────────────────────────────────────────────────
-  function buildTicketHtml(): string {
-    const issueDate = new Date().toLocaleDateString('ar-SA', {
-      year: 'numeric', month: 'long', day: 'numeric',
+    // Simple SVG barcode for PDF
+    const barVal = pnr.padEnd(20, '0').slice(0, 20);
+    const bw = 2;
+    let bx = 0;
+    const bars: string[] = [];
+    Array.from(barVal).forEach((c) => {
+      const code = c.charCodeAt(0);
+      [3,1,2,1,3,1,1].forEach((m, i) => {
+        const bww = (i % 2 === 0 ? (code >> (4 - Math.min(i, 4)) & 1 ? 3 : 1) : 1) * bw;
+        if (i % 2 === 0) bars.push(`<rect x="${bx}" y="0" width="${bww}" height="40" fill="#1A2035"/>`);
+        bx += bww;
+      });
     });
-    const passengerName = booking!.passengers[0]
-      ? `${booking!.passengers[0].firstName} ${booking!.passengers[0].lastName}`
-      : '—';
-    const paxCount = booking!.passengers.length;
+    const barcodeSvg = isConfirmedDoc ? `<svg xmlns="http://www.w3.org/2000/svg" width="${bx}" height="40" viewBox="0 0 ${bx} 40">${bars.join('')}</svg>` : '';
 
-    // Build segment blocks
-    const segBlocks = (() => {
-      const segs = (booking!.segments && booking!.segments.length > 0)
-        ? booking!.segments
-        : [{
-          fromAirport: offer.fromAirport,
-          fromAirportName: '',
-          fromCity: '',
-          toAirport: offer.toAirport,
-          toAirportName: '',
-          toCity: '',
-          departTime: departStr,
-          arriveTime: arriveStr,
-          airlineName: offer.airlineName,
-          flightNumber: offer.flightNumber,
-          aircraft: '',
-          durationMinutes: offer.durationMinutes,
-          cabinClass: offer.cabinClass,
-        }];
-
-      return segs.map((s, idx) => {
-        const depDt = typeof s.departTime === 'string' ? s.departTime : (s.departTime as any)?.toISOString?.() ?? '';
-        const arrDt = typeof s.arriveTime === 'string' ? s.arriveTime : (s.arriveTime as any)?.toISOString?.() ?? '';
-        const depTime = formatTime(depDt);
-        const arrTime = formatTime(arrDt);
-        const depDate = dayOfWeekAr(depDt.slice(0, 10));
-        const arrDate = dayOfWeekAr(arrDt.slice(0, 10));
-        const dur = s.durationMinutes ? formatDuration(s.durationMinutes) : '';
-        const cabinAr = CABIN_LABELS_AR[s.cabinClass ?? ''] ?? (s.cabinClass ?? offer.cabinClass);
-        const airline = s.airlineName ?? offer.airlineName;
-        const flNum = s.flightNumber ?? offer.flightNumber;
-        const fromName = s.fromAirportName ?? s.fromAirport;
-        const toName = s.toAirportName ?? s.toAirport;
-        const fromCityStr = s.fromCity ? `, ${s.fromCity}` : '';
-        const toCityStr = s.toCity ? `, ${s.toCity}` : '';
-
-        return `
-        <div class="segment" style="${idx > 0 ? 'margin-top:12px' : ''}">
-          <!-- Day header -->
-          <div class="seg-day-header">
-            <span class="seg-day-text">${depDate}</span>
+    return `
+    <div class="segment-block" ${idx > 0 ? 'style="margin-top:16px"' : ''}>
+      <div class="seg-date-bar">${depDate}</div>
+      <div class="seg-inner">
+        <!-- Airline row -->
+        <div class="seg-airline-row">
+          <div class="airline-icon">✈</div>
+          <div class="airline-info">
+            <span class="airline-name">${airline}</span>
+            <span class="flight-num">${flNum}</span>
           </div>
-
-          <!-- Airline row -->
-          <div class="seg-airline-row">
-            <span class="seg-airline-logo">✈</span>
-            <div>
-              <div class="seg-airline-name">${airline}</div>
-              <div class="seg-flight-num">${flNum}</div>
-            </div>
-            <div class="seg-status-badge">${booking!.status === 'ticketed' || booking!.status === 'confirmed' ? 'Confirmed' : 'Pending'}</div>
+          <div class="seg-badge" style="background:${confColor}18;color:${confColor};border:1px solid ${confColor}44">${confText}</div>
+        </div>
+        <!-- Route -->
+        <div class="route-grid">
+          <div class="port-dep">
+            <div class="port-time">${depTime}</div>
+            <div class="port-date">${depDate.split('،')[1]?.trim() ?? depDate}</div>
+            <div class="port-code">${s.fromAirport ?? '—'}</div>
+            <div class="port-name">${fromName}${fromCity}</div>
           </div>
-
-          <!-- Route grid -->
-          <div class="seg-route-grid">
-            <!-- Departure -->
-            <div class="seg-port">
-              <div class="seg-port-time">${depTime}</div>
-              <div class="seg-port-date">${depDate.split('،')[1]?.trim() ?? depDate}</div>
-              <div class="seg-port-code">${s.fromAirport}</div>
-              <div class="seg-port-name">${fromName}${fromCityStr}</div>
-            </div>
-
-            <!-- Duration middle -->
-            <div class="seg-mid">
-              <div class="seg-mid-arrow">→</div>
-              <div class="seg-mid-dur">${dur}</div>
-              <div class="seg-mid-stops">${segs.length === 1 && idx === 0 ? 'Non stop' : ''}</div>
-            </div>
-
-            <!-- Arrival -->
-            <div class="seg-port seg-port-right">
-              <div class="seg-port-time">${arrTime}</div>
-              <div class="seg-port-date">${arrDate.split('،')[1]?.trim() ?? arrDate}</div>
-              <div class="seg-port-code">${s.toAirport}</div>
-              <div class="seg-port-name">${toName}${toCityStr}</div>
-            </div>
+          <div class="route-mid">
+            <div class="route-arrow">────── ✈ ──────</div>
+            <div class="route-dur">${dur}</div>
+            ${isNonstop ? '<div class="route-nonstop">Non-stop</div>' : ''}
           </div>
-
-          <!-- Details row -->
-          <div class="seg-details">
-            <div class="seg-detail-item">
-              <span class="seg-detail-label">Class</span>
-              <span class="seg-detail-val">${cabinAr}</span>
-            </div>
-            ${s.aircraft ? `
-            <div class="seg-detail-item">
-              <span class="seg-detail-label">Equipment</span>
-              <span class="seg-detail-val">${s.aircraft}</span>
-            </div>` : ''}
-            <div class="seg-detail-item">
-              <span class="seg-detail-label">Status</span>
-              <span class="seg-detail-val seg-detail-confirmed">${booking!.status === 'ticketed' || booking!.status === 'confirmed' ? 'Confirmed' : 'Pending'}</span>
-            </div>
+          <div class="port-arr">
+            <div class="port-time">${arrTime}</div>
+            <div class="port-date">${arrDate.split('،')[1]?.trim() ?? arrDate}</div>
+            <div class="port-code">${s.toAirport ?? '—'}</div>
+            <div class="port-name">${toName}${toCity}</div>
           </div>
-        </div>`;
-      }).join('');
-    })();
+        </div>
+        <!-- Details strip -->
+        <div class="details-strip">
+          <div class="det-item"><span class="det-label">Cabin Class</span><span class="det-val">${cabin}</span></div>
+          ${s.aircraft ? `<div class="det-item"><span class="det-label">Aircraft</span><span class="det-val">${s.aircraft}</span></div>` : ''}
+          <div class="det-item"><span class="det-label">Duration</span><span class="det-val">${dur}</span></div>
+          <div class="det-item"><span class="det-label">Status</span><span class="det-val" style="color:${confColor}">${confText}</span></div>
+          <div class="det-item"><span class="det-label">Seat</span><span class="det-val">${(offer as any).seat ?? 'غير متوفر'}</span></div>
+          <div class="det-item"><span class="det-label">Gate</span><span class="det-val">${(offer as any).gate ?? '—'}</span></div>
+          <div class="det-item"><span class="det-label">Terminal</span><span class="det-val">${(offer as any).terminal ?? '—'}</span></div>
+          <div class="det-item"><span class="det-label">Boarding</span><span class="det-val">${(offer as any).boardingTime ?? '—'}</span></div>
+        </div>
+        ${isConfirmedDoc ? `
+        <!-- Barcode -->
+        <div class="barcode-wrap">
+          ${barcodeSvg}
+          <div style="font-size:9px;color:#999;margin-top:4px;letter-spacing:2px;font-family:monospace">${pnr}</div>
+          <div style="font-size:9px;color:#AAA;margin-top:2px">Scan this code at the airport</div>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
 
-    // Passenger rows
-    const passengerRows = booking!.passengers.map((p, i) => {
-      const eTicket = (p as any).eTicketNumber ?? booking!.eticketNumbers?.[i] ?? '—';
-      const nat = codeToEnglishName(p.nationality ?? '');
-      return `
-      <tr>
-        <td class="pax-num">${i + 1}</td>
-        <td>
-          <div class="pax-name">${p.firstName} ${p.lastName}</div>
-          <div class="pax-nat">${nat}</div>
-        </td>
-        <td class="pax-passport">${p.passportNumber ?? '—'}</td>
-        <td class="pax-eticket">${eTicket}</td>
-      </tr>`;
-    }).join('');
+  const passengerHtml = booking.passengers.map((p: any, i: number) => {
+    const eTicket = (p as any).eTicketNumber ?? booking.eticketNumbers?.[i] ?? '—';
+    const nat     = codeToEnglishName(p.nationality ?? '');
+    const dob     = p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString('en-GB') : '—';
+    const gender  = GENDER_MAP[p.gender ?? ''] ?? p.gender ?? '—';
+    return `
+    <div class="pax-card" ${i > 0 ? 'style="margin-top:10px"' : ''}>
+      <div class="pax-header">
+        <span class="pax-num">${i + 1}</span>
+        <div class="pax-name-block">
+          <span class="pax-name">${p.firstName ?? ''} ${p.lastName ?? ''}</span>
+          <span class="pax-type">${p.type ?? 'Adult'}</span>
+        </div>
+        ${eTicket !== '—' ? `<span class="pax-eticket">Ticket: ${eTicket}</span>` : ''}
+      </div>
+      <div class="pax-grid">
+        <div class="pax-field"><span class="pax-fl">Passport No.</span><span class="pax-fv">${p.passportNumber ?? '—'}</span></div>
+        <div class="pax-field"><span class="pax-fl">Nationality</span><span class="pax-fv">${nat || '—'}</span></div>
+        <div class="pax-field"><span class="pax-fl">Date of Birth</span><span class="pax-fv">${dob}</span></div>
+        <div class="pax-field"><span class="pax-fl">Gender</span><span class="pax-fv">${gender}</span></div>
+        <div class="pax-field"><span class="pax-fl">Passport Expiry</span><span class="pax-fv">${p.passportExpiry ? new Date(p.passportExpiry).toLocaleDateString('en-GB') : '—'}</span></div>
+        <div class="pax-field"><span class="pax-fl">Fare Basis</span><span class="pax-fv">${p.fareBasis ?? (offer as any).fareBasis ?? '—'}</span></div>
+      </div>
+    </div>`;
+  }).join('');
 
-    const pnr = booking!.bookingReference ?? '—';
+  const baggage  = (offer as any).baggage ?? booking.baggage ?? '—';
+  const numBags  = (offer as any).numberOfBags ?? '—';
+  const isTemp   = isTemporary(booking.status);
 
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>تذكرة سفر — ${COMPANY_AR}</title>
+<title>Electronic_Ticket_${pnr}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Cairo', Arial, sans-serif;
-    background: #e8eaf0;
-    color: #1a1a2e;
-    font-size: 12px;
-    padding: 16px;
-  }
-  .page { max-width: 820px; margin: 0 auto; }
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+@page{size:A4;margin:15mm 12mm}
+body{font-family:'Cairo',Arial,sans-serif;background:#E8EAF0;color:#1A2035;font-size:12px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+.page{max-width:780px;margin:0 auto;padding:12px}
 
-  /* ── Main document card ── */
-  .doc-card {
-    background: #fff;
-    border-radius: 4px;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.13);
-    overflow: hidden;
-    margin-bottom: 12px;
-  }
+/* Watermark */
+.watermark{
+  position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(-42deg);
+  font-size:52px;font-weight:900;
+  color:rgba(201,160,96,0.055);
+  white-space:nowrap;pointer-events:none;z-index:0;font-family:'Cairo',sans-serif;
+}
 
-  /* ── Dark header bar ── */
-  .doc-header {
-    background: linear-gradient(135deg, #0B1628 0%, #1a2e4a 100%);
-    padding: 0;
-  }
-  .doc-header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 18px 24px 14px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-  }
-  .company-block { text-align: right; }
-  .company-name-ar {
-    font-size: 20px; font-weight: 900; color: #C9A060;
-    line-height: 1.2; margin-bottom: 2px;
-  }
-  .company-name-en { font-size: 10px; color: rgba(255,255,255,0.45); letter-spacing: 0.5px; }
-  .company-contact { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px; direction: ltr; text-align: right; }
-  
-  .doc-meta { text-align: left; }
-  .doc-meta-label { font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; }
-  .doc-meta-val { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-  .doc-meta-pnr { font-size: 22px; font-weight: 900; color: #C9A060; font-family: monospace; letter-spacing: 3px; }
+/* Main card */
+.doc-card{background:#fff;border-radius:6px;box-shadow:0 2px 20px rgba(0,0,0,0.12);overflow:hidden;margin-bottom:14px;position:relative;z-index:1}
 
-  /* ── Traveler + Agency bar ── */
-  .traveler-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 24px;
-    background: rgba(255,255,255,0.04);
-  }
-  .traveler-block { text-align: right; }
-  .traveler-label { font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-  .traveler-name { font-size: 16px; font-weight: 700; color: #fff; }
-  .traveler-count { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 2px; }
-  .issue-block { text-align: left; }
-  .issue-label { font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; }
-  .issue-date { font-size: 11px; color: rgba(255,255,255,0.7); }
+/* Status top bar */
+.status-top-bar{
+  height:5px;
+  background:${isTemp ? 'linear-gradient(90deg,#F97316,#FBBF24)' : 'linear-gradient(90deg,#C9A060,#E8C07A,#C9A060)'};
+}
 
-  /* ── Segments area ── */
-  .segments-area { padding: 16px 20px; background: #f7f8fc; }
+/* Header */
+.doc-header{background:linear-gradient(135deg,#0B1628 0%,#132039 60%,#0F1E36 100%);padding:20px 24px 16px}
+.header-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+.company-block{text-align:right}
+.company-logo-circle{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:42px;height:42px;border-radius:50%;
+  background:linear-gradient(135deg,#C9A060,#E8C07A);
+  font-size:18px;font-weight:900;color:#0B1628;margin-bottom:6px;
+}
+.company-ar{font-size:18px;font-weight:900;color:#C9A060;line-height:1.2}
+.company-en{font-size:9px;color:rgba(255,255,255,0.40);letter-spacing:0.6px;margin-top:2px}
+.company-contact{font-size:9px;color:rgba(255,255,255,0.30);margin-top:3px;direction:ltr;text-align:right}
+.doc-meta{text-align:left;min-width:200px}
+.doc-type-label{font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.doc-type-val{
+  font-size:13px;font-weight:700;
+  color:${isTemp ? '#F97316' : '#C9A060'};
+  margin-bottom:10px;
+}
+.pnr-label{font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px}
+.pnr-val{font-size:24px;font-weight:900;color:#fff;font-family:monospace;letter-spacing:4px;line-height:1.1}
+.status-badge{
+  display:inline-block;margin-top:6px;
+  padding:3px 10px;border-radius:20px;
+  font-size:10px;font-weight:700;
+  background:${statusColor}22;color:${statusColor};
+  border:1px solid ${statusColor}55;
+}
 
-  /* ── Single segment ── */
-  .segment {
-    background: #fff;
-    border: 1px solid #dde1ed;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 10px;
-  }
-  .seg-day-header {
-    background: #0B1628;
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-  }
-  .seg-day-text { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.7); direction: rtl; }
+/* Traveler strip */
+.traveler-strip{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 24px;background:rgba(255,255,255,0.04);
+  border-top:1px solid rgba(255,255,255,0.06);
+}
+.trav-label{font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px}
+.trav-name{font-size:15px;font-weight:700;color:#fff}
+.trav-count{font-size:9px;color:rgba(255,255,255,0.4);margin-top:2px}
+.issue-val{font-size:10px;color:rgba(255,255,255,0.55);text-align:left}
 
-  .seg-airline-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px 8px;
-    border-bottom: 1px solid #f0f2f8;
-    direction: ltr;
-  }
-  .seg-airline-logo {
-    font-size: 22px;
-    width: 36px; height: 36px;
-    background: #0B1628;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    color: #C9A060;
-    flex-shrink: 0;
-  }
-  .seg-airline-name { font-size: 14px; font-weight: 700; color: #1a1a2e; }
-  .seg-flight-num { font-size: 11px; color: #888; margin-top: 1px; }
-  .seg-status-badge {
-    margin-left: auto;
-    background: rgba(16,185,129,0.12);
-    color: #059669;
-    border: 1px solid rgba(16,185,129,0.3);
-    border-radius: 20px;
-    padding: 3px 12px;
-    font-size: 11px;
-    font-weight: 700;
-  }
+/* Segments area */
+.segments-area{padding:16px 20px;background:#F7F8FC}
 
-  /* Route grid */
-  .seg-route-grid {
-    display: flex;
-    align-items: center;
-    padding: 16px;
-    gap: 8px;
-    direction: ltr;
-  }
-  .seg-port { flex: 1; }
-  .seg-port-right { text-align: right; }
-  .seg-port-time { font-size: 28px; font-weight: 900; color: #0B1628; line-height: 1; }
-  .seg-port-date { font-size: 10px; color: #888; margin: 2px 0 4px; }
-  .seg-port-code { font-size: 13px; font-weight: 700; color: #C9A060; }
-  .seg-port-name { font-size: 10px; color: #666; margin-top: 2px; max-width: 180px; }
-  .seg-port-right .seg-port-name { margin-left: auto; }
+/* Segment block */
+.segment-block{}
+.seg-date-bar{
+  background:#0B1628;padding:7px 16px;
+  font-size:11px;font-weight:700;color:rgba(255,255,255,0.65);
+  border-radius:6px 6px 0 0;direction:rtl;
+}
+.seg-inner{background:#fff;border:1px solid #DDE1ED;border-top:none;border-radius:0 0 8px 8px;overflow:hidden}
+.seg-airline-row{display:flex;align-items:center;gap:12px;padding:12px 16px 10px;border-bottom:1px solid #F0F2F8;direction:ltr}
+.airline-icon{font-size:18px;width:36px;height:36px;background:#0B1628;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#C9A060;flex-shrink:0}
+.airline-info{flex:1}
+.airline-name{display:block;font-size:14px;font-weight:700;color:#1A2035}
+.flight-num{display:block;font-size:11px;color:#888;margin-top:2px}
+.seg-badge{margin-left:auto;border-radius:20px;padding:3px 12px;font-size:10px;font-weight:700}
 
-  .seg-mid {
-    text-align: center;
-    flex: 0 0 100px;
-    padding: 0 8px;
-  }
-  .seg-mid-arrow { font-size: 22px; color: #C9A060; font-weight: 300; letter-spacing: -2px; }
-  .seg-mid-dur { font-size: 12px; font-weight: 700; color: #555; margin-top: 4px; }
-  .seg-mid-stops { font-size: 10px; color: #aaa; margin-top: 2px; }
+/* Route grid */
+.route-grid{display:flex;align-items:center;padding:18px 16px;gap:12px;direction:ltr}
+.port-dep,.port-arr{flex:1}
+.port-arr{text-align:right}
+.port-time{font-size:32px;font-weight:900;color:#0B1628;line-height:1;font-family:'Cairo',monospace}
+.port-date{font-size:10px;color:#888;margin:3px 0}
+.port-code{font-size:14px;font-weight:700;color:#C9A060;letter-spacing:1px}
+.port-name{font-size:10px;color:#666;margin-top:2px;max-width:160px}
+.route-mid{flex:0 0 120px;text-align:center}
+.route-arrow{font-size:11px;color:#C9A060;margin-bottom:4px}
+.route-dur{font-size:12px;font-weight:700;color:#444}
+.route-nonstop{font-size:9px;color:#AAA;margin-top:3px}
 
-  /* Details strip */
-  .seg-details {
-    display: flex;
-    gap: 0;
-    border-top: 1px solid #f0f2f8;
-    background: #fcfcfe;
-    direction: ltr;
-  }
-  .seg-detail-item {
-    flex: 1;
-    padding: 10px 14px;
-    border-right: 1px solid #f0f2f8;
-  }
-  .seg-detail-item:last-child { border-right: none; }
-  .seg-detail-label { display: block; font-size: 9px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-  .seg-detail-val { font-size: 12px; font-weight: 700; color: #333; }
-  .seg-detail-confirmed { color: #059669; }
+/* Details strip */
+.details-strip{display:flex;flex-wrap:wrap;border-top:1px solid #F0F2F8;background:#FAFBFD;direction:ltr}
+.det-item{flex:0 0 25%;padding:8px 14px;border-right:1px solid #F0F2F8;border-bottom:1px solid #F0F2F8}
+.det-item:nth-child(4n){border-right:none}
+.det-label{display:block;font-size:8px;color:#AAA;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px}
+.det-val{display:block;font-size:11px;font-weight:700;color:#333}
 
-  /* ── Passengers section ── */
-  .pax-section {
-    padding: 0 20px 16px;
-    background: #f7f8fc;
-  }
-  .section-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: #C9A060;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 12px 0 8px;
-    border-bottom: 2px solid #C9A060;
-    margin-bottom: 0;
-  }
-  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #dde1ed; border-radius: 8px; overflow: hidden; }
-  thead tr { background: #0B1628; }
-  thead th {
-    padding: 10px 14px;
-    font-size: 10px;
-    font-weight: 700;
-    color: rgba(255,255,255,0.6);
-    text-align: left;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  tbody tr:nth-child(even) { background: #f9fafb; }
-  tbody td { padding: 10px 14px; font-size: 12px; border-bottom: 1px solid #f0f2f8; vertical-align: middle; }
-  tbody tr:last-child td { border-bottom: none; }
-  .pax-num { font-weight: 900; color: #C9A060; width: 30px; text-align: center; }
-  .pax-name { font-weight: 700; color: #1a1a2e; font-size: 13px; }
-  .pax-nat { font-size: 10px; color: #888; margin-top: 2px; }
-  .pax-passport { font-family: monospace; font-size: 13px; letter-spacing: 1px; color: #444; }
-  .pax-eticket { font-family: monospace; font-size: 11px; color: #C9A060; font-weight: 700; letter-spacing: 1px; }
+/* Barcode */
+.barcode-wrap{padding:12px 16px;border-top:1px solid #F0F2F8;text-align:center;background:#FCFCFD}
 
-  /* ── Reference section ── */
-  .ref-section {
-    padding: 12px 20px;
-    background: #f7f8fc;
-    border-top: 1px solid #e8eaf0;
-  }
-  .ref-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 8px 0;
-    border-bottom: 1px dashed #e0e4ee;
-    direction: ltr;
-  }
-  .ref-row:last-child { border-bottom: none; }
-  .ref-label { font-size: 10px; color: #888; min-width: 180px; }
-  .ref-val { font-weight: 700; color: #C9A060; font-family: monospace; letter-spacing: 2px; font-size: 15px; }
+/* Passengers */
+.pax-section{padding:0 20px 16px;background:#F7F8FC}
+.section-title{
+  font-size:11px;font-weight:700;color:#C9A060;text-transform:uppercase;letter-spacing:0.8px;
+  padding:14px 0 8px;border-bottom:2px solid #C9A060;margin-bottom:10px;
+}
+.pax-card{background:#fff;border:1px solid #DDE1ED;border-radius:8px;overflow:hidden}
+.pax-header{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#0B1628;direction:ltr}
+.pax-num{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#C9A060;color:#0B1628;font-size:11px;font-weight:900;flex-shrink:0}
+.pax-name-block{flex:1}
+.pax-name{display:block;font-size:14px;font-weight:700;color:#fff}
+.pax-type{display:block;font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px}
+.pax-eticket{font-size:10px;color:#C9A060;font-family:monospace;letter-spacing:1px;font-weight:700}
+.pax-grid{display:flex;flex-wrap:wrap;direction:ltr}
+.pax-field{flex:0 0 50%;padding:8px 14px;border-right:1px solid #F0F2F8;border-bottom:1px solid #F0F2F8}
+.pax-field:nth-child(2n){border-right:none}
+.pax-fl{display:block;font-size:9px;color:#AAA;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px}
+.pax-fv{display:block;font-size:12px;font-weight:700;color:#333}
 
-  /* ── Notes section ── */
-  .notes-section {
-    padding: 14px 20px;
-    background: #fff;
-    border-top: 2px solid #f0f2f8;
-  }
-  .notes-title { font-size: 11px; font-weight: 700; color: #555; margin-bottom: 8px; direction: rtl; }
-  .note-item { font-size: 10px; color: #777; line-height: 1.8; direction: rtl; }
+/* Booking summary */
+.summary-section{padding:0 20px 16px;background:#F7F8FC}
+.summary-grid{background:#fff;border:1px solid #DDE1ED;border-radius:8px;overflow:hidden;direction:ltr}
+.sum-row{display:flex;padding:9px 14px;border-bottom:1px solid #F0F2F8;align-items:center}
+.sum-row:last-child{border-bottom:none}
+.sum-label{flex:0 0 200px;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.4px}
+.sum-val{flex:1;font-size:12px;font-weight:700;color:#1A2035}
+.sum-val-gold{color:#C9A060;font-family:monospace;letter-spacing:2px;font-size:14px;font-weight:900}
 
-  /* ── Footer ── */
-  .doc-footer {
-    background: #0B1628;
-    padding: 14px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    direction: ltr;
-  }
-  .footer-left { text-align: left; }
-  .footer-right { text-align: right; }
-  .footer-company { font-size: 11px; color: #C9A060; font-weight: 700; }
-  .footer-sub { font-size: 9px; color: rgba(255,255,255,0.35); margin-top: 3px; }
-  .footer-disclaimer { font-size: 8px; color: rgba(255,255,255,0.25); max-width: 400px; line-height: 1.6; }
+/* Baggage */
+.baggage-section{padding:0 20px 14px;background:#F7F8FC}
+.baggage-card{background:#fff;border:1px solid #DDE1ED;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:14px;direction:ltr}
+.bag-icon{font-size:22px}
+.bag-info{}
+.bag-main{font-size:14px;font-weight:700;color:#1A2035}
+.bag-sub{font-size:11px;color:#888;margin-top:2px}
 
-  @media print {
-    body { padding: 0; background: white; }
-    .doc-card { box-shadow: none; }
-  }
+/* Notes */
+.notes-section{padding:12px 20px 16px;background:#fff;border-top:1px solid #EEF0F6}
+.notes-title{font-size:11px;font-weight:700;color:#555;margin-bottom:8px;direction:rtl}
+.note{font-size:10px;color:#777;line-height:1.8;direction:rtl;padding:2px 0}
+
+/* Footer */
+.doc-footer{background:#0B1628;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;direction:ltr}
+.footer-company{font-size:11px;color:#C9A060;font-weight:700}
+.footer-sub{font-size:9px;color:rgba(255,255,255,0.3);margin-top:3px}
+.footer-disc{font-size:8px;color:rgba(255,255,255,0.2);max-width:380px;line-height:1.6;text-align:right}
+
+/* Temporary booking notice */
+.temp-notice{
+  background:#FFF7ED;border:1.5px solid #F97316;border-radius:8px;
+  padding:12px 16px;margin:0 20px 14px;
+  font-size:12px;color:#C05702;direction:rtl;font-weight:600;
+  text-align:center;
+}
+
+@media print{
+  body{background:white;padding:0}
+  .doc-card{box-shadow:none}
+  .page{padding:0;max-width:100%}
+}
 </style>
 </head>
 <body>
+<div class="watermark">${COMPANY_AR}</div>
 <div class="page">
 <div class="doc-card">
 
-  <!-- ═══ DARK HEADER ═══ -->
+  <!-- Status bar -->
+  <div class="status-top-bar"></div>
+
+  <!-- Header -->
   <div class="doc-header">
-    <div class="doc-header-top">
-      <!-- Right: Company -->
+    <div class="header-top">
       <div class="company-block">
-        <div class="company-name-ar">${COMPANY_AR}</div>
-        <div class="company-name-en">${COMPANY_EN}</div>
+        <div class="company-logo-circle">Q</div>
+        <div class="company-ar">${COMPANY_AR}</div>
+        <div class="company-en">${COMPANY_EN}</div>
         <div class="company-contact">${COMPANY_PHONE} · ${COMPANY_EMAIL}</div>
         <div class="company-contact">${COMPANY_CITY}</div>
       </div>
-      <!-- Left: Booking ref -->
       <div class="doc-meta">
-        <div class="doc-meta-label">Booking Reference / رقم المرجع</div>
-        <div class="doc-meta-pnr">${pnr}</div>
-        <div style="margin-top:8px">
-          <div class="doc-meta-label">Document Issue Date / تاريخ الإصدار</div>
-          <div class="doc-meta-val" style="font-size:11px;color:rgba(255,255,255,0.7)">${issueDate}</div>
-        </div>
-        <div style="margin-top:6px">
-          <div class="doc-meta-label">Booking No.</div>
-          <div class="doc-meta-val" style="font-size:11px">${booking!.referenceNumber}</div>
+        <div class="doc-type-label">Document Type</div>
+        <div class="doc-type-val">${isTemp ? 'TEMPORARY BOOKING' : 'ELECTRONIC TICKET'}</div>
+        <div class="pnr-label">Booking Reference / PNR</div>
+        <div class="pnr-val">${pnr}</div>
+        <div class="status-badge">${statusLabel}</div>
+        <div style="margin-top:10px">
+          <div class="pnr-label">Booking No.</div>
+          <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.7);margin-top:2px">${booking.referenceNumber ?? '—'}</div>
         </div>
       </div>
     </div>
 
-    <!-- Traveler bar -->
-    <div class="traveler-bar">
-      <div class="traveler-block">
-        <div class="traveler-label">Traveler / المسافر</div>
-        <div class="traveler-name">${passengerName}</div>
-        ${paxCount > 1 ? `<div class="traveler-count">+ ${paxCount - 1} مسافر آخر / other traveler(s)</div>` : ''}
+    <div class="traveler-strip">
+      <div>
+        <div class="trav-label">Passenger / المسافر</div>
+        <div class="trav-name">${booking.passengers[0] ? `${booking.passengers[0].firstName} ${booking.passengers[0].lastName}` : '—'}</div>
+        ${booking.passengers.length > 1 ? `<div class="trav-count">+ ${booking.passengers.length - 1} other passenger(s)</div>` : ''}
       </div>
-      <div class="issue-block">
-        <div class="issue-label">Status</div>
-        <div class="issue-date" style="font-weight:700;color:#10B981">
-          ${booking!.status === 'ticketed' ? '✓ Ticketed' : booking!.status === 'confirmed' ? '✓ Confirmed' : booking!.status}
-        </div>
+      <div style="text-align:left">
+        <div class="trav-label">Issue Date</div>
+        <div class="issue-val">${issueDate} · ${issueTime}</div>
       </div>
     </div>
   </div>
 
-  <!-- ═══ SEGMENTS ═══ -->
+  <!-- Segments -->
   <div class="segments-area">
-    ${segBlocks}
+    ${segHtml}
   </div>
 
-  <!-- ═══ PASSENGERS ═══ -->
+  ${isTemp ? `<div class="temp-notice">⚠ هذا حجز مؤقت — يرجى إتمام الدفع لإصدار التذكرة الإلكترونية النهائية<br>This is a temporary booking — please complete payment to issue the final e-ticket</div>` : ''}
+
+  <!-- Passengers -->
   <div class="pax-section">
     <div class="section-title">Passenger Details / بيانات المسافرين</div>
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Name / الاسم</th>
-          <th>Passport No. / رقم الجواز</th>
-          <th>E-Ticket No. / رقم التذكرة</th>
-        </tr>
-      </thead>
-      <tbody>${passengerRows}</tbody>
-    </table>
+    ${passengerHtml}
   </div>
 
-  <!-- ═══ BOOKING REFERENCE ═══ -->
-  ${pnr !== '—' ? `
-  <div class="ref-section">
-    <div class="section-title" style="padding-bottom:8px;margin-bottom:4px">Airline Booking Reference(s)</div>
-    <div class="ref-row">
-      <span class="ref-label">${offer.airlineName}:</span>
-      <span class="ref-val">${pnr}</span>
+  <!-- Baggage -->
+  ${baggage !== '—' || numBags !== '—' ? `
+  <div class="baggage-section">
+    <div class="section-title">Baggage Allowance / وزن الأمتعة</div>
+    <div class="baggage-card">
+      <span class="bag-icon">🧳</span>
+      <div class="bag-info">
+        <div class="bag-main">${baggage}</div>
+        ${numBags !== '—' ? `<div class="bag-sub">${numBags} piece(s) per passenger</div>` : ''}
+      </div>
     </div>
   </div>` : ''}
 
-  <!-- ═══ NOTES ═══ -->
-  <div class="notes-section">
-    <div class="notes-title">General Information / معلومات عامة</div>
-    <div class="note-item">• يرجى الحضور إلى المطار قبل موعد الإقلاع بساعتين على الأقل للرحلات الدولية.</div>
-    <div class="note-item">• Please check airline's check-in procedures for this itinerary.</div>
-    <div class="note-item">• هذه التذكرة شخصية وغير قابلة للتحويل · This ticket is non-transferable and non-refundable.</div>
-    <div class="note-item">• تأكد من صلاحية جواز سفرك قبل السفر · Ensure your passport is valid before travel.</div>
-    <div class="note-item">• للاستفسار والمساعدة: ${COMPANY_PHONE} · ${COMPANY_EMAIL}</div>
+  <!-- Summary -->
+  <div class="summary-section">
+    <div class="section-title">Booking Summary / ملخص الحجز</div>
+    <div class="summary-grid">
+      <div class="sum-row"><span class="sum-label">Booking Reference (PNR)</span><span class="sum-val sum-val-gold">${pnr}</span></div>
+      ${booking.eticketNumbers?.length ? `<div class="sum-row"><span class="sum-label">Ticket Number</span><span class="sum-val sum-val-gold">${booking.eticketNumbers.join(' / ')}</span></div>` : ''}
+      <div class="sum-row"><span class="sum-label">Booking No.</span><span class="sum-val">${booking.referenceNumber ?? '—'}</span></div>
+      <div class="sum-row"><span class="sum-label">Airline</span><span class="sum-val">${offer.airlineName ?? '—'}</span></div>
+      <div class="sum-row"><span class="sum-label">Flight Number</span><span class="sum-val">${offer.flightNumber ?? '—'}</span></div>
+      <div class="sum-row"><span class="sum-label">Cabin Class</span><span class="sum-val">${CABIN_LABELS_AR[offer.cabinClass ?? ''] ?? (offer.cabinClass ?? '—')}</span></div>
+      <div class="sum-row"><span class="sum-label">Status</span><span class="sum-val" style="color:${statusColor};font-weight:700">${statusLabel}</span></div>
+      <div class="sum-row"><span class="sum-label">Issue Date</span><span class="sum-val">${issueDate}</span></div>
+    </div>
   </div>
 
-  <!-- ═══ FOOTER ═══ -->
+  <!-- Notes -->
+  <div class="notes-section">
+    <div class="notes-title">معلومات مهمة / Important Information</div>
+    <div class="note">• يرجى الحضور إلى المطار قبل موعد الإقلاع بساعتين على الأقل للرحلات الدولية.</div>
+    <div class="note">• Please check airline's check-in procedures and baggage policy for this itinerary.</div>
+    <div class="note">• هذه التذكرة شخصية وغير قابلة للتحويل · This ticket is non-transferable.</div>
+    <div class="note">• تأكد من صلاحية جواز سفرك قبل السفر · Ensure your passport is valid before travel.</div>
+    <div class="note">• للاستفسار والمساعدة: ${COMPANY_PHONE} · ${COMPANY_EMAIL}</div>
+  </div>
+
+  <!-- Footer -->
   <div class="doc-footer">
-    <div class="footer-left">
+    <div>
       <div class="footer-company">${COMPANY_EN}</div>
-      <div class="footer-sub">${COMPANY_PHONE} · ${COMPANY_EMAIL}</div>
+      <div class="footer-sub">${COMPANY_PHONE} · ${COMPANY_EMAIL} · ${COMPANY_CITY}</div>
     </div>
-    <div class="footer-right">
-      <div class="footer-disclaimer">
-        Your personal data will be processed in accordance with applicable privacy policies.
-        This document is issued by ${COMPANY_AR} on behalf of the passenger.
-      </div>
+    <div class="footer-disc">
+      Your personal data is processed in accordance with applicable privacy policies.
+      This document is issued by ${COMPANY_AR} on behalf of the passenger.
     </div>
   </div>
 
@@ -656,271 +626,495 @@ export default function ETicketScreen() {
 </div><!-- /page -->
 </body>
 </html>`;
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+export default function ETicketScreen() {
+  const colors      = useColors();
+  const insets      = useSafeAreaInsets();
+  const { id }      = useLocalSearchParams<{ id: string }>();
+  const paddingTop  = Platform.OS === 'web' ? 67 : insets.top;
+  const [exporting, setExporting]   = useState(false);
+  const [completing, setCompleting] = useState(false);
+
+  // Fade-in animation
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(24)).current;
+
+  const completeMutation = useCompleteHoldBooking();
+  const bookingId        = Number(id);
+  const { data: booking, isLoading, isError, refetch } = useGetFlightBooking(bookingId, {
+    query: {
+      enabled: !!bookingId && !isNaN(bookingId),
+      queryKey: getGetFlightBookingQueryKey(bookingId),
+    },
+  });
+
+  useEffect(() => {
+    if (booking) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 450, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 450, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [!!booking]);
+
+  // ─── Loading ────────────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <View style={[styles.screen, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', gap: 14 }]}>
+        <ActivityIndicator size="large" color={GOLD} />
+        <Text style={{ color: colors.mutedForeground, fontFamily: 'Tajawal_500Medium', fontSize: 14 }}>
+          جاري تحميل التذكرة...
+        </Text>
+      </View>
+    );
   }
+
+  // ─── Error ──────────────────────────────────────────────────────────────────
+  if (isError || !booking) {
+    return (
+      <View style={[styles.screen, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', gap: 18 }]}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#EF444418', alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="alert-circle-outline" size={36} color="#EF4444" />
+        </View>
+        <Text style={{ color: colors.foreground, fontFamily: 'Tajawal_700Bold', fontSize: 16 }}>تعذر تحميل التذكرة</Text>
+        <Text style={{ color: colors.mutedForeground, fontFamily: 'Tajawal_400Regular', fontSize: 13 }}>يرجى التحقق من اتصالك بالإنترنت</Text>
+        <TouchableOpacity onPress={() => refetch()} style={[styles.outlineBtn, { borderColor: GOLD }]}>
+          <Ionicons name="refresh" size={16} color={GOLD} />
+          <Text style={{ color: GOLD, fontFamily: 'Tajawal_700Bold', fontSize: 14 }}>إعادة المحاولة</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} style={[styles.outlineBtn, { borderColor: colors.border }]}>
+          <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+          <Text style={{ color: colors.mutedForeground, fontFamily: 'Tajawal_500Medium', fontSize: 14 }}>رجوع</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ─── Data Extraction ─────────────────────────────────────────────────────────
+  const offer       = booking.offer as any;
+  const segments    = (booking.segments ?? []) as any[];
+  const seg0        = segments[0];
+  const departStr   = typeof offer.departTime === 'string' ? offer.departTime : (offer.departTime as any)?.toISOString?.() ?? '';
+  const arriveStr   = typeof offer.arriveTime === 'string' ? offer.arriveTime : (offer.arriveTime as any)?.toISOString?.() ?? '';
+  const fromAirport = seg0?.fromAirport ?? offer.fromAirport ?? '—';
+  const toAirport   = seg0?.toAirport ?? offer.toAirport ?? '—';
+  const fromCity    = seg0?.fromCity ?? '';
+  const toCity      = seg0?.toCity ?? '';
+  const fromAirportName = seg0?.fromAirportName ?? fromAirport;
+  const toAirportName   = seg0?.toAirportName ?? toAirport;
+  const aircraft    = seg0?.aircraft ?? offer.aircraft ?? '';
+  const qrValue     = booking.bookingReference ?? booking.referenceNumber ?? String(booking.id);
+  const pnr         = booking.bookingReference ?? booking.referenceNumber ?? '—';
+  const statusColor = STATUS_COLORS[booking.status] ?? '#888';
+  const statusLabel = STATUS_LABELS[booking.status] ?? booking.status;
+  const isTemp      = isTemporary(booking.status);
+  const isConf      = isConfirmed(booking.status);
+  const ticketColor = isTemp ? '#F97316' : isConf ? '#10B981' : '#3B82F6';
+  const ticketDocLabel = isTemp ? 'حجز مؤقت · TEMPORARY BOOKING' : isConf ? 'تذكرة إلكترونية · ELECTRONIC TICKET' : 'قيد الانتظار · PENDING';
+
+  const firstPax = booking.passengers[0] as any;
+  const passengerName = firstPax ? `${firstPax.firstName} ${firstPax.lastName}` : '—';
+  const holdExpiresStr = booking.holdExpiresAt
+    ? (typeof booking.holdExpiresAt === 'string' ? booking.holdExpiresAt : (booking.holdExpiresAt as any)?.toISOString?.() ?? '')
+    : '';
 
   // ─── PDF Export ──────────────────────────────────────────────────────────────
   async function handleExportPDF() {
+    const html     = buildTicketHtml(booking, segments, offer, departStr, arriveStr);
+    const filename = `Electronic_Ticket_${pnr}.pdf`;
+
     if (Platform.OS === 'web') {
-      try { await Print.printAsync({ html: buildTicketHtml() }); } catch { /* cancelled */ }
+      // Use hidden iframe to print without opening a new tab
+      try {
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;';
+        document.body.appendChild(iframe);
+        const win = iframe.contentWindow!;
+        win.document.open();
+        win.document.write(html);
+        win.document.title = filename;
+        win.document.close();
+        setTimeout(() => {
+          win.focus();
+          win.print();
+          setTimeout(() => document.body.removeChild(iframe), 3000);
+        }, 600);
+      } catch {
+        window.print();
+      }
       return;
     }
+
     setExporting(true);
     try {
-      const { uri } = await Print.printToFileAsync({ html: buildTicketHtml(), base64: false });
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      // Rename to proper filename
+      const dir     = FileSystem.documentDirectory!;
+      const newUri  = dir + filename;
+      try { await FileSystem.deleteAsync(newUri, { idempotent: true }); } catch {}
+      await FileSystem.moveAsync({ from: uri, to: newUri });
+
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
-        await Sharing.shareAsync(uri, {
+        await Sharing.shareAsync(newUri, {
           mimeType: 'application/pdf',
-          dialogTitle: `تذكرة ${offer.fromAirport}–${offer.toAirport}`,
+          dialogTitle: filename,
           UTI: 'com.adobe.pdf',
         });
       } else {
-        Alert.alert('تم الحفظ', `تم حفظ التذكرة في:\n${uri}`);
+        Alert.alert('تم الحفظ', `تم حفظ التذكرة:\n${newUri}`);
       }
     } catch (e: any) {
-      Alert.alert('خطأ', e?.message ?? 'تعذر تصدير التذكرة');
+      Alert.alert('خطأ في التصدير', e?.message ?? 'تعذر تصدير التذكرة');
     } finally {
       setExporting(false);
     }
   }
 
+  // ─── Complete Payment ────────────────────────────────────────────────────────
+  async function handleCompletePayment() {
+    Alert.alert(
+      'إتمام الدفع وإصدار التذكرة',
+      `سيتم تحويل حجزك إلى طور الدفع وإشعار فريقنا لإصدار التذكرة الإلكترونية النهائية.\n\nالرحلة: ${fromAirport} ← ${toAirport}\nالمبلغ: ${offer.price ?? '—'} ${offer.currency ?? ''}`,
+      [
+        { text: 'إلغاء', style: 'cancel' },
+        {
+          text: 'تأكيد الدفع',
+          onPress: async () => {
+            setCompleting(true);
+            try {
+              await completeMutation.mutateAsync({ id: booking.id });
+              Alert.alert(
+                '✅ تم استلام طلب الدفع',
+                'تم تحويل حجزك إلى قيد الانتظار. سيقوم فريقنا بالتواصل معك لإتمام عملية الدفع وإصدار التذكرة الإلكترونية.',
+                [{ text: 'حسناً', onPress: () => refetch() }],
+              );
+            } catch (e: any) {
+              const msg = e?.data?.error ?? e?.message ?? 'حدث خطأ غير متوقع';
+              Alert.alert('فشلت عملية الدفع', `${msg}\n\nلا يزال الحجز مؤقتاً، يرجى إعادة المحاولة.`, [{ text: 'حسناً' }]);
+            } finally {
+              setCompleting(false);
+            }
+          },
+        },
+      ],
+    );
+  }
+
   // ─── UI ──────────────────────────────────────────────────────────────────────
   return (
-    <View style={styles.screen}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: paddingTop + 12 }]}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="chevron-forward" size={24} color={WHITE} />
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+
+      {/* ── Header ── */}
+      <View style={[styles.header, { paddingTop: paddingTop + 10, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-forward" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>التذكرة الإلكترونية</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>التذكرة الإلكترونية</Text>
+          <View style={[styles.headerBadge, { backgroundColor: ticketColor + '18', borderColor: ticketColor + '44' }]}>
+            <Text style={[styles.headerBadgeText, { color: ticketColor }]}>{statusLabel}</Text>
+          </View>
+        </View>
+        <TouchableOpacity onPress={handleExportPDF} style={styles.headerBtn} activeOpacity={0.7}>
+          <Ionicons name="share-outline" size={22} color={GOLD} />
+        </TouchableOpacity>
       </View>
 
+      {/* ── Scroll Content ── */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 40 : insets.bottom + 100 }}
+        contentContainerStyle={{ padding: 14, paddingBottom: Platform.OS === 'web' ? 40 : insets.bottom + 110 }}
       >
-        {/* ── Company ticket card (dark style matching app) ── */}
-        <View style={styles.ticketDoc}>
-          {/* Company header */}
-          <View style={styles.ticketTop}>
-            <View>
-              <Text style={styles.companyName}>{COMPANY_AR}</Text>
-              <Text style={styles.companyEn}>{COMPANY_EN}</Text>
-              <Text style={styles.companyPhone}>{COMPANY_PHONE}</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.docMetaLabel}>رقم الحجز</Text>
-              <Text style={styles.pnrText}>{qrValue}</Text>
-              <Text style={[styles.docMetaLabel, { marginTop: 6 }]}>رقم الطلب</Text>
-              <Text style={styles.refText}>{booking.referenceNumber}</Text>
-            </View>
-          </View>
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
 
-          {/* Traveler bar */}
-          <View style={styles.travelerBar}>
-            <View>
-              <Text style={styles.travelerLabel}>المسافر</Text>
-              <Text style={styles.travelerName}>
-                {booking.passengers[0] ? `${booking.passengers[0].firstName} ${booking.passengers[0].lastName}` : '—'}
-              </Text>
-            </View>
-            <View style={[styles.statusChip, { backgroundColor: statusColor + '22', borderColor: statusColor + '66' }]}>
-              <Text style={[styles.statusChipText, { color: statusColor }]}>{statusLabel}</Text>
-            </View>
-          </View>
-
-          {/* Perforation line */}
-          <View style={styles.perforation}>
-            <View style={[styles.halfCircle, { left: -14 }]} />
-            <View style={styles.dashedLine} />
-            <View style={[styles.halfCircle, { right: -14, transform: [{ rotate: '180deg' }] }]} />
-          </View>
-
-          {/* Flight segment(s) */}
-          {(segments.length > 0 ? segments : [{
-            fromAirport, toAirport, fromCity, toCity,
-            departTime: departStr, arriveTime: arriveStr,
-            airlineName: offer.airlineName, flightNumber: offer.flightNumber,
-            aircraft, durationMinutes: duration, cabinClass: offer.cabinClass,
-            fromAirportName: '', toAirportName: '',
-          }]).map((seg: any, idx: number) => {
-            const segDepStr = typeof seg.departTime === 'string' ? seg.departTime : seg.departTime?.toISOString?.() ?? '';
-            const segArrStr = typeof seg.arriveTime === 'string' ? seg.arriveTime : seg.arriveTime?.toISOString?.() ?? '';
-            return (
-              <View key={idx} style={[styles.segBlock, idx > 0 && { borderTopWidth: 1, borderTopColor: BORDER }]}>
-                {/* Date label */}
-                <Text style={styles.segDateLabel}>
-                  {dayOfWeekAr(segDepStr.slice(0, 10))}
-                </Text>
-
-                {/* Airline row */}
-                <View style={styles.segAirlineRow}>
-                  {offer.airlineLogoUrl ? (
-                    <Image source={{ uri: offer.airlineLogoUrl }} style={styles.airlineLogo} contentFit="contain" />
-                  ) : (
-                    <View style={[styles.airlineLogo, { justifyContent: 'center', alignItems: 'center' }]}>
-                      <Ionicons name="airplane" size={18} color={GOLD} />
-                    </View>
-                  )}
-                  <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                    <Text style={styles.airlineName}>{seg.airlineName ?? offer.airlineName}</Text>
-                    <Text style={styles.flightNum}>{seg.flightNumber ?? offer.flightNumber}</Text>
-                  </View>
-                </View>
-
-                {/* Route */}
-                <View style={styles.routeRow}>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.routeCode}>{seg.toAirport}</Text>
-                    {seg.toCity ? <Text style={styles.routeCity}>{seg.toCity}</Text> : null}
-                    <Text style={styles.routeTime}>{formatTime(segArrStr)}</Text>
-                  </View>
-                  <View style={styles.routeMid}>
-                    <View style={styles.routeLine} />
-                    <Ionicons name="airplane" size={18} color={GOLD} style={{ transform: [{ rotate: '180deg' }] }} />
-                    <View style={styles.routeLine} />
-                    <Text style={styles.routeDur}>{formatDuration(seg.durationMinutes ?? duration)}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.routeCode}>{seg.fromAirport}</Text>
-                    {seg.fromCity ? <Text style={styles.routeCity}>{seg.fromCity}</Text> : null}
-                    <Text style={styles.routeTime}>{formatTime(segDepStr)}</Text>
-                  </View>
-                </View>
-
-                {/* Details chips */}
-                <View style={styles.detailChips}>
-                  <View style={styles.detailChip}>
-                    <Ionicons name="ribbon-outline" size={12} color={GOLD} />
-                    <Text style={styles.detailChipText}>{CABIN_LABELS_AR[seg.cabinClass ?? offer.cabinClass] ?? seg.cabinClass}</Text>
-                  </View>
-                  {seg.aircraft ? (
-                    <View style={styles.detailChip}>
-                      <Ionicons name="airplane-outline" size={12} color={MUTED} />
-                      <Text style={styles.detailChipText}>{seg.aircraft}</Text>
-                    </View>
-                  ) : null}
-                  <View style={[styles.detailChip, { borderColor: GREEN + '55', backgroundColor: GREEN + '11' }]}>
-                    <Text style={[styles.detailChipText, { color: GREEN }]}>{statusLabel}</Text>
-                  </View>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* ── Passengers card ── */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>بيانات المسافرين</Text>
-          {booking.passengers.map((p, i) => {
-            const eTicket = (p as any).eTicketNumber ?? booking.eticketNumbers?.[i];
-            return (
-              <View key={i} style={[i > 0 && { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: BORDER }]}>
-                <Text style={styles.paxName}>{p.firstName} {p.lastName}</Text>
-                <View style={styles.paxMeta}>
-                  <Text style={styles.paxDetail}>جواز: {p.passportNumber}</Text>
-                  <Text style={styles.paxDetail}>{codeToEnglishName(p.nationality ?? '')}</Text>
-                </View>
-                {eTicket ? (
-                  <Text style={[styles.paxDetail, { color: GOLD, marginTop: 3 }]}>تذكرة: {eTicket}</Text>
-                ) : null}
-              </View>
-            );
-          })}
-          {booking.baggage ? (
-            <View style={[styles.baggageRow, { marginTop: 12 }]}>
-              <Ionicons name="bag-handle-outline" size={14} color={GREEN} />
-              <Text style={[styles.paxDetail, { color: GREEN }]}>{booking.baggage}</Text>
-            </View>
-          ) : null}
-        </View>
-
-        {/* ── References card ── */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>مراجع الحجز</Text>
-          <InfoRow label="رقم طلب الحجز" value={booking.referenceNumber} />
-          <InfoRow label="رقم المرجع (PNR)" value={booking.bookingReference} highlight />
-          {booking.eticketNumbers && booking.eticketNumbers.length > 0 && (
-            <InfoRow label="رقم التذكرة الإلكترونية" value={booking.eticketNumbers.join(' / ')} highlight />
+          {/* ── Hold countdown ── */}
+          {booking.status === 'held' && holdExpiresStr && (
+            <HoldCountdownBanner expiresAt={holdExpiresStr} />
           )}
-          {aircraft && <InfoRow label="طراز الطائرة" value={aircraft} />}
-        </View>
 
-        {/* ── Hold countdown (for held bookings) ── */}
-        {booking.status === 'held' && booking.holdExpiresAt && (
-          <HoldCountdownBanner expiresAt={
-            typeof booking.holdExpiresAt === 'string'
-              ? booking.holdExpiresAt
-              : (booking.holdExpiresAt as any)?.toISOString?.() ?? ''
-          } />
-        )}
+          {/* ════════ MAIN TICKET CARD ════════ */}
+          <View style={styles.ticketCard}>
 
-        {/* ── QR card ── */}
-        <View style={styles.qrCard}>
-          <Text style={styles.qrLabel}>امسح الرمز عند المطار</Text>
-          <View style={styles.qrBox}>
-            <QRCode value={qrValue} size={150} color={DARK} backgroundColor={WHITE} />
+            {/* Status accent bar */}
+            <View style={[styles.ticketAccentBar, { backgroundColor: ticketColor }]} />
+
+            {/* Document type strip */}
+            <View style={[styles.docTypeStrip, { borderBottomColor: ticketColor + '30' }]}>
+              <Ionicons name={isConf ? 'checkmark-circle' : isTemp ? 'time' : 'hourglass'} size={15} color={ticketColor} />
+              <Text style={[styles.docTypeText, { color: ticketColor }]}>{ticketDocLabel}</Text>
+            </View>
+
+            {/* Company header */}
+            <View style={styles.companyHeader}>
+              {/* Logo badge */}
+              <View style={styles.logoCircle}>
+                <Text style={styles.logoLetter}>Q</Text>
+              </View>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <Text style={styles.companyAr}>{COMPANY_AR}</Text>
+                <Text style={styles.companyEn}>{COMPANY_EN}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.pnrLabel}>PNR / رقم الحجز</Text>
+                <Text style={styles.pnrValue}>{pnr}</Text>
+              </View>
+            </View>
+
+            {/* Traveler strip */}
+            <View style={styles.travelerStrip}>
+              <View>
+                <Text style={styles.travelerLabel}>TRAVELER / المسافر</Text>
+                <Text style={styles.travelerName}>{passengerName}</Text>
+                {booking.passengers.length > 1 && (
+                  <Text style={styles.travelerCount}>+{booking.passengers.length - 1} مسافر آخر</Text>
+                )}
+              </View>
+              <View style={[styles.issueDateBlock]}>
+                <Text style={styles.travelerLabel}>ISSUED</Text>
+                <Text style={styles.issueDateText}>{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}</Text>
+              </View>
+            </View>
+
+            {/* Perforation */}
+            <View style={styles.perforation}>
+              <View style={[styles.halfCircle, { left: -13 }]} />
+              <View style={styles.dashedLine} />
+              <View style={[styles.halfCircle, { right: -13, transform: [{ scaleX: -1 }] }]} />
+            </View>
+
+            {/* Flight segments */}
+            {(segments.length > 0 ? segments : [{
+              fromAirport, toAirport, fromCity, toCity,
+              fromAirportName, toAirportName,
+              departTime: departStr, arriveTime: arriveStr,
+              airlineName: offer.airlineName, flightNumber: offer.flightNumber,
+              aircraft, durationMinutes: offer.durationMinutes, cabinClass: offer.cabinClass,
+            }]).map((seg: any, idx: number) => {
+              const depStr2 = typeof seg.departTime === 'string' ? seg.departTime : seg.departTime?.toISOString?.() ?? '';
+              const arrStr2 = typeof seg.arriveTime === 'string' ? seg.arriveTime : seg.arriveTime?.toISOString?.() ?? '';
+              const depTime = formatTime(depStr2);
+              const arrTime = formatTime(arrStr2);
+              const depDate = dayFull(depStr2.slice(0, 10));
+              const dur     = seg.durationMinutes ? formatDuration(seg.durationMinutes) : '—';
+              const cabin   = CABIN_LABELS_AR[seg.cabinClass ?? ''] ?? seg.cabinClass ?? offer.cabinClass ?? '—';
+
+              return (
+                <View key={idx} style={[styles.segBlock, idx > 0 && { borderTopWidth: 1, borderTopColor: '#EEF0F6' }]}>
+                  {/* Date label */}
+                  <View style={styles.segDateRow}>
+                    <Ionicons name="calendar-outline" size={12} color={GOLD} />
+                    <Text style={styles.segDateText}>{depDate}</Text>
+                  </View>
+
+                  {/* Airline info */}
+                  <View style={styles.airlineRow}>
+                    <View style={styles.airlineIconBox}>
+                      {offer.airlineLogoUrl ? (
+                        <Image source={{ uri: offer.airlineLogoUrl }} style={{ width: 28, height: 28 }} contentFit="contain" />
+                      ) : (
+                        <Ionicons name="airplane" size={16} color={GOLD} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={styles.airlineName}>{seg.airlineName ?? offer.airlineName ?? '—'}</Text>
+                      <Text style={styles.flightNum}>{seg.flightNumber ?? offer.flightNumber ?? '—'}</Text>
+                    </View>
+                    <View style={[styles.segStatusChip, { backgroundColor: ticketColor + '15', borderColor: ticketColor + '40' }]}>
+                      <Text style={[styles.segStatusText, { color: ticketColor }]}>{statusLabel}</Text>
+                    </View>
+                  </View>
+
+                  {/* Route visual */}
+                  <View style={styles.routeRow}>
+                    {/* Departure — right side (RTL) */}
+                    <View style={styles.routePort}>
+                      <Text style={styles.routeTime}>{depTime}</Text>
+                      <Text style={styles.routeDateSmall}>{dateShort(depStr2.slice(0, 10))}</Text>
+                      <Text style={styles.routeCode}>{seg.fromAirport ?? fromAirport}</Text>
+                      <Text style={styles.routePortName} numberOfLines={2}>{seg.fromAirportName ?? seg.fromAirport}</Text>
+                      {(seg.fromCity ?? fromCity) ? <Text style={styles.routeCity}>{seg.fromCity ?? fromCity}</Text> : null}
+                    </View>
+
+                    {/* Middle */}
+                    <View style={styles.routeMid}>
+                      <View style={styles.routeLine} />
+                      <View style={styles.routePlaneCircle}>
+                        <Ionicons name="airplane" size={14} color={GOLD} style={{ transform: [{ rotate: '180deg' }] }} />
+                      </View>
+                      <View style={styles.routeLine} />
+                      <Text style={styles.routeDur}>{dur}</Text>
+                      {segments.length === 1 && <Text style={styles.routeNonstop}>Non-stop</Text>}
+                    </View>
+
+                    {/* Arrival — left side (RTL) */}
+                    <View style={[styles.routePort, { alignItems: 'flex-start' }]}>
+                      <Text style={styles.routeTime}>{arrTime}</Text>
+                      <Text style={styles.routeDateSmall}>{dateShort(arrStr2.slice(0, 10))}</Text>
+                      <Text style={styles.routeCode}>{seg.toAirport ?? toAirport}</Text>
+                      <Text style={styles.routePortName} numberOfLines={2}>{seg.toAirportName ?? seg.toAirport}</Text>
+                      {(seg.toCity ?? toCity) ? <Text style={styles.routeCity}>{seg.toCity ?? toCity}</Text> : null}
+                    </View>
+                  </View>
+
+                  {/* Detail chips */}
+                  <View style={styles.chipRow}>
+                    <View style={styles.chip}>
+                      <Ionicons name="ribbon-outline" size={11} color={GOLD} />
+                      <Text style={styles.chipText}>{cabin}</Text>
+                    </View>
+                    {seg.aircraft || aircraft ? (
+                      <View style={styles.chip}>
+                        <Ionicons name="airplane-outline" size={11} color="#99AABB" />
+                        <Text style={styles.chipText}>{seg.aircraft || aircraft}</Text>
+                      </View>
+                    ) : null}
+                    {offer.seat && (
+                      <View style={styles.chip}>
+                        <Ionicons name="person-outline" size={11} color="#99AABB" />
+                        <Text style={styles.chipText}>مقعد {offer.seat}</Text>
+                      </View>
+                    )}
+                    {offer.baggage && (
+                      <View style={[styles.chip, { backgroundColor: '#10B98112', borderColor: '#10B98135' }]}>
+                        <Ionicons name="bag-handle-outline" size={11} color="#10B981" />
+                        <Text style={[styles.chipText, { color: '#10B981' }]}>{offer.baggage}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
           </View>
-          <Text style={styles.qrRef}>{qrValue}</Text>
-        </View>
+
+          {/* ════════ PASSENGER CARD ════════ */}
+          <View style={styles.card}>
+            <SectionTitle title="بيانات المسافرين" icon="people-outline" color="#60A5FA" />
+            {booking.passengers.map((p: any, i: number) => {
+              const eTicket = (p as any).eTicketNumber ?? booking.eticketNumbers?.[i];
+              const nat     = codeToEnglishName(p.nationality ?? '');
+              const dobStr  = p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString('ar-EG') : null;
+              return (
+                <View key={i} style={[i > 0 && { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#EEF0F6' }]}>
+                  <View style={styles.paxNameRow}>
+                    <View style={[styles.paxNumBadge, { backgroundColor: GOLD }]}>
+                      <Text style={styles.paxNumText}>{i + 1}</Text>
+                    </View>
+                    <Text style={styles.paxName}>{p.firstName} {p.lastName}</Text>
+                  </View>
+                  <TField label="رقم التذكرة الإلكترونية" value={eTicket} icon="ticket-outline" gold />
+                  <TField label="رقم الجواز"     value={p.passportNumber}   icon="card-outline" gold />
+                  <TField label="الجنسية"         value={nat || p.nationality} icon="flag-outline" />
+                  <TField label="تاريخ الميلاد"  value={dobStr}              icon="calendar-outline" />
+                  <TField label="الجنس"           value={GENDER_MAP[p.gender ?? ''] ?? p.gender} icon="person-outline" />
+                  <TField label="رقم الحجز (PNR)" value={pnr}                icon="barcode-outline" gold />
+                  <TField label="شركة الطيران"   value={offer.airlineName}   icon="airplane-outline" />
+                  <TField label="رقم الرحلة"     value={offer.flightNumber}  icon="navigate-outline" />
+                  <TField label="درجة السفر"     value={CABIN_LABELS_AR[offer.cabinClass ?? ''] ?? offer.cabinClass} icon="ribbon-outline" />
+                  <TField label="حالة الحجز"     value={statusLabel}         icon="checkmark-circle-outline" />
+                  <TField label="رقم المقعد"     value={(offer as any).seat ?? null} icon="person-outline" />
+                  <TField label="رقم البوابة"    value={(offer as any).gate ?? null} icon="navigate-circle-outline" />
+                  <TField label="مبنى المغادرة"  value={(offer as any).terminal ?? null} icon="business-outline" />
+                  <TField label="وقت الصعود"     value={(offer as any).boardingTime ?? null} icon="time-outline" />
+                  <TField label="الوزن المسموح"  value={(offer as any).baggage ?? booking.baggage} icon="bag-handle-outline" />
+                  <TField label="Fare Basis"      value={(p as any).fareBasis ?? (offer as any).fareBasis} icon="document-text-outline" />
+                  <TField label="Cabin Class"     value={offer.cabinClass}    icon="layers-outline" />
+                </View>
+              );
+            })}
+          </View>
+
+          {/* ════════ BOOKING SUMMARY ════════ */}
+          <View style={styles.card}>
+            <SectionTitle title="ملخص الحجز" icon="document-text-outline" color="#A78BFA" />
+            <TField label="Booking Reference"         value={pnr}                         gold />
+            {booking.eticketNumbers?.length ? (
+              <TField label="Ticket Number"           value={booking.eticketNumbers.join(' / ')} gold />
+            ) : null}
+            <TField label="رقم الطلب الداخلي"        value={booking.referenceNumber} />
+            <TField label="Flight Number"             value={offer.flightNumber} />
+            <TField label="Airline"                   value={offer.airlineName} />
+            <TField label="Cabin Class"               value={offer.cabinClass} />
+            <TField label="Status"                    value={statusLabel} />
+            <TField label="Issue Date"                value={new Date().toLocaleDateString('ar-SA')} />
+          </View>
+
+          {/* ════════ QR + BARCODE (confirmed only) ════════ */}
+          {isConf && (
+            <View style={[styles.card, styles.qrCard]}>
+              <SectionTitle title="رمز الدخول للمطار" icon="qr-code-outline" color="#10B981" />
+              <Text style={styles.qrSubtitle}>Scan this code at the airport</Text>
+              <View style={styles.qrBarcodeRow}>
+                {/* QR Code */}
+                <View style={styles.qrBox}>
+                  <QRCode value={qrValue} size={130} color={DARK_BG} backgroundColor="#FFFFFF" />
+                  <Text style={styles.qrRefText}>{qrValue}</Text>
+                </View>
+                {/* Barcode */}
+                <View style={styles.barcodeBox}>
+                  <BarcodeView value={qrValue} width={120} height={130} />
+                  <Text style={styles.barcodeRefText}>{qrValue}</Text>
+                </View>
+              </View>
+              <Text style={styles.scanHint}>امسح رمز QR عند بوابة الصعود للطائرة</Text>
+            </View>
+          )}
+
+          {/* ════════ TEMP BOOKING NOTICE ════════ */}
+          {isTemp && (
+            <View style={[styles.card, { borderColor: '#F97316', borderWidth: 1.5 }]}>
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F9731618', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="time" size={18} color="#F97316" />
+                </View>
+                <Text style={{ fontFamily: 'Tajawal_800ExtraBold', fontSize: 14, color: '#1A2035' }}>حجز مؤقت · Temporary Booking</Text>
+              </View>
+              <Text style={{ fontFamily: 'Tajawal_400Regular', fontSize: 12, color: '#667788', lineHeight: 22, textAlign: 'right' }}>
+                تم إنشاء الحجز بنجاح، يرجى استكمال الدفع لإصدار التذكرة الإلكترونية النهائية.{'\n'}
+                Your booking is confirmed. Please complete payment to issue the electronic ticket.
+              </Text>
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginTop: 12, backgroundColor: '#F9731608', borderRadius: 10, padding: 10 }}>
+                <Ionicons name="warning-outline" size={14} color="#F97316" />
+                <Text style={{ fontFamily: 'Tajawal_500Medium', fontSize: 11, color: '#F97316' }}>
+                  لن يتم إصدار QR أو Barcode إلا بعد إتمام الدفع والتأكيد
+                </Text>
+              </View>
+            </View>
+          )}
+
+        </Animated.View>
       </ScrollView>
 
-      {/* Footer buttons */}
-      <View style={[styles.footer, { paddingBottom: Platform.OS === 'web' ? 24 : insets.bottom + 16 }]}>
-        {/* Complete payment button — only for active held bookings */}
-        {booking.status === 'held' && booking.holdExpiresAt && new Date(booking.holdExpiresAt).getTime() > Date.now() && (
+      {/* ── Footer Buttons ── */}
+      <View style={[styles.footer, { paddingBottom: Platform.OS === 'web' ? 20 : insets.bottom + 12, backgroundColor: colors.card, borderTopColor: colors.border }]}>
+        {/* Complete payment button */}
+        {booking.status === 'held' && holdExpiresStr && new Date(holdExpiresStr).getTime() > Date.now() && (
           <TouchableOpacity
-            style={[styles.pdfBtn, { backgroundColor: '#8B5CF6', marginBottom: 10 }, completing && { opacity: 0.7 }]}
-            onPress={async () => {
-              Alert.alert(
-                'إتمام الدفع وتأكيد الحجز',
-                `ستقوم بإتمام عملية الدفع الكاملة للرحلة ${booking.offer.fromAirport} → ${booking.offer.toAirport}.\n\nالمبلغ المطلوب: ${booking.offer.price} ${booking.offer.currency}`,
-                [
-                  { text: 'إلغاء', style: 'cancel' },
-                  {
-                    text: 'تأكيد الدفع',
-                    style: 'default',
-                    onPress: async () => {
-                      setCompleting(true);
-                      try {
-                        await completeMutation.mutateAsync({ id: booking.id });
-                        Alert.alert(
-                          '✅ تم استلام طلب الدفع',
-                          'تم تحويل حجزك إلى قيد الانتظار. سيقوم فريقنا بالتواصل معك لإتمام عملية الدفع وإصدار التذكرة.',
-                          [{ text: 'حسناً' }],
-                        );
-                      } catch (e: any) {
-                        const msg = e?.data?.error ?? e?.message ?? 'حدث خطأ غير متوقع';
-                        Alert.alert('تعذر إتمام الطلب', msg, [{ text: 'حسناً' }]);
-                      } finally {
-                        setCompleting(false);
-                      }
-                    },
-                  },
-                ],
-              );
-            }}
+            style={[styles.footerBtn, { backgroundColor: '#F97316', marginBottom: 10 }, completing && { opacity: 0.7 }]}
+            onPress={handleCompletePayment}
             disabled={completing}
             activeOpacity={0.85}
           >
             {completing
-              ? <ActivityIndicator color={WHITE} size="small" />
-              : <Ionicons name="checkmark-circle" size={20} color={WHITE} />}
-            <Text style={[styles.pdfBtnText, { color: WHITE }]}>إتمام الدفع وتأكيد الحجز</Text>
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Ionicons name="card-outline" size={20} color="#fff" />}
+            <Text style={[styles.footerBtnText, { color: '#fff' }]}>استكمال الدفع وإصدار التذكرة</Text>
           </TouchableOpacity>
         )}
-        {/* PDF download */}
+
+        {/* PDF Download */}
         <TouchableOpacity
-          style={[styles.pdfBtn, exporting && { opacity: 0.7 }]}
+          style={[styles.footerBtn, { backgroundColor: GOLD }, exporting && { opacity: 0.7 }]}
           onPress={handleExportPDF}
           disabled={exporting}
           activeOpacity={0.85}
         >
           {exporting
-            ? <ActivityIndicator color={DARK} size="small" />
-            : <Ionicons name="download-outline" size={20} color={DARK} />}
-          <Text style={styles.pdfBtnText}>
+            ? <ActivityIndicator color={DARK_BG} size="small" />
+            : <Ionicons name="download-outline" size={20} color={DARK_BG} />}
+          <Text style={[styles.footerBtnText, { color: DARK_BG }]}>
             {exporting ? 'جاري التصدير...' : 'تحميل التذكرة PDF'}
           </Text>
         </TouchableOpacity>
@@ -929,139 +1123,170 @@ export default function ETicketScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: DARK },
+  screen: { flex: 1 },
+
   header: {
     flexDirection: 'row-reverse', alignItems: 'center',
-    paddingHorizontal: 16, paddingBottom: 16, backgroundColor: DARK2,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+    paddingHorizontal: 14, paddingBottom: 12, gap: 8,
+    borderBottomWidth: 1,
   },
-  headerTitle: {
-    flex: 1, color: WHITE, fontSize: 17,
-    fontFamily: 'Tajawal_800ExtraBold', textAlign: 'center',
+  headerBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 16 },
+  headerBadge: {
+    paddingHorizontal: 10, paddingVertical: 2, borderRadius: 20, borderWidth: 1, marginTop: 2,
   },
-  backBtnFallback: {
-    paddingHorizontal: 24, paddingVertical: 12,
-    backgroundColor: 'rgba(201,160,96,0.12)', borderRadius: 14,
-    borderWidth: 1, borderColor: 'rgba(201,160,96,0.3)',
-  },
+  headerBadgeText: { fontFamily: 'Tajawal_700Bold', fontSize: 10 },
 
-  // Ticket document card
-  ticketDoc: {
-    backgroundColor: DARK2, borderRadius: 20, borderWidth: 1,
-    borderColor: BORDER, overflow: 'hidden', marginBottom: 14,
+  // ── Ticket card ──
+  ticketCard: {
+    backgroundColor: TICKET_BG,
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginBottom: 14,
+    shadowColor: '#0B1628',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 6,
   },
-  ticketTop: {
-    flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'flex-start',
-    padding: 18, backgroundColor: '#0a1525',
-    borderBottomWidth: 1, borderBottomColor: 'rgba(201,160,96,0.2)',
+  ticketAccentBar: { height: 5 },
+  docTypeStrip: {
+    flexDirection: 'row-reverse', alignItems: 'center', gap: 7,
+    paddingHorizontal: 16, paddingVertical: 9,
+    borderBottomWidth: 1, backgroundColor: '#FAFBFD',
   },
-  companyName: { color: GOLD, fontFamily: 'Tajawal_800ExtraBold', fontSize: 16, textAlign: 'right' },
-  companyEn: { color: 'rgba(255,255,255,0.4)', fontFamily: 'Tajawal_400Regular', fontSize: 9, textAlign: 'right', marginTop: 2 },
-  companyPhone: { color: 'rgba(255,255,255,0.35)', fontFamily: 'Tajawal_400Regular', fontSize: 10, textAlign: 'right', marginTop: 3 },
-  docMetaLabel: { color: 'rgba(255,255,255,0.4)', fontFamily: 'Tajawal_400Regular', fontSize: 9, textAlign: 'left' },
-  pnrText: { color: GOLD, fontFamily: 'Tajawal_800ExtraBold', fontSize: 22, letterSpacing: 3, textAlign: 'left' },
-  refText: { color: WHITE, fontFamily: 'Tajawal_700Bold', fontSize: 12, textAlign: 'left' },
+  docTypeText: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 11, letterSpacing: 0.5 },
 
-  travelerBar: {
+  companyHeader: {
+    flexDirection: 'row-reverse', alignItems: 'center',
+    padding: 16, borderBottomWidth: 1, borderBottomColor: '#EEF0F6',
+  },
+  logoCircle: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: DARK_BG, alignItems: 'center', justifyContent: 'center',
+    marginLeft: 12,
+  },
+  logoLetter: { color: GOLD, fontFamily: 'Tajawal_800ExtraBold', fontSize: 22 },
+  companyAr: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 13, color: '#1A2035' },
+  companyEn: { fontFamily: 'Tajawal_400Regular', fontSize: 9, color: '#99AABB', marginTop: 2, letterSpacing: 0.3 },
+  pnrLabel: { fontFamily: 'Tajawal_400Regular', fontSize: 9, color: '#99AABB', textAlign: 'left' },
+  pnrValue: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 16, color: GOLD, letterSpacing: 2, textAlign: 'left', fontVariant: ['tabular-nums'] },
+
+  travelerStrip: {
     flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 18, paddingVertical: 10,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    paddingHorizontal: 16, paddingVertical: 11,
+    backgroundColor: TICKET_SECONDARY, borderBottomWidth: 1, borderBottomColor: '#EEF0F6',
   },
-  travelerLabel: { color: 'rgba(255,255,255,0.4)', fontFamily: 'Tajawal_400Regular', fontSize: 10, textAlign: 'right' },
-  travelerName: { color: WHITE, fontFamily: 'Tajawal_700Bold', fontSize: 14, textAlign: 'right' },
-  statusChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
-  statusChipText: { fontFamily: 'Tajawal_700Bold', fontSize: 11 },
+  travelerLabel: { fontFamily: 'Tajawal_400Regular', fontSize: 9, color: '#99AABB', letterSpacing: 0.5, marginBottom: 3 },
+  travelerName: { fontFamily: 'Tajawal_700Bold', fontSize: 14, color: '#1A2035' },
+  travelerCount: { fontFamily: 'Tajawal_400Regular', fontSize: 10, color: '#99AABB', marginTop: 2 },
+  issueDateBlock: { alignItems: 'flex-end' },
+  issueDateText: { fontFamily: 'Tajawal_700Bold', fontSize: 11, color: '#445566', textAlign: 'left' },
 
   perforation: {
-    height: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: DARK,
+    height: 18, flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#EBEDF5', paddingHorizontal: 0,
   },
   halfCircle: {
-    width: 18, height: 18, borderRadius: 9, backgroundColor: DARK2,
-    position: 'absolute', top: -1,
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: TICKET_BG, position: 'absolute',
   },
   dashedLine: {
-    flex: 1, height: 1, marginHorizontal: 18,
-    borderStyle: 'dashed', borderWidth: 1, borderColor: BORDER,
+    flex: 1, height: 1.5, marginHorizontal: 12,
+    borderStyle: 'dashed', borderWidth: 1, borderColor: '#CCCED8',
   },
 
   // Segment
-  segBlock: { padding: 16 },
-  segDateLabel: {
-    color: GOLD, fontFamily: 'Tajawal_700Bold', fontSize: 12,
-    textAlign: 'right', marginBottom: 10,
+  segBlock: { padding: 16, backgroundColor: TICKET_BG },
+  segDateRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginBottom: 12 },
+  segDateText: { fontFamily: 'Tajawal_700Bold', fontSize: 12, color: GOLD },
+  airlineRow: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 16 },
+  airlineIconBox: {
+    width: 40, height: 40, borderRadius: 10,
+    backgroundColor: DARK_BG, alignItems: 'center', justifyContent: 'center', marginLeft: 10,
   },
-  segAirlineRow: {
-    flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginBottom: 12,
-  },
-  airlineLogo: {
-    width: 40, height: 40, borderRadius: 8,
-    backgroundColor: DARK3,
-  },
-  airlineName: { color: WHITE, fontFamily: 'Tajawal_700Bold', fontSize: 14 },
-  flightNum: { color: MUTED, fontFamily: 'Tajawal_400Regular', fontSize: 12 },
+  airlineName: { fontFamily: 'Tajawal_700Bold', fontSize: 14, color: '#1A2035', textAlign: 'right' },
+  flightNum: { fontFamily: 'Tajawal_400Regular', fontSize: 11, color: '#99AABB', textAlign: 'right', marginTop: 2 },
+  segStatusChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  segStatusText: { fontFamily: 'Tajawal_700Bold', fontSize: 10 },
 
   routeRow: {
-    flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 12,
+    flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 14, gap: 8,
   },
-  routeCode: { color: WHITE, fontFamily: 'Tajawal_800ExtraBold', fontSize: 24 },
-  routeCity: { color: MUTED, fontFamily: 'Tajawal_400Regular', fontSize: 11, textAlign: 'right' },
-  routeTime: { color: GOLD, fontFamily: 'Tajawal_700Bold', fontSize: 13, textAlign: 'right', marginTop: 2 },
-  routeMid: { flex: 1, alignItems: 'center', gap: 3 },
-  routeLine: { flex: 1, height: 1, backgroundColor: BORDER, width: '100%' },
-  routeDur: { color: MUTED, fontFamily: 'Tajawal_400Regular', fontSize: 10, marginTop: 2 },
+  routePort: { flex: 1, alignItems: 'flex-end' },
+  routeTime: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 28, color: '#1A2035', lineHeight: 32 },
+  routeDateSmall: { fontFamily: 'Tajawal_400Regular', fontSize: 10, color: '#99AABB', marginTop: 2 },
+  routeCode: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 16, color: GOLD, letterSpacing: 1, marginTop: 2 },
+  routePortName: { fontFamily: 'Tajawal_400Regular', fontSize: 10, color: '#778899', marginTop: 2, textAlign: 'right', maxWidth: 110 },
+  routeCity: { fontFamily: 'Tajawal_400Regular', fontSize: 10, color: '#AABBCC', marginTop: 1, textAlign: 'right' },
+  routeMid: { flex: 0, alignItems: 'center', width: 80, gap: 4 },
+  routeLine: { flex: 1, height: 1, backgroundColor: '#DDE1ED', width: 30 },
+  routePlaneCircle: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: GOLD + '18', borderWidth: 1, borderColor: GOLD + '44',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  routeDur: { fontFamily: 'Tajawal_500Medium', fontSize: 10, color: '#778899', marginTop: 4 },
+  routeNonstop: { fontFamily: 'Tajawal_400Regular', fontSize: 9, color: '#AABBCC' },
 
-  detailChips: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 6 },
-  detailChip: {
+  chipRow: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 6 },
+  chip: {
     flexDirection: 'row-reverse', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
-    borderWidth: 1, borderColor: BORDER, backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8,
+    borderWidth: 1, borderColor: '#DDE1ED', backgroundColor: '#F7F8FC',
   },
-  detailChipText: { color: MUTED, fontFamily: 'Tajawal_400Regular', fontSize: 11 },
+  chipText: { fontFamily: 'Tajawal_400Regular', fontSize: 11, color: '#667788' },
 
-  // Cards
+  // ── Generic card ──
   card: {
-    backgroundColor: DARK2, borderRadius: 18, borderWidth: 1,
-    borderColor: BORDER, padding: 16, marginBottom: 14,
+    backgroundColor: TICKET_BG, borderRadius: 18, borderWidth: 1, borderColor: '#EEF0F6',
+    padding: 16, marginBottom: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  cardTitle: { color: WHITE, fontFamily: 'Tajawal_800ExtraBold', fontSize: 14, textAlign: 'right', marginBottom: 12 },
 
-  infoRow: {
-    flexDirection: 'row-reverse', justifyContent: 'space-between',
-    alignItems: 'center', paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
-  },
-  infoLabel: { color: MUTED, fontFamily: 'Tajawal_400Regular', fontSize: 12 },
-  infoValue: { color: WHITE, fontFamily: 'Tajawal_700Bold', fontSize: 14 },
+  // Passenger
+  paxNameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginBottom: 10 },
+  paxNumBadge: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  paxNumText: { color: DARK_BG, fontFamily: 'Tajawal_800ExtraBold', fontSize: 12 },
+  paxName: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 15, color: '#1A2035' },
 
-  paxName: { color: WHITE, fontFamily: 'Tajawal_700Bold', fontSize: 14, textAlign: 'right', marginBottom: 4 },
-  paxMeta: { flexDirection: 'row-reverse', gap: 12, flexWrap: 'wrap' },
-  paxDetail: { color: MUTED, fontFamily: 'Tajawal_400Regular', fontSize: 12 },
-  baggageRow: { flexDirection: 'row-reverse', gap: 6, alignItems: 'center' },
-
-  // QR
-  qrCard: {
-    backgroundColor: DARK2, borderRadius: 18, borderWidth: 1,
-    borderColor: BORDER, padding: 20, marginBottom: 14, alignItems: 'center',
-  },
-  qrLabel: { color: MUTED, fontFamily: 'Tajawal_500Medium', fontSize: 13, marginBottom: 16 },
+  // ── QR + Barcode ──
+  qrCard: { alignItems: 'center' },
+  qrSubtitle: { fontFamily: 'Tajawal_400Regular', fontSize: 12, color: '#778899', textAlign: 'center', marginBottom: 16 },
+  qrBarcodeRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 20 },
   qrBox: {
-    backgroundColor: WHITE, borderRadius: 16, padding: 12,
-    shadowColor: GOLD, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 4,
+    backgroundColor: '#FFFFFF', padding: 12, borderRadius: 14,
+    alignItems: 'center',
+    shadowColor: GOLD, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 4,
+    borderWidth: 1, borderColor: GOLD + '30',
   },
-  qrRef: { color: GOLD, fontFamily: 'Tajawal_800ExtraBold', fontSize: 18, marginTop: 14, letterSpacing: 2 },
+  qrRefText: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 13, color: GOLD, marginTop: 10, letterSpacing: 2 },
+  barcodeBox: {
+    backgroundColor: '#FFFFFF', padding: 12, borderRadius: 14,
+    alignItems: 'center',
+    shadowColor: '#0B1628', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 2,
+    borderWidth: 1, borderColor: '#EEF0F6',
+  },
+  barcodeRefText: { fontFamily: 'Tajawal_500Medium', fontSize: 9, color: '#99AABB', marginTop: 8, letterSpacing: 3, fontVariant: ['tabular-nums'] },
+  scanHint: { fontFamily: 'Tajawal_500Medium', fontSize: 11, color: '#99AABB', textAlign: 'center', marginTop: 16 },
 
-  // Footer
+  // ── Footer ──
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: DARK2, borderTopWidth: 1, borderTopColor: BORDER,
-    paddingHorizontal: 16, paddingTop: 12,
+    paddingHorizontal: 14, paddingTop: 12,
+    borderTopWidth: 1,
   },
-  pdfBtn: {
-    flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', gap: 10,
-    backgroundColor: GOLD, paddingVertical: 16, borderRadius: 16, minHeight: 52,
-    shadowColor: GOLD, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
+  footerBtn: {
+    flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 10,
+    paddingVertical: 15, borderRadius: 16, minHeight: 52,
+    shadowColor: GOLD, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 5,
   },
-  pdfBtnText: { color: DARK, fontFamily: 'Tajawal_800ExtraBold', fontSize: 15 },
+  footerBtnText: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 15 },
+
+  outlineBtn: {
+    flexDirection: 'row-reverse', alignItems: 'center', gap: 8,
+    paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14, borderWidth: 1,
+  },
 });

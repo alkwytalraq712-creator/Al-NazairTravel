@@ -1,5 +1,7 @@
 # Memory Index
 
+- [E-ticket screen architecture](eticket-architecture.md) — white paper-style ticket card; two-phase UI (orange=temp, green=confirmed); SVG barcode from react-native-svg; expo-file-system for PDF rename; web PDF via hidden iframe.
+
 - [drizzle-kit push TTY prompt](drizzle-push-workaround.md) — `drizzle-kit push` can't run non-interactively here; use `generate` + manual SQL for new tables/columns.
 - [Generated API error shape](api-error-shape.md) — orval `ApiError` has no `.error` field directly; read `error.data?.error`, not `error.error`, in mutation onError handlers.
 - [Object storage ACL finalize pattern](object-storage-acl-finalize.md) — upload flow needs a POST /finalize call after GCS PUT to set ACL owner; without it canAccessObjectEntity always returns false.
