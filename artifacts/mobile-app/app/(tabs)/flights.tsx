@@ -542,7 +542,7 @@ export default function FlightsScreen() {
   const totalPassengers = adults + children + infants;
 
   return (
-    <View style={[S.screen, { backgroundColor: colors.background }]}>
+    <View style={S.screen}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 40 : 120 }}
