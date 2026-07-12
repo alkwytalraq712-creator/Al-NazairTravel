@@ -1,15 +1,16 @@
 /**
- * Account Screen — Premium dark-hero redesign.
- * Navy gradient header, gold avatar ring, elevated stat cards,
- * crisp menu rows — Emirates / Qatar Airways quality.
+ * Account Screen — Ultra-premium redesign.
+ * Cinematic dark hero, floating stats card, gradient icon rows.
+ * Emirates × Revolut × Apple quality.
  */
 import React, { useRef, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Animated, Platform, ScrollView,
-  StyleSheet, Text, TouchableOpacity, View,
+  ActivityIndicator, Animated, Dimensions, Platform,
+  ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,120 +23,145 @@ import {
   useGetProfileCompletion,
 } from '@workspace/api-client-react';
 
-// Brand constants — only for LinearGradient (must be string literals)
-const GOLD  = '#C9A060';
-const GOLD2 = '#E8C07A';
-const NAVY  = '#080C18';
-const NAVY2 = '#0D1526';
+const { width: SCREEN_W } = Dimensions.get('window');
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-function StatCard({
-  icon, value, label, color, onPress, delay = 0,
+// ── Brand constants (LinearGradient requires string literals) ──────────────────
+const GOLD   = '#C9A060';
+const GOLD2  = '#E8C07A';
+const NAVY   = '#060B18';
+const NAVY2  = '#0C1628';
+const NAVY3  = '#121F38';
+
+// ── Stat bubble ───────────────────────────────────────────────────────────────
+function StatBubble({
+  value, label, icon, grad, onPress, delay,
 }: {
-  icon: string; value: string | number; label: string;
-  color: string; onPress?: () => void; delay?: number;
+  value: number; label: string; icon: string;
+  grad: readonly [string, string]; onPress?: () => void; delay: number;
 }) {
-  const colors = useColors();
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.timing(anim, { toValue: 1, duration: 400, delay, useNativeDriver: true }).start();
+    Animated.spring(anim, { toValue: 1, delay, useNativeDriver: true, speed: 14, bounciness: 5 }).start();
   }, []);
   return (
-    <Animated.View style={{ opacity: anim, flex: 1 }}>
-      <TouchableOpacity
-        style={[s.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-        onPress={onPress}
-        activeOpacity={onPress ? 0.75 : 1}
-      >
-        <View style={[s.statIconWrap, { backgroundColor: color + '20' }]}>
-          <Ionicons name={icon as any} size={22} color={color} />
-        </View>
-        <Text style={[s.statValue, { color: colors.foreground }]}>{value}</Text>
-        <Text style={[s.statLabel, { color: colors.mutedForeground }]}>{label}</Text>
+    <Animated.View style={{ opacity: anim, transform: [{ scale: anim }] }}>
+      <TouchableOpacity onPress={onPress} activeOpacity={onPress ? 0.75 : 1} style={styles.statBubble}>
+        <LinearGradient colors={grad} style={styles.statBubbleGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <Ionicons name={icon as any} size={20} color="#fff" />
+        </LinearGradient>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
-// ─── Menu Item ────────────────────────────────────────────────────────────────
-function MenuItem({
-  icon, label, route, iconColor, badge, badgeText, disabled, last,
+// ── Menu row ─────────────────────────────────────────────────────────────────
+function MenuRow({
+  icon, label, route, grad, badge, badgeText, disabled, last, sublabel,
 }: {
-  icon: string; label: string; route?: string; iconColor: string;
-  badge?: boolean; badgeText?: string; disabled?: boolean; last?: boolean;
+  icon: string; label: string; route?: string;
+  grad: readonly [string, string]; badge?: boolean; badgeText?: string;
+  disabled?: boolean; last?: boolean; sublabel?: string;
 }) {
   const colors = useColors();
   return (
     <TouchableOpacity
       onPress={() => { if (!disabled && route) router.push(route as any); }}
-      activeOpacity={disabled ? 1 : 0.65}
-      style={[s.menuItem, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
+      activeOpacity={disabled ? 1 : 0.6}
+      style={[
+        styles.menuRow,
+        { borderBottomColor: colors.border },
+        last && { borderBottomWidth: 0 },
+      ]}
     >
-      <Ionicons name="chevron-back" size={14} color={disabled ? colors.border : colors.mutedForeground} />
-      <Text style={[s.menuLabel, { color: disabled ? colors.mutedForeground : colors.foreground }]}>{label}</Text>
+      {/* Icon tile */}
+      <LinearGradient colors={grad} style={styles.menuIconTile} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <Ionicons name={icon as any} size={18} color="#fff" />
+      </LinearGradient>
+
+      {/* Labels */}
+      <View style={styles.menuTextWrap}>
+        <Text style={[styles.menuLabel, { color: disabled ? colors.mutedForeground : colors.foreground }]}>
+          {label}
+        </Text>
+        {sublabel && (
+          <Text style={[styles.menuSublabel, { color: colors.mutedForeground }]}>{sublabel}</Text>
+        )}
+      </View>
+
+      {/* Right side */}
       {badgeText ? (
-        <View style={[s.menuCountBadge, { backgroundColor: iconColor + '20', borderColor: iconColor + '40' }]}>
-          <Text style={[s.menuCountText, { color: iconColor }]}>{badgeText}</Text>
+        <View style={[styles.menuBadge, { backgroundColor: grad[0] + '25', borderColor: grad[0] + '50' }]}>
+          <Text style={[styles.menuBadgeText, { color: grad[0] }]}>{badgeText}</Text>
         </View>
       ) : null}
       {badge && (
-        <View style={[s.menuSoonBadge, { backgroundColor: colors.muted }]}>
-          <Text style={[s.menuSoonText, { color: colors.mutedForeground }]}>قريباً</Text>
+        <View style={[styles.soonPill, { backgroundColor: colors.muted }]}>
+          <Text style={[styles.soonText, { color: colors.mutedForeground }]}>قريباً</Text>
         </View>
       )}
-      <View style={[s.menuIconWrap, { backgroundColor: iconColor + '18' }]}>
-        <Ionicons name={icon as any} size={18} color={iconColor} />
-      </View>
+      {!badge && !badgeText && (
+        <Ionicons name="chevron-back" size={15} color={disabled ? colors.border : colors.mutedForeground} />
+      )}
     </TouchableOpacity>
   );
 }
 
-// ─── Menu Group ───────────────────────────────────────────────────────────────
-function MenuGroup({ title, children }: { title?: string; children: React.ReactNode }) {
+// ── Section card ─────────────────────────────────────────────────────────────
+function SectionCard({ title, children }: { title?: string; children: React.ReactNode }) {
   const colors = useColors();
   return (
-    <View style={s.sectionWrap}>
-      {title && (
-        <Text style={[s.sectionTitle, { color: colors.mutedForeground }]}>{title}</Text>
-      )}
-      <View style={[s.menuGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View style={styles.sectionOuter}>
+      {title && <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>{title}</Text>}
+      <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         {children}
       </View>
     </View>
   );
 }
 
-// ─── Guest Screen ─────────────────────────────────────────────────────────────
+// ── Guest screen ─────────────────────────────────────────────────────────────
 function GuestScreen({ paddingTop }: { paddingTop: number }) {
   const colors = useColors();
   const fade = useRef(new Animated.Value(0)).current;
+  const slide = useRef(new Animated.Value(40)).current;
   useEffect(() => {
-    Animated.timing(fade, { toValue: 1, duration: 700, useNativeDriver: true }).start();
+    Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.spring(slide, { toValue: 0, speed: 12, bounciness: 4, useNativeDriver: true }),
+    ]).start();
   }, []);
+
   return (
-    <View style={[s.screen, { backgroundColor: colors.background }]}>
-      <LinearGradient colors={[NAVY, NAVY2, colors.background]} style={[s.guestHero, { paddingTop }]}>
-        <Animated.View style={[s.guestWrap, { opacity: fade }]}>
-          <View style={[s.guestLogoRing]}>
-            <LinearGradient colors={[GOLD, GOLD2]} style={s.guestLogoGrad}>
-              <Ionicons name="airplane" size={36} color={NAVY} />
-            </LinearGradient>
-          </View>
-          <Text style={s.guestTitle}>قمة النظائر للسفر</Text>
-          <Text style={[s.guestSub, { color: colors.mutedForeground }]}>
-            سجّل دخولك للوصول إلى رحلاتك، طلباتك، وملفك الشخصي
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <LinearGradient colors={[NAVY, NAVY2, NAVY3, colors.background]} style={{ flex: 1 }}>
+        <Animated.View
+          style={[styles.guestContent, { paddingTop: paddingTop + 40, opacity: fade, transform: [{ translateY: slide }] }]}
+        >
+          <LinearGradient colors={[GOLD, GOLD2]} style={styles.guestIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <Ionicons name="airplane" size={40} color={NAVY} />
+          </LinearGradient>
+          <Text style={styles.guestTitle}>قمة النظائر للسفر</Text>
+          <Text style={[styles.guestSub, { color: 'rgba(255,255,255,0.55)' }]}>
+            سجّل دخولك للوصول إلى رحلاتك، طلباتك، وملفك الشخصي الكامل
           </Text>
-          <TouchableOpacity style={s.loginBtn} onPress={() => router.push('/auth/login')} activeOpacity={0.85}>
-            <LinearGradient colors={[GOLD, GOLD2]} style={s.loginGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-              <Text style={s.loginBtnText}>تسجيل الدخول</Text>
+          <TouchableOpacity
+            style={styles.guestLoginBtn}
+            onPress={() => router.push('/auth/login')}
+            activeOpacity={0.85}
+          >
+            <LinearGradient colors={[GOLD, GOLD2]} style={styles.guestLoginGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              <Ionicons name="log-in-outline" size={18} color={NAVY} />
+              <Text style={styles.guestLoginText}>تسجيل الدخول</Text>
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[s.registerBtn, { borderColor: GOLD + '55' }]}
+            style={[styles.guestRegBtn, { borderColor: 'rgba(201,160,96,0.40)' }]}
             onPress={() => router.push('/auth/register')}
             activeOpacity={0.8}
           >
-            <Text style={[s.registerBtnText, { color: GOLD }]}>إنشاء حساب جديد</Text>
+            <Text style={[styles.guestRegText, { color: GOLD }]}>إنشاء حساب جديد</Text>
           </TouchableOpacity>
         </Animated.View>
       </LinearGradient>
@@ -143,7 +169,7 @@ function GuestScreen({ paddingTop }: { paddingTop: number }) {
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ── Main ─────────────────────────────────────────────────────────────────────
 export default function AccountScreen() {
   const colors     = useColors();
   const insets     = useSafeAreaInsets();
@@ -152,12 +178,13 @@ export default function AccountScreen() {
   const [loggingOut, setLoggingOut] = useState(false);
 
   const heroFade  = useRef(new Animated.Value(0)).current;
-  const heroSlide = useRef(new Animated.Value(-20)).current;
+  const cardSlide = useRef(new Animated.Value(30)).current;
+
   useEffect(() => {
     if (!isLoading) {
       Animated.parallel([
-        Animated.timing(heroFade,  { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.spring(heroSlide, { toValue: 0, speed: 14, bounciness: 3, useNativeDriver: true }),
+        Animated.timing(heroFade,  { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.spring(cardSlide, { toValue: 0, speed: 12, bounciness: 4, useNativeDriver: true }),
       ]).start();
     }
   }, [isLoading]);
@@ -187,7 +214,7 @@ export default function AccountScreen() {
 
   if (isLoading) {
     return (
-      <View style={[s.screen, s.center, { backgroundColor: colors.background }]}>
+      <View style={[styles.screen, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={GOLD} />
       </View>
     );
@@ -198,435 +225,487 @@ export default function AccountScreen() {
   const initials = (user!.fullName ?? '?').charAt(0).toUpperCase();
 
   return (
-    <View style={[s.screen, { backgroundColor: colors.background }]}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 40 : insets.bottom + 120 }}
       >
 
-        {/* ══════════ DARK HERO ══════════ */}
+        {/* ══════════ CINEMATIC HERO ══════════ */}
         <LinearGradient
-          colors={[NAVY, NAVY2, NAVY2 + 'F0']}
-          style={[s.hero, { paddingTop: paddingTop + 12 }]}
+          colors={[NAVY, NAVY2, NAVY3]}
+          style={[styles.hero, { paddingTop: paddingTop + 12 }]}
         >
-          <Animated.View style={{ opacity: heroFade, transform: [{ translateY: heroSlide }] }}>
+          <Animated.View style={{ opacity: heroFade }}>
 
-            {/* Top bar */}
-            <View style={s.heroTopBar}>
-              <TouchableOpacity
-                style={s.topBarBtn}
-                onPress={() => router.push('/security' as any)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="settings-outline" size={20} color="rgba(255,255,255,0.75)" />
+            {/* Top action bar */}
+            <View style={styles.heroBar}>
+              <TouchableOpacity onPress={() => router.push('/security' as any)} style={styles.heroBarBtn} activeOpacity={0.7}>
+                <Ionicons name="settings-outline" size={20} color="rgba(255,255,255,0.80)" />
               </TouchableOpacity>
-              <Text style={s.screenTitle}>حسابي</Text>
-              <TouchableOpacity
-                style={s.topBarBtn}
-                onPress={() => router.push('/notifications' as any)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="notifications-outline" size={20} color="rgba(255,255,255,0.75)" />
+              <Text style={styles.heroTitle}>حسابي</Text>
+              <TouchableOpacity onPress={() => router.push('/notifications' as any)} style={styles.heroBarBtn} activeOpacity={0.7}>
+                <Ionicons name="notifications-outline" size={20} color="rgba(255,255,255,0.80)" />
               </TouchableOpacity>
             </View>
 
-            {/* Avatar + info */}
-            <View style={s.profileRow}>
-              {/* Gold-ring avatar */}
-              <View style={s.avatarShell}>
-                <LinearGradient
-                  colors={[GOLD2, GOLD, GOLD2]}
-                  style={s.avatarGradRing}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <View style={s.avatarInner}>
-                    {user!.avatarUrl ? (
-                      <Image source={{ uri: user!.avatarUrl }} style={s.avatarImg} contentFit="cover" />
-                    ) : (
-                      <Text style={s.avatarInitial}>{initials}</Text>
-                    )}
-                  </View>
-                </LinearGradient>
-              </View>
-
-              {/* Text */}
-              <View style={s.profileInfo}>
-                <Text style={s.profileName} numberOfLines={1}>{user!.fullName}</Text>
-                {user!.email && (
-                  <View style={s.infoRow}>
-                    <Ionicons name="mail-outline" size={12} color="rgba(255,255,255,0.55)" />
-                    <Text style={s.infoText} numberOfLines={1}>{user!.email}</Text>
-                  </View>
-                )}
-                {user!.phone && (
-                  <View style={s.infoRow}>
-                    <Ionicons name="call-outline" size={12} color="rgba(255,255,255,0.55)" />
-                    <Text style={s.infoText}>{user!.phone}</Text>
-                  </View>
-                )}
-                <View style={s.memberBadge}>
-                  <Ionicons name="diamond-outline" size={11} color={GOLD} />
-                  <Text style={s.memberText}>عضو قمة · Qema Member</Text>
-                </View>
-              </View>
-
-              {/* Edit */}
-              <TouchableOpacity
-                onPress={() => router.push('/profile-edit' as any)}
-                style={s.editBtn}
-                activeOpacity={0.75}
+            {/* Avatar — centered + large */}
+            <View style={styles.avatarWrap}>
+              <LinearGradient
+                colors={[GOLD2, GOLD, GOLD2]}
+                style={styles.avatarRing}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
               >
-                <Ionicons name="create-outline" size={17} color={GOLD} />
+                <View style={styles.avatarInner}>
+                  {user!.avatarUrl ? (
+                    <Image source={{ uri: user!.avatarUrl }} style={styles.avatarImg} contentFit="cover" />
+                  ) : (
+                    <Text style={styles.avatarInitial}>{initials}</Text>
+                  )}
+                </View>
+              </LinearGradient>
+              {/* Edit button */}
+              <TouchableOpacity
+                style={styles.editDot}
+                onPress={() => router.push('/profile-edit' as any)}
+                activeOpacity={0.8}
+              >
+                <LinearGradient colors={[GOLD, GOLD2]} style={styles.editDotGrad}>
+                  <Ionicons name="create" size={13} color={NAVY} />
+                </LinearGradient>
               </TouchableOpacity>
+            </View>
+
+            {/* Name + info */}
+            <Text style={styles.heroName}>{user!.fullName}</Text>
+            {user!.email && (
+              <View style={styles.heroInfoRow}>
+                <Ionicons name="mail-outline" size={12} color="rgba(255,255,255,0.50)" />
+                <Text style={styles.heroInfoText}>{user!.email}</Text>
+              </View>
+            )}
+            {user!.phone && (
+              <View style={styles.heroInfoRow}>
+                <Ionicons name="call-outline" size={12} color="rgba(255,255,255,0.50)" />
+                <Text style={styles.heroInfoText}>{user!.phone}</Text>
+              </View>
+            )}
+
+            {/* Membership badge */}
+            <View style={styles.memberBadgeWrap}>
+              <LinearGradient
+                colors={[GOLD + '28', GOLD2 + '18']}
+                style={styles.memberBadge}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Ionicons name="diamond" size={12} color={GOLD} />
+                <Text style={styles.memberText}>عضو قمة · Qema Member</Text>
+              </LinearGradient>
             </View>
 
             {/* Profile completion */}
             {!isComplete && pct > 0 && (
               <TouchableOpacity
-                style={s.completionWrap}
+                style={styles.completionRow}
                 onPress={() => router.push('/profile-edit' as any)}
-                activeOpacity={0.85}
+                activeOpacity={0.8}
               >
-                <View style={s.completionHeader}>
-                  <Text style={[s.completionPct, { color: GOLD }]}>{pct}%</Text>
-                  <Text style={s.completionLabel}>أكمل ملفك لتسريع الحجز ←</Text>
-                </View>
-                <View style={s.completionTrack}>
+                <View style={styles.completionTrack}>
                   <LinearGradient
                     colors={[GOLD, GOLD2]}
-                    style={[s.completionFill, { width: `${pct}%` as any }]}
+                    style={[styles.completionFill, { width: `${pct}%` as any }]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                   />
                 </View>
+                <Text style={styles.completionLabel}>{pct}% — أكمل ملفك لتسريع الحجز ←</Text>
               </TouchableOpacity>
             )}
             {isComplete && (
-              <View style={s.completionDone}>
-                <Ionicons name="checkmark-circle" size={15} color="#4ADE80" />
-                <Text style={s.completionDoneText}>الملف الشخصي مكتمل</Text>
+              <View style={styles.completionDone}>
+                <Ionicons name="checkmark-circle" size={14} color="#4ADE80" />
+                <Text style={styles.completionDoneText}>الملف الشخصي مكتمل</Text>
               </View>
             )}
 
           </Animated.View>
         </LinearGradient>
 
-        {/* ══════════ STATS GRID ══════════ */}
-        <View style={s.statsGrid}>
-          <View style={s.statsRow}>
-            <StatCard icon="document-text"  value={totalOrders}      label="إجمالي الطلبات"  color="#6366F1" delay={0}   onPress={() => router.push('/bookings' as any)} />
-            <StatCard icon="checkmark-done" value={completedFlights} label="رحلات مكتملة"    color="#22C55E" delay={80}  onPress={() => router.push('/bookings' as any)} />
+        {/* ══════════ FLOATING STATS CARD ══════════ */}
+        <Animated.View style={[styles.statsCard, { backgroundColor: colors.card, borderColor: colors.border, transform: [{ translateY: cardSlide }], opacity: heroFade }]}>
+          <View style={styles.statsRow}>
+            <StatBubble
+              value={totalOrders}
+              label="إجمالي الطلبات"
+              icon="document-text"
+              grad={['#6366F1', '#8B5CF6']}
+              delay={0}
+              onPress={() => router.push('/bookings' as any)}
+            />
+            <View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
+            <StatBubble
+              value={completedFlights}
+              label="رحلات مكتملة"
+              icon="checkmark-circle"
+              grad={['#10B981', '#059669']}
+              delay={80}
+              onPress={() => router.push('/bookings' as any)}
+            />
+            <View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
+            <StatBubble
+              value={upcomingFlights}
+              label="رحلات قادمة"
+              icon="airplane"
+              grad={[GOLD, GOLD2]}
+              delay={160}
+              onPress={() => router.push('/bookings' as any)}
+            />
+            <View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
+            <StatBubble
+              value={visas.length}
+              label="طلبات التأشيرة"
+              icon="earth"
+              grad={['#3B82F6', '#2563EB']}
+              delay={240}
+              onPress={() => router.push('/bookings' as any)}
+            />
           </View>
-          <View style={s.statsRow}>
-            <StatCard icon="airplane"       value={upcomingFlights}  label="رحلات قادمة"     color={GOLD}    delay={160} onPress={() => router.push('/bookings' as any)} />
-            <StatCard icon="earth"          value={visas.length}     label="طلبات التأشيرة"  color="#3B82F6" delay={240} onPress={() => router.push('/bookings' as any)} />
+        </Animated.View>
+
+        {/* ══════════ MENU SECTIONS ══════════ */}
+        <View style={{ marginTop: 8 }}>
+
+          {/* خدماتي */}
+          <SectionCard title="خدماتي">
+            <MenuRow
+              icon="document-text"
+              label="طلباتي وحجوزاتي"
+              sublabel="تتبع حجوزاتك ورحلاتك"
+              route="/bookings"
+              grad={['#6366F1', '#8B5CF6']}
+              badgeText={totalOrders > 0 ? String(totalOrders) : undefined}
+            />
+            <MenuRow
+              icon="person"
+              label="الملف الشخصي"
+              sublabel="بيانات الهوية والجواز"
+              route="/my-profile"
+              grad={[GOLD, GOLD2]}
+            />
+            <MenuRow
+              icon="card"
+              label="وسائل الدفع"
+              sublabel="البطاقات والمحافظ"
+              grad={['#10B981', '#059669']}
+              badge
+              disabled
+            />
+            <MenuRow
+              icon="pricetag"
+              label="العروض والكوبونات"
+              sublabel="خصومات حصرية لك"
+              grad={['#F59E0B', '#D97706']}
+              badge
+              disabled
+              last
+            />
+          </SectionCard>
+
+          {/* الحساب والتفضيلات */}
+          <SectionCard title="الحساب والتفضيلات">
+            <MenuRow
+              icon="notifications"
+              label="الإشعارات"
+              sublabel="تنبيهات الحجز والعروض"
+              route="/notifications"
+              grad={['#8B5CF6', '#7C3AED']}
+            />
+            <MenuRow
+              icon="shield-checkmark"
+              label="الأمان والخصوصية"
+              sublabel="كلمة المرور والبيومتري"
+              route="/security"
+              grad={['#EF4444', '#DC2626']}
+              last
+            />
+          </SectionCard>
+
+          {/* الدعم والمعلومات */}
+          <SectionCard title="الدعم والمعلومات">
+            <MenuRow
+              icon="headset"
+              label="الدعم الفني"
+              sublabel="تواصل مع فريقنا"
+              route="/help"
+              grad={['#3B82F6', '#2563EB']}
+            />
+            <MenuRow
+              icon="call"
+              label="اتصل بنا"
+              sublabel="هاتف وواتساب"
+              route="/contact"
+              grad={['#10B981', '#059669']}
+            />
+            <MenuRow
+              icon="document-text-outline"
+              label="الشروط والأحكام"
+              route="/legal/terms"
+              grad={['#6B7280', '#4B5563']}
+            />
+            <MenuRow
+              icon="lock-closed"
+              label="سياسة الخصوصية"
+              route="/legal/privacy"
+              grad={['#6B7280', '#4B5563']}
+              last
+            />
+          </SectionCard>
+
+          {/* Logout */}
+          <View style={styles.logoutWrap}>
+            <TouchableOpacity
+              style={[styles.logoutBtn, loggingOut && { opacity: 0.6 }]}
+              onPress={handleLogout}
+              activeOpacity={0.75}
+              disabled={loggingOut}
+            >
+              {loggingOut
+                ? <ActivityIndicator size="small" color="#EF4444" />
+                : <Ionicons name="log-out-outline" size={20} color="#EF4444" />}
+              <Text style={styles.logoutText}>{loggingOut ? 'جاري الخروج...' : 'تسجيل الخروج'}</Text>
+            </TouchableOpacity>
           </View>
+
+          <Text style={[styles.version, { color: colors.mutedForeground }]}>
+            قمة النظائر للسفريات والسياحة · v1.0
+          </Text>
+
         </View>
-
-        {/* ══════════ SERVICES ══════════ */}
-        <MenuGroup title="الخدمات">
-          <MenuItem
-            icon="document-text"
-            label="طلباتي وحجوزاتي"
-            route="/bookings"
-            iconColor="#6366F1"
-            badgeText={totalOrders > 0 ? String(totalOrders) : undefined}
-          />
-          <MenuItem icon="person"               label="الملف الشخصي"      route="/my-profile"    iconColor={GOLD} />
-          <MenuItem icon="card-outline"         label="وسائل الدفع"        iconColor="#22C55E"    badge disabled />
-          <MenuItem icon="notifications"        label="الإشعارات"          route="/notifications" iconColor="#8B5CF6" />
-          <MenuItem icon="pricetag-outline"     label="العروض والكوبونات"  iconColor="#F59E0B"    badge disabled />
-          <MenuItem icon="settings"             label="الإعدادات"          route="/security"      iconColor="#6B7280" last />
-        </MenuGroup>
-
-        {/* ══════════ SUPPORT ══════════ */}
-        <MenuGroup title="الدعم والمعلومات">
-          <MenuItem icon="headset-outline"       label="الدعم الفني"         route="/help"           iconColor="#3B82F6" />
-          <MenuItem icon="call-outline"          label="اتصل بنا"            route="/contact"        iconColor="#22C55E" />
-          <MenuItem icon="shield-checkmark"      label="سياسة الخصوصية"     route="/legal/privacy"  iconColor="#8B5CF6" />
-          <MenuItem icon="document-text-outline" label="الشروط والأحكام"     route="/legal/terms"    iconColor="#6B7280" last />
-        </MenuGroup>
-
-        {/* ══════════ LOGOUT ══════════ */}
-        <View style={[s.sectionWrap, { marginBottom: 0 }]}>
-          <TouchableOpacity
-            style={[s.logoutBtn, { borderColor: 'rgba(239,68,68,0.35)', backgroundColor: 'rgba(239,68,68,0.06)' }, loggingOut && { opacity: 0.6 }]}
-            onPress={handleLogout}
-            activeOpacity={0.75}
-            disabled={loggingOut}
-          >
-            {loggingOut
-              ? <ActivityIndicator size="small" color="#EF4444" />
-              : <Ionicons name="log-out-outline" size={19} color="#EF4444" />}
-            <Text style={s.logoutText}>{loggingOut ? 'جاري الخروج...' : 'تسجيل الخروج'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={[s.version, { color: colors.mutedForeground }]}>
-          قمة النظائر للسفريات والسياحة · v1.0
-        </Text>
 
       </ScrollView>
     </View>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-const s = StyleSheet.create({
+// ─── Styles ──────────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
   screen: { flex: 1 },
-  center: { justifyContent: 'center', alignItems: 'center' },
 
-  // ── Hero (dark gradient) ──
+  // ── Hero ──
   hero: {
     paddingHorizontal: 20,
-    paddingBottom: 28,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    paddingBottom: 36,
   },
-  heroTopBar: {
+  heroBar: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 24,
   },
-  screenTitle: {
-    fontSize: 20,
-    fontFamily: 'Tajawal_800ExtraBold',
-    color: '#FFFFFF',
-  },
-  topBarBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  heroTitle: { fontSize: 20, fontFamily: 'Tajawal_800ExtraBold', color: '#FFFFFF' },
+  heroBarBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.10)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.10)',
   },
 
-  // ── Profile row ──
-  profileRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'flex-start',
-    gap: 14,
-    marginBottom: 16,
-  },
-  avatarShell: {},
-  avatarGradRing: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+  // ── Avatar ──
+  avatarWrap: { alignItems: 'center', marginBottom: 16, position: 'relative' },
+  avatarRing: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     padding: 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInner: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     backgroundColor: NAVY,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  avatarImg: { width: 78, height: 78, borderRadius: 39 },
-  avatarInitial: {
-    color: GOLD,
-    fontSize: 34,
-    fontFamily: 'Tajawal_800ExtraBold',
+  avatarImg: { width: 90, height: 90, borderRadius: 45 },
+  avatarInitial: { color: GOLD, fontSize: 38, fontFamily: 'Tajawal_800ExtraBold' },
+  editDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: SCREEN_W / 2 - 60,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  editDotGrad: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  profileInfo: { flex: 1, paddingTop: 4 },
-  profileName: {
+  // ── Hero text ──
+  heroName: {
     fontFamily: 'Tajawal_800ExtraBold',
-    fontSize: 18,
+    fontSize: 22,
     color: '#FFFFFF',
-    textAlign: 'right',
-    marginBottom: 5,
+    textAlign: 'center',
+    marginBottom: 6,
   },
-  infoRow: {
+  heroInfoRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 5,
     marginBottom: 3,
   },
-  infoText: {
+  heroInfoText: {
     fontFamily: 'Tajawal_400Regular',
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.60)',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.55)',
   },
+
+  // ── Member badge ──
+  memberBadgeWrap: { alignItems: 'center', marginTop: 10, marginBottom: 14 },
   memberBadge: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 7,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
     borderRadius: 20,
-    backgroundColor: GOLD + '22',
-    borderWidth: 1,
-    borderColor: GOLD + '40',
-    alignSelf: 'flex-end',
-  },
-  memberText: {
-    fontFamily: 'Tajawal_500Medium',
-    fontSize: 10,
-    color: GOLD,
-  },
-
-  editBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: GOLD + '20',
     borderWidth: 1,
     borderColor: GOLD + '45',
   },
+  memberText: { fontFamily: 'Tajawal_700Bold', fontSize: 11, color: GOLD },
 
-  // ── Completion bar ──
-  completionWrap: {
-    borderRadius: 14,
-    padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  completionHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  completionPct: { fontFamily: 'Tajawal_700Bold', fontSize: 14 },
-  completionLabel: {
-    fontFamily: 'Tajawal_400Regular',
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.60)',
-  },
+  // ── Completion ──
+  completionRow: { marginTop: 4 },
   completionTrack: {
-    height: 6,
+    height: 5,
     borderRadius: 3,
     backgroundColor: 'rgba(255,255,255,0.15)',
     overflow: 'hidden',
+    marginBottom: 7,
   },
   completionFill: { height: '100%', borderRadius: 3 },
+  completionLabel: {
+    fontFamily: 'Tajawal_400Regular',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.55)',
+    textAlign: 'center',
+  },
   completionDone: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 6,
     justifyContent: 'center',
-    paddingVertical: 6,
+    gap: 5,
+    marginTop: 6,
   },
-  completionDoneText: {
-    color: '#4ADE80',
-    fontFamily: 'Tajawal_500Medium',
-    fontSize: 13,
-  },
+  completionDoneText: { fontFamily: 'Tajawal_500Medium', fontSize: 13, color: '#4ADE80' },
 
-  // ── Stats 2×2 grid ──
-  statsGrid: {
-    paddingHorizontal: 14,
-    paddingTop: 16,
-    gap: 10,
+  // ── Floating stats card ──
+  statsCard: {
+    marginHorizontal: 16,
+    marginTop: -20,
+    borderRadius: 22,
+    borderWidth: 1,
+    paddingVertical: 18,
+    paddingHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 10,
+    zIndex: 10,
   },
   statsRow: {
     flexDirection: 'row-reverse',
-    gap: 10,
+    alignItems: 'center',
+    justifyContent: 'space-around',
   },
-  statCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-    alignItems: 'flex-end',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  statIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+  statsDivider: { width: 1, height: 44, opacity: 0.5 },
+  statBubble: { alignItems: 'center', gap: 6, flex: 1 },
+  statBubbleGrad: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
-  },
-  statValue: {
-    fontFamily: 'Tajawal_800ExtraBold',
-    fontSize: 26,
     marginBottom: 2,
   },
-  statLabel: {
-    fontFamily: 'Tajawal_400Regular',
-    fontSize: 11,
-    textAlign: 'right',
-  },
+  statValue: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 20, color: '#FFFFFF' },
+  statLabel: { fontFamily: 'Tajawal_400Regular', fontSize: 10, color: 'rgba(255,255,255,0.55)', textAlign: 'center' },
 
-  // ── Menu ──
-  sectionWrap: { paddingHorizontal: 14, marginTop: 18 },
+  // ── Menu sections ──
+  sectionOuter: { paddingHorizontal: 16, marginTop: 18 },
   sectionTitle: {
     fontFamily: 'Tajawal_700Bold',
-    fontSize: 11,
+    fontSize: 12,
     textAlign: 'right',
     marginBottom: 10,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
-  menuGroup: {
-    borderRadius: 18,
+  sectionCard: {
+    borderRadius: 20,
     borderWidth: 1,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  menuItem: {
+  menuRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
     paddingHorizontal: 18,
-    paddingVertical: 15,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  menuIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
+  menuIconTile: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuLabel: {
-    flex: 1,
-    fontFamily: 'Tajawal_500Medium',
-    fontSize: 14,
-    textAlign: 'right',
-  },
-  menuCountBadge: {
+  menuTextWrap: { flex: 1 },
+  menuLabel: { fontFamily: 'Tajawal_700Bold', fontSize: 14, textAlign: 'right' },
+  menuSublabel: { fontFamily: 'Tajawal_400Regular', fontSize: 11, textAlign: 'right', marginTop: 1 },
+  menuBadge: {
     paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: 20,
     borderWidth: 1,
   },
-  menuCountText: { fontFamily: 'Tajawal_700Bold', fontSize: 11 },
-  menuSoonBadge: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 },
-  menuSoonText: { fontFamily: 'Tajawal_400Regular', fontSize: 10 },
+  menuBadgeText: { fontFamily: 'Tajawal_700Bold', fontSize: 11 },
+  soonPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  soonText: { fontFamily: 'Tajawal_400Regular', fontSize: 10 },
 
   // ── Logout ──
+  logoutWrap: { paddingHorizontal: 16, marginTop: 18 },
   logoutBtn: {
     flexDirection: 'row-reverse',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     paddingVertical: 16,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1.5,
+    borderColor: 'rgba(239,68,68,0.35)',
+    backgroundColor: 'rgba(239,68,68,0.06)',
   },
-  logoutText: { color: '#EF4444', fontFamily: 'Tajawal_700Bold', fontSize: 15 },
+  logoutText: { fontFamily: 'Tajawal_700Bold', fontSize: 15, color: '#EF4444' },
 
+  // ── Version ──
   version: {
     textAlign: 'center',
     fontSize: 11,
@@ -637,44 +716,37 @@ const s = StyleSheet.create({
   },
 
   // ── Guest ──
-  guestHero: { flex: 1, minHeight: 600 },
-  guestWrap: {
+  guestContent: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
+    paddingHorizontal: 32,
     gap: 14,
-    paddingTop: 60,
   },
-  guestLogoRing: { borderRadius: 44, overflow: 'hidden', marginBottom: 8 },
-  guestLogoGrad: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+  guestIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 8,
   },
-  guestTitle: {
-    fontSize: 24,
-    fontFamily: 'Tajawal_800ExtraBold',
-    textAlign: 'center',
-    color: '#FFFFFF',
+  guestTitle: { fontSize: 26, fontFamily: 'Tajawal_800ExtraBold', color: '#FFFFFF', textAlign: 'center' },
+  guestSub: { fontSize: 14, fontFamily: 'Tajawal_400Regular', textAlign: 'center', lineHeight: 22 },
+  guestLoginBtn: { width: '100%', borderRadius: 18, overflow: 'hidden', marginTop: 10 },
+  guestLoginGrad: {
+    flexDirection: 'row-reverse',
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
-  guestSub: {
-    fontSize: 14,
-    fontFamily: 'Tajawal_400Regular',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  loginBtn: { width: '100%', borderRadius: 18, overflow: 'hidden', marginTop: 8 },
-  loginGrad: { paddingVertical: 17, alignItems: 'center' },
-  loginBtnText: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 16, color: NAVY },
-  registerBtn: {
+  guestLoginText: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 16, color: NAVY },
+  guestRegBtn: {
     width: '100%',
     paddingVertical: 15,
     borderRadius: 18,
     borderWidth: 1.5,
     alignItems: 'center',
   },
-  registerBtnText: { fontFamily: 'Tajawal_700Bold', fontSize: 16 },
+  guestRegText: { fontFamily: 'Tajawal_700Bold', fontSize: 16 },
 });
