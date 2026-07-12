@@ -18,6 +18,8 @@ import { useListVisas } from '@workspace/api-client-react';
 import type { VisaType } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { VisaCard } from '@/components/VisaCard';
+import { useServiceSettings } from '@/context/ServiceSettingsContext';
+import { ServiceUnavailable } from '@/components/ServiceUnavailable';
 
 
 type Filter = VisaType | 'all';
@@ -36,9 +38,12 @@ export default function VisasScreen() {
   const insets   = useSafeAreaInsets();
   const colors   = useColors();
   const inputRef = useRef<TextInput>(null);
+  const { visasEnabled } = useServiceSettings();
 
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
+
+  if (!visasEnabled) return <ServiceUnavailable serviceName="التأشيرات" icon="document-text-outline" />;
 
   const { data: visas, isLoading } = useListVisas(
     filter === 'all' ? undefined : { visaType: filter },

@@ -1275,7 +1275,7 @@ export default function ETicketScreen() {
         {isTemp && (
           <TouchableOpacity
             style={[styles.footerBtn, { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.border }]}
-            onPress={() => router.replace('/(tabs)/')}
+            onPress={() => router.replace('/' as any)}
             activeOpacity={0.8}
           >
             <Ionicons name="home-outline" size={20} color={colors.foreground} />

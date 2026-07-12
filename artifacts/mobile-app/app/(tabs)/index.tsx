@@ -17,22 +17,27 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useGetHomeSummary, getGetHomeSummaryQueryKey } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { useServiceSettings } from '@/context/ServiceSettingsContext';
 import { BannerSlider } from '@/components/BannerSlider';
 import { VisaCard } from '@/components/VisaCard';
 import { PackageCard } from '@/components/PackageCard';
 import { OfferCard } from '@/components/OfferCard';
 
-const SERVICES = [
-  { icon: 'document-text-outline', label: 'التأشيرات', route: '/(tabs)/visas' },
-  { icon: 'airplane-outline', label: 'الطيران', route: '/(tabs)/flights' },
-  { icon: 'map-outline', label: 'الباقات', route: '/(tabs)/packages' },
-  { icon: 'headset-outline', label: 'تواصل معنا', route: null },
-] as const;
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const { data: home, isLoading } = useGetHomeSummary({ query: { queryKey: getGetHomeSummaryQueryKey() } });
+  const { flightsEnabled, packagesEnabled, visasEnabled } = useServiceSettings();
+
+  // Filter service shortcuts based on admin toggles
+  const ALL_SERVICES = [
+    { icon: 'document-text-outline', label: 'التأشيرات', route: '/(tabs)/visas',     enabled: visasEnabled    },
+    { icon: 'airplane-outline',      label: 'الطيران',   route: '/(tabs)/flights',   enabled: flightsEnabled  },
+    { icon: 'map-outline',           label: 'الباقات',   route: '/(tabs)/packages',  enabled: packagesEnabled },
+    { icon: 'headset-outline',       label: 'تواصل معنا', route: null,               enabled: true            },
+  ] as const;
+  const SERVICES = ALL_SERVICES.filter(s => s.enabled);
 
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 

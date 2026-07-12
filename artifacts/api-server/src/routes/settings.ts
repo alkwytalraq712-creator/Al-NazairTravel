@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { asc, eq } from "drizzle-orm";
-import { db, companySettingsTable, branchTable, holdSettingsTable } from "@workspace/db";
+import { db, companySettingsTable, branchTable, holdSettingsTable, serviceSettingsTable } from "@workspace/db";
 import { requireAdmin } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -64,6 +64,41 @@ router.patch("/admin/settings/hold", requireAdmin, async (req, res): Promise<voi
   } else {
     const [created] = await db
       .insert(holdSettingsTable)
+      .values({ id: 1, ...update, updatedAt: new Date() } as any)
+      .returning();
+    res.json(created);
+  }
+});
+
+// ─── Service Settings (flights / packages / visas toggle) ─────────────────────
+
+router.get("/settings/services", async (_req, res): Promise<void> => {
+  const [row] = await db.select().from(serviceSettingsTable).where(eq(serviceSettingsTable.id, 1));
+  if (!row) {
+    const [created] = await db.insert(serviceSettingsTable).values({ id: 1 }).returning();
+    res.json(created);
+    return;
+  }
+  res.json(row);
+});
+
+router.patch("/admin/settings/services", requireAdmin, async (req, res): Promise<void> => {
+  const allowed = ["flightsEnabled", "packagesEnabled", "visasEnabled"] as const;
+  const update: Record<string, unknown> = {};
+  for (const key of allowed) {
+    if (key in req.body) update[key] = Boolean(req.body[key]);
+  }
+  const [existing] = await db.select().from(serviceSettingsTable).where(eq(serviceSettingsTable.id, 1));
+  if (existing) {
+    const [updated] = await db
+      .update(serviceSettingsTable)
+      .set({ ...update, updatedAt: new Date() })
+      .where(eq(serviceSettingsTable.id, 1))
+      .returning();
+    res.json(updated);
+  } else {
+    const [created] = await db
+      .insert(serviceSettingsTable)
       .values({ id: 1, ...update, updatedAt: new Date() } as any)
       .returning();
     res.json(created);

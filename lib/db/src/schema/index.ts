@@ -14,3 +14,4 @@ export * from "./testimonials";
 export * from "./payments";
 export * from "./invoices";
 export * from "./holdSettings";
+export * from "./serviceSettings";

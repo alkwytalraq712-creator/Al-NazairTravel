@@ -18,6 +18,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { FlightBookingProvider } from '@/context/FlightBookingContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { PushNotificationProvider } from '@/context/PushNotificationProvider';
+import { ServiceSettingsProvider } from '@/context/ServiceSettingsContext';
 
 // Set base URL at module level so all hooks reach the correct server
 if (process.env.EXPO_PUBLIC_DOMAIN) {
@@ -84,15 +85,17 @@ export default function RootLayout() {
         <ErrorBoundary>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <PushNotificationProvider>
-                <FlightBookingProvider>
-                  <GestureHandlerRootView style={{ flex: 1 }}>
-                    <KeyboardProvider>
-                      <RootLayoutNav />
-                    </KeyboardProvider>
-                  </GestureHandlerRootView>
-                </FlightBookingProvider>
-              </PushNotificationProvider>
+              <ServiceSettingsProvider>
+                <PushNotificationProvider>
+                  <FlightBookingProvider>
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                      <KeyboardProvider>
+                        <RootLayoutNav />
+                      </KeyboardProvider>
+                    </GestureHandlerRootView>
+                  </FlightBookingProvider>
+                </PushNotificationProvider>
+              </ServiceSettingsProvider>
             </AuthProvider>
           </QueryClientProvider>
         </ErrorBoundary>

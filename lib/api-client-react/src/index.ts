@@ -3,5 +3,6 @@ export * from "./generated/api";
 export * from "./generated/api-hold";
 export * from "./generated/api-staff";
 export * from "./generated/api-notifications";
+export * from "./generated/api-services";
 export { setBaseUrl, setAuthTokenGetter, customFetch } from "./custom-fetch";
 export type { AuthTokenGetter } from "./custom-fetch";

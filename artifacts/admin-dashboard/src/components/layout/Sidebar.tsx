@@ -18,6 +18,7 @@ import {
   Building2,
   Clock,
   ShieldAlert,
+  Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLogout } from '@workspace/api-client-react';
@@ -26,7 +27,7 @@ import { usePermissions } from '@/context/PermissionsContext';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, Users, Plane, FileText, Map, Briefcase,
-  Ticket, Bell, ImageIcon, MessageSquare, UserCog, Wallet, Receipt, Building2, Clock,
+  Ticket, Bell, ImageIcon, MessageSquare, UserCog, Wallet, Receipt, Building2, Clock, Settings2,
 };
 
 // Full nav — each item has an optional permissionKey (null = always visible)
@@ -46,6 +47,7 @@ const NAV_ITEMS = [
   { icon: ImageIcon,       label: 'اللافتات الترويجية', path: '/banners',            permissionKey: 'banners' },
   { icon: MessageSquare,   label: 'الآراء والتقييمات',  path: '/testimonials',       permissionKey: 'testimonials' },
   { icon: Building2,       label: 'إعدادات التواصل',     path: '/company-settings',  permissionKey: 'company_settings' },
+  { icon: Settings2,       label: 'إدارة الخدمات',       path: '/service-management', permissionKey: null },
 ];
 
 export function Sidebar() {

@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useListPackages } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { PackageCard } from '@/components/PackageCard';
+import { useServiceSettings } from '@/context/ServiceSettingsContext';
+import { ServiceUnavailable } from '@/components/ServiceUnavailable';
 
 const REGIONS = [
   { key: '', label: 'الكل' },
@@ -28,8 +30,11 @@ const REGIONS = [
 export default function PackagesScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const { packagesEnabled } = useServiceSettings();
   const [search, setSearch] = useState('');
   const [region, setRegion] = useState('');
+
+  if (!packagesEnabled) return <ServiceUnavailable serviceName="الباقات السياحية" icon="map-outline" />;
 
   const { data: packages, isLoading, refetch } = useListPackages(
     region ? { country: region } : undefined,

@@ -24,6 +24,7 @@ import { Banners } from '@/pages/banners';
 import { Testimonials } from '@/pages/testimonials';
 import { CompanySettings } from '@/pages/company-settings';
 import { HoldSettings } from '@/pages/hold-settings';
+import { ServiceManagement } from '@/pages/service-management';
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ function AppRouter() {
             <Route path="/testimonials" component={Testimonials} />
             <Route path="/company-settings" component={CompanySettings} />
             <Route path="/hold-settings" component={HoldSettings} />
+            <Route path="/service-management" component={ServiceManagement} />
             <Route component={NotFound} />
           </Switch>
         </MainLayout>

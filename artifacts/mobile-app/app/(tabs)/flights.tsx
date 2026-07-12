@@ -20,6 +20,8 @@ import type { CabinClass } from '@workspace/api-client-react';
 import { AIRPORT_DB, AIRPORT_MAP, searchAirports } from '../../lib/airports';
 import type { Airport } from '../../lib/airports';
 import { useColors } from '@/hooks/useColors';
+import { useServiceSettings } from '@/context/ServiceSettingsContext';
+import { ServiceUnavailable } from '@/components/ServiceUnavailable';
 
 const GOLD = '#C9A060';
 const GOLD2 = '#E8C07A';
@@ -380,6 +382,7 @@ type ActiveAirport = 'from' | 'to' | null;
 export default function FlightsScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const { flightsEnabled } = useServiceSettings();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -399,6 +402,8 @@ export default function FlightsScreen() {
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
   }, []);
+
+  if (!flightsEnabled) return <ServiceUnavailable serviceName="حجوزات الطيران" icon="paper-plane-outline" />;
 
   function swapAirports() { const t = from; setFrom(to); setTo(t); }
 
