@@ -422,39 +422,64 @@ const AP = StyleSheet.create({
 });
 
 // ─── Date card ──────────────────────────────────────────────────────────────────
+const RETURN_ACCENT   = '#38BDF8'; // sky-blue for return date
+const RETURN_ACCENT_BG = 'rgba(56,189,248,0.10)';
+
 function DateCard({
-  label, iso, active, onPress,
-}: { label: string; iso: string; active: boolean; onPress: () => void }) {
+  label, iso, active, onPress, variant = 'depart',
+}: { label: string; iso: string; active: boolean; onPress: () => void; variant?: 'depart' | 'return' }) {
   const { weekday, full } = formatDateAr(iso);
+  const hasDate = !!iso;
+  const accent  = variant === 'return' ? RETURN_ACCENT : GOLD;
+  const accentBg = variant === 'return' ? RETURN_ACCENT_BG : 'rgba(201,160,96,0.10)';
+
   return (
     <TouchableOpacity
-      style={[DC.card, active && DC.activeCard]}
+      style={[
+        DC.card,
+        active && { borderColor: accent + '80', backgroundColor: accentBg },
+        !active && hasDate && { borderColor: accent + '40' },
+      ]}
       onPress={onPress}
       activeOpacity={0.8}
     >
+      {/* Label row */}
       <View style={DC.iconRow}>
-        <Ionicons name="calendar-outline" size={14} color={active ? GOLD : MUTED} />
-        <Text style={[DC.label, active && { color: GOLD }]}>{label}</Text>
+        <Ionicons name="calendar-outline" size={13} color={hasDate || active ? accent : MUTED} />
+        <Text style={[DC.label, (hasDate || active) && { color: accent }]}>{label}</Text>
       </View>
-      <Text style={[DC.weekday, active && { color: WHITE }]}>{weekday}</Text>
-      {full && full !== 'التاريخ' ? (
-        <Text style={[DC.full, active && { color: GOLD_LIGHT }]} numberOfLines={1}>{full}</Text>
+
+      {hasDate ? (
+        <>
+          {/* Day name */}
+          <Text style={[DC.weekday, { color: WHITE }]}>{weekday}</Text>
+          {/* Full date — always bright */}
+          <Text style={[DC.full, { color: accent }]} numberOfLines={1}>{full}</Text>
+          {/* ISO tag */}
+          <Text style={DC.isoTag}>{iso}</Text>
+        </>
       ) : (
-        <Text style={DC.placeholder}>اختر التاريخ</Text>
+        <>
+          {/* Empty state — visible prompt */}
+          <Text style={[DC.weekdayEmpty, active && { color: WHITE }]}>اضغط لتحديد</Text>
+          <Text style={[DC.placeholderMain, active && { color: accent }]}>التاريخ</Text>
+        </>
       )}
-      {iso && <Text style={DC.isoTag}>{iso}</Text>}
     </TouchableOpacity>
   );
 }
 const DC = StyleSheet.create({
-  card: { flex: 1, backgroundColor: CARD_BG, borderRadius: 14, borderWidth: 1, borderColor: BORDER, padding: 14, gap: 3 },
-  activeCard: { borderColor: GOLD + '60', backgroundColor: 'rgba(201,160,96,0.08)' },
-  iconRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5, marginBottom: 2 },
+  card: {
+    flex: 1, backgroundColor: CARD_BG, borderRadius: 14,
+    borderWidth: 1.5, borderColor: BORDER, padding: 14, gap: 3,
+  },
+  iconRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5, marginBottom: 4 },
   label: { color: MUTED, fontSize: 11, fontFamily: 'Tajawal_400Regular' },
-  weekday: { color: MUTED, fontSize: 13, fontFamily: 'Tajawal_700Bold', textAlign: 'right' },
-  full: { color: MUTED, fontSize: 12, fontFamily: 'Tajawal_500Medium', textAlign: 'right' },
-  isoTag: { color: MUTED, fontSize: 10, fontFamily: 'Tajawal_400Regular', textAlign: 'right', marginTop: 2 },
-  placeholder: { color: 'rgba(255,255,255,0.25)', fontSize: 12, fontFamily: 'Tajawal_400Regular', textAlign: 'right' },
+  weekday: { fontSize: 13, fontFamily: 'Tajawal_700Bold', textAlign: 'right' },
+  weekdayEmpty: { color: MUTED, fontSize: 13, fontFamily: 'Tajawal_500Medium', textAlign: 'right' },
+  full: { fontSize: 13, fontFamily: 'Tajawal_800ExtraBold', textAlign: 'right' },
+  isoTag: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontFamily: 'Tajawal_400Regular', textAlign: 'right', marginTop: 2 },
+  placeholderMain: { color: 'rgba(255,255,255,0.30)', fontSize: 18, fontFamily: 'Tajawal_800ExtraBold', textAlign: 'right' },
 });
 
 // ─── Main screen ────────────────────────────────────────────────────────────────
@@ -579,6 +604,7 @@ export default function FlightsScreen() {
               iso={departDate}
               active={activeDate === 'depart'}
               onPress={() => toggleDate('depart')}
+              variant="depart"
             />
             {tripType === 'round_trip' && (
               <DateCard
@@ -586,6 +612,7 @@ export default function FlightsScreen() {
                 iso={returnDate}
                 active={activeDate === 'return'}
                 onPress={() => toggleDate('return')}
+                variant="return"
               />
             )}
           </View>
