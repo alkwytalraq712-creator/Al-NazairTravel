@@ -162,15 +162,27 @@ export default function FlightSuccessScreen() {
         </Animated.View>
       </View>
 
-      {/* Single CTA */}
-      <View style={[styles.footer, { paddingBottom: Platform.OS === 'web' ? 34 : insets.bottom + 16 }]}>
+      {/* CTAs */}
+      <View style={[styles.footer, { paddingBottom: Platform.OS === 'web' ? 34 : insets.bottom + 16, gap: 10 }]}>
+        {/* View ticket — primary */}
+        {params.bookingId && (
+          <TouchableOpacity
+            style={styles.ctaBtn}
+            onPress={() => router.replace(`/e-ticket/${params.bookingId}` as any)}
+            activeOpacity={0.88}
+          >
+            <Ionicons name="document-text-outline" size={20} color={DARK} />
+            <Text style={styles.ctaText}>عرض التذكرة الإلكترونية</Text>
+          </TouchableOpacity>
+        )}
+        {/* Back home — secondary */}
         <TouchableOpacity
-          style={styles.ctaBtn}
+          style={styles.secondaryBtn}
           onPress={() => router.replace('/(tabs)' as any)}
           activeOpacity={0.88}
         >
-          <Ionicons name="home-outline" size={20} color={DARK} />
-          <Text style={styles.ctaText}>العودة إلى الصفحة الرئيسية</Text>
+          <Ionicons name="home-outline" size={18} color={GREEN} />
+          <Text style={styles.secondaryText}>العودة إلى الصفحة الرئيسية</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -233,4 +245,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
   },
   ctaText: { color: DARK, fontFamily: 'Tajawal_800ExtraBold', fontSize: 16 },
+  secondaryBtn: {
+    flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', gap: 10,
+    borderWidth: 1.5, borderColor: GREEN + '55', paddingVertical: 14, borderRadius: 16,
+    backgroundColor: GREEN + '11',
+  },
+  secondaryText: { color: GREEN, fontFamily: 'Tajawal_700Bold', fontSize: 15 },
 });
