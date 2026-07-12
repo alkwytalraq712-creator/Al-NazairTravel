@@ -159,11 +159,17 @@ router.get(
   },
 );
 
-router.get("/admin/employees", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/employees", requireAdmin, async (req, res): Promise<void> => {
+  // Only admin (owner) can manage employees
+  const [caller] = await db.select({ role: usersTable.role }).from(usersTable).where(eq(usersTable.id, req.session.userId!));
+  if (!caller || caller.role !== "admin") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   const rows = await db
     .select()
     .from(usersTable)
-    .where(eq(usersTable.role, "admin"))
+    .where(eq(usersTable.role, "staff"))
     .orderBy(desc(usersTable.createdAt));
 
   res.json(ListEmployeesResponse.parse(rows.map(serializeUser)));
@@ -193,8 +199,10 @@ router.post("/admin/employees", requireAdmin, async (req, res): Promise<void> =>
       phone: parsed.data.phone,
       email: parsed.data.email,
       passwordHash,
-      role: "admin",
-    })
+      role: "staff",
+      // New employees start with empty permissions (no access until admin assigns tasks)
+      permissions: [],
+    } as any)
     .returning();
 
   res.status(201).json(CreateEmployeeResponse.parse(serializeUser(employee)));
@@ -216,7 +224,7 @@ router.patch(
     const [existing] = await db
       .select()
       .from(usersTable)
-      .where(and(eq(usersTable.id, params.data.id), eq(usersTable.role, "admin")));
+      .where(and(eq(usersTable.id, params.data.id), eq(usersTable.role, "staff")));
     if (!existing) {
       res.status(404).json({ error: "Employee not found" });
       return;
@@ -254,6 +262,48 @@ router.patch(
   },
 );
 
+// ── Update employee permissions ──────────────────────────────────────────────
+router.patch(
+  "/admin/employees/:id/permissions",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    // Only the main admin (owner, role = 'admin') can manage permissions
+    const [caller] = await db
+      .select({ role: usersTable.role })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.session.userId!));
+    if (!caller || caller.role !== "admin") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const id = parseInt(String(req.params.id), 10);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid ID" });
+      return;
+    }
+
+    const { permissions } = req.body as { permissions?: string[] };
+    if (!Array.isArray(permissions)) {
+      res.status(400).json({ error: "permissions must be an array" });
+      return;
+    }
+
+    const [employee] = await db
+      .update(usersTable)
+      .set({ permissions } as any)
+      .where(and(eq(usersTable.id, id), eq(usersTable.role, "staff")))
+      .returning();
+
+    if (!employee) {
+      res.status(404).json({ error: "Employee not found" });
+      return;
+    }
+
+    res.json(serializeUser(employee));
+  },
+);
+
 router.delete(
   "/admin/employees/:id",
   requireAdmin,
@@ -272,18 +322,9 @@ router.delete(
     const [existing] = await db
       .select()
       .from(usersTable)
-      .where(and(eq(usersTable.id, params.data.id), eq(usersTable.role, "admin")));
+      .where(and(eq(usersTable.id, params.data.id), eq(usersTable.role, "staff")));
     if (!existing) {
       res.status(404).json({ error: "Employee not found" });
-      return;
-    }
-
-    const [{ count: adminCount }] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(usersTable)
-      .where(eq(usersTable.role, "admin"));
-    if (adminCount <= 1) {
-      res.status(400).json({ error: "لا يمكن حذف آخر حساب موظف" });
       return;
     }
 

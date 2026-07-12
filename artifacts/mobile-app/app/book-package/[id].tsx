@@ -65,7 +65,8 @@ export default function BookPackageScreen() {
         { text: 'حسناً', onPress: () => router.push('/bookings') },
       ]);
     } catch (e: any) {
-      Alert.alert('خطأ', e?.message ?? 'حدث خطأ');
+      const msg = e?.data?.error ?? e?.message ?? 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.';
+      Alert.alert('تعذر إرسال الطلب', msg, [{ text: 'حسناً' }]);
     } finally { setLoading(false); }
   }
 

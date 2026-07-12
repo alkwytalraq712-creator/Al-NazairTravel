@@ -78,6 +78,10 @@ export const usersTable = pgTable("users", {
 
   // ── Completion tracking ───────────────────────────────────────────────────
   profileCompletedAt: timestamp("profile_completed_at", { withTimezone: true }),
+
+  // ── Staff permissions ─────────────────────────────────────────────────────
+  // null = full access (admin/owner). Array of module keys for staff employees.
+  permissions: jsonb("permissions").$type<string[]>(),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

@@ -30,6 +30,7 @@ interface AuthContextType {
   login: (data: LoginInput) => Promise<void>;
   logout: () => Promise<void>;
   register: (data: SignupInput) => Promise<void>;
+  tryRestoreFromBiometric: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -154,6 +155,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [queryClient],
   );
 
+  /**
+   * After a successful biometric challenge, reload the stored token and try
+   * to re-hydrate the session without asking for the password again.
+   * Returns true if the session was restored successfully.
+   */
+  const tryRestoreFromBiometric = useCallback(async (): Promise<boolean> => {
+    const token = await loadToken();
+    if (!token) return false;
+    setAuthTokenGetter(() => token);
+    try {
+      await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+      return true;
+    } catch {
+      return false;
+    }
+  }, [queryClient]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -163,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         register,
+        tryRestoreFromBiometric,
       }}
     >
       {children}

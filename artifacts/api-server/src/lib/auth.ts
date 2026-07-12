@@ -54,6 +54,7 @@ export function serializeUser(user: User) {
     language: user.language,
     currency: user.currency,
     createdAt: user.createdAt,
+    permissions: (user as any).permissions ?? null,
 
     // Profile fields
     firstName: user.firstName ?? null,
@@ -161,7 +162,8 @@ export async function requireAdmin(
       .select({ role: usersTable.role })
       .from(usersTable)
       .where(eq(usersTable.id, req.session.userId));
-    if (!user || user.role !== "admin") {
+    // Allow both admin (full access) and staff (permission-restricted, enforced at UI level)
+    if (!user || (user.role !== "admin" && user.role !== "staff")) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }

@@ -3,7 +3,7 @@
  * Supports phone (any country) + email login.
  * Links to register and forgot-password.
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -24,6 +24,13 @@ import { Image } from 'expo-image';
 import { useAuth } from '@/context/AuthContext';
 import CountryPickerModal from '@/components/CountryPickerModal';
 import { DEFAULT_COUNTRY, type Country } from '@/lib/countries';
+import {
+  isBiometricAvailable,
+  isBiometricEnabled,
+  getBiometricLabel,
+  authenticateBiometric,
+  setBiometricEnabled,
+} from '@/lib/biometric';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const GOLD   = '#C9A060';
@@ -42,7 +49,7 @@ type Tab = 'phone' | 'email';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { login } = useAuth();
+  const { login, tryRestoreFromBiometric } = useAuth();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   const [tab, setTab] = useState<Tab>('phone');
@@ -54,6 +61,45 @@ export default function LoginScreen() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [biometricReady, setBiometricReady] = useState(false);
+  const [biometricLabel, setBiometricLabel] = useState('البصمة البيومترية');
+  const [biometricLoading, setBiometricLoading] = useState(false);
+
+  // Check if biometric login is available
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    (async () => {
+      const available = await isBiometricAvailable();
+      const enabled = await isBiometricEnabled();
+      if (available && enabled) {
+        setBiometricReady(true);
+        const label = await getBiometricLabel();
+        setBiometricLabel(label);
+      }
+    })();
+  }, []);
+
+  async function handleBiometricLogin() {
+    setBiometricLoading(true);
+    try {
+      const authOk = await authenticateBiometric('تسجيل الدخول إلى قمة للسفر والسياحة');
+      if (!authOk) return;
+      const restored = await tryRestoreFromBiometric();
+      if (restored) {
+        router.replace('/(tabs)');
+      } else {
+        // Token expired — disable biometric until next manual login
+        await setBiometricEnabled(false);
+        setBiometricReady(false);
+        Alert.alert(
+          'انتهت صلاحية الجلسة',
+          'يرجى تسجيل الدخول بكلمة المرور مرة واحدة لإعادة تفعيل ميزة البصمة.',
+        );
+      }
+    } finally {
+      setBiometricLoading(false);
+    }
+  }
 
   async function handleLogin() {
     const identifier = tab === 'phone'
@@ -240,6 +286,25 @@ export default function LoginScreen() {
               <View style={styles.dividerLine} />
             </View>
 
+            {/* Biometric button — shown only when enabled & available */}
+            {biometricReady && Platform.OS !== 'web' && (
+              <TouchableOpacity
+                style={[styles.biometricBtn, biometricLoading && { opacity: 0.7 }]}
+                onPress={handleBiometricLogin}
+                disabled={biometricLoading}
+                activeOpacity={0.85}
+              >
+                {biometricLoading ? (
+                  <ActivityIndicator size="small" color={GOLD} />
+                ) : (
+                  <>
+                    <Ionicons name="finger-print" size={22} color={GOLD} />
+                    <Text style={styles.biometricText}>تسجيل الدخول بـ {biometricLabel}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
             {/* Google button */}
             <TouchableOpacity
               style={styles.googleBtn}
@@ -396,6 +461,16 @@ const styles = StyleSheet.create({
     fontSize: 18, width: 24, textAlign: 'center',
   },
   googleText: { color: WHITE, fontFamily: 'Tajawal_700Bold', fontSize: 15 },
+
+  // Biometric
+  biometricBtn: {
+    flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center',
+    gap: 10, paddingVertical: 14, borderRadius: 14,
+    borderWidth: 1.5, borderColor: 'rgba(201,160,96,0.35)',
+    backgroundColor: 'rgba(201,160,96,0.07)',
+    marginBottom: 12,
+  },
+  biometricText: { color: GOLD, fontFamily: 'Tajawal_700Bold', fontSize: 15 },
 
   // Register link
   registerRow: {
