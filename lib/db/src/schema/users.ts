@@ -82,6 +82,9 @@ export const usersTable = pgTable("users", {
   // ── Staff permissions ─────────────────────────────────────────────────────
   // null = full access (admin/owner). Array of module keys for staff employees.
   permissions: jsonb("permissions").$type<string[]>(),
+
+  // ── Push notifications ────────────────────────────────────────────────────
+  expoPushToken: text("expo_push_token"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

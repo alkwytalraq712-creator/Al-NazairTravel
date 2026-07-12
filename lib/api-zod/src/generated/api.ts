@@ -2520,8 +2520,10 @@ export const ListMyNotificationsResponseItem = zod.object({
   "userId": zod.number().nullable(),
   "title": zod.string(),
   "message": zod.string(),
-  "type": zod.enum(['visa_application', 'package_booking', 'flight_booking', 'general', 'promotion']),
+  "type": zod.enum(['visa_application', 'package_booking', 'flight_booking', 'general', 'promotion', 'payment', 'system']),
   "isRead": zod.boolean(),
+  "imageUrl": zod.string().nullable().optional(),
+  "data": zod.record(zod.string()).nullable().optional(),
   "createdAt": zod.coerce.date()
 })
 export const ListMyNotificationsResponse = zod.array(ListMyNotificationsResponseItem)
@@ -2539,8 +2541,10 @@ export const MarkNotificationReadResponse = zod.object({
   "userId": zod.number().nullable(),
   "title": zod.string(),
   "message": zod.string(),
-  "type": zod.enum(['visa_application', 'package_booking', 'flight_booking', 'general', 'promotion']),
+  "type": zod.enum(['visa_application', 'package_booking', 'flight_booking', 'general', 'promotion', 'payment', 'system']),
   "isRead": zod.boolean(),
+  "imageUrl": zod.string().nullable().optional(),
+  "data": zod.record(zod.string()).nullable().optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -2553,8 +2557,10 @@ export const ListAllNotificationsResponseItem = zod.object({
   "userId": zod.number().nullable(),
   "title": zod.string(),
   "message": zod.string(),
-  "type": zod.enum(['visa_application', 'package_booking', 'flight_booking', 'general', 'promotion']),
+  "type": zod.enum(['visa_application', 'package_booking', 'flight_booking', 'general', 'promotion', 'payment', 'system']),
   "isRead": zod.boolean(),
+  "imageUrl": zod.string().nullable().optional(),
+  "data": zod.record(zod.string()).nullable().optional(),
   "createdAt": zod.coerce.date()
 })
 export const ListAllNotificationsResponse = zod.array(ListAllNotificationsResponseItem)
@@ -2571,7 +2577,9 @@ export const SendNotificationBody = zod.object({
   "userId": zod.number().nullish().describe('Null broadcasts to all customers'),
   "title": zod.string().min(1),
   "message": zod.string().min(1),
-  "type": zod.enum(['visa_application', 'package_booking', 'flight_booking', 'general', 'promotion'])
+  "type": zod.enum(['visa_application', 'package_booking', 'flight_booking', 'general', 'promotion', 'payment', 'system']),
+  "imageUrl": zod.string().nullish(),
+  "data": zod.record(zod.string()).nullish()
 })
 
 export const SendNotificationResponse = zod.object({
@@ -2579,8 +2587,10 @@ export const SendNotificationResponse = zod.object({
   "userId": zod.number().nullable(),
   "title": zod.string(),
   "message": zod.string(),
-  "type": zod.enum(['visa_application', 'package_booking', 'flight_booking', 'general', 'promotion']),
+  "type": zod.enum(['visa_application', 'package_booking', 'flight_booking', 'general', 'promotion', 'payment', 'system']),
   "isRead": zod.boolean(),
+  "imageUrl": zod.string().nullable().optional(),
+  "data": zod.record(zod.string()).nullable().optional(),
   "createdAt": zod.coerce.date()
 })
 

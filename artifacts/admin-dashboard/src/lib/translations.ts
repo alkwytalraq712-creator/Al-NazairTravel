@@ -61,7 +61,9 @@ export const NOTIFICATION_TYPE_ARABIC: Record<string, string> = {
   package_booking: "حجز باقة",
   flight_booking: "حجز طيران",
   general: "عام",
-  promotion: "عرض ترويجي"
+  promotion: "عرض ترويجي",
+  payment: "مدفوعات",
+  system: "النظام",
 };
 
 export function formatDateAr(date: string | Date, formatStr: string = 'd MMM yyyy') {
