@@ -76,7 +76,7 @@ export default function LoginScreen() {
   async function handleBiometricLogin() {
     setBiometricLoading(true);
     try {
-      const authOk = await authenticateBiometric('تسجيل الدخول إلى قمة للسفر والسياحة');
+      const authOk = await authenticateBiometric('تسجيل الدخول إلى قمة النظائر للسفريات والسياحة');
       if (!authOk) return;
       const restored = await tryRestoreFromBiometric();
       if (restored) {
@@ -141,7 +141,7 @@ export default function LoginScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={[styles.brandName, { color: colors.foreground }]}>قمة للسفر والسياحة</Text>
+            <Text style={[styles.brandName, { color: colors.foreground }]}>قمة النظائر للسفريات والسياحة</Text>
             <Text style={[styles.brandSub, { color: colors.mutedForeground }]}>QEMA TRAVEL &amp; TOURISM</Text>
           </View>
 

@@ -184,7 +184,7 @@ export default function RegisterScreen() {
               resizeMode="contain"
             />
             <Text style={[styles.brandName, { color: colors.foreground }]}>إنشاء حساب جديد</Text>
-            <Text style={[styles.brandSub, { color: colors.mutedForeground }]}>انضم إلى قمة للسفر والسياحة</Text>
+            <Text style={[styles.brandSub, { color: colors.mutedForeground }]}>انضم إلى قمة النظائر للسفريات والسياحة</Text>
           </View>
 
           {/* Card */}
