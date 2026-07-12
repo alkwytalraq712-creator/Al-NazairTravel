@@ -4,12 +4,12 @@
     "slug": "mobile-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.jpeg",
+    "icon": "./assets/images/app-icon.png",
     "scheme": "mobile-app",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/logo.jpeg",
+      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0D1526"
     },
@@ -18,10 +18,14 @@
       "bundleIdentifier": "com.qema.alnathair"
     },
     "android": {
-      "package": "com.qema.alnathair"
+      "package": "com.qema.alnathair",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
     },
     "web": {
-      "favicon": "./assets/images/logo.jpeg"
+      "favicon": "./assets/images/app-icon.png"
     },
     "plugins": [
       [
