@@ -1241,8 +1241,8 @@ export default function ETicketScreen() {
 
       {/* ── Footer Buttons ── */}
       <View style={[styles.footer, { paddingBottom: Platform.OS === 'web' ? 20 : insets.bottom + 12, backgroundColor: colors.card, borderTopColor: colors.border }]}>
-        {/* Complete payment button */}
-        {booking.status === 'held' && holdExpiresStr && new Date(holdExpiresStr).getTime() > Date.now() && (
+        {/* Complete payment button — only shown for non-held confirmed/ticketed */}
+        {!isTemp && booking.status !== 'held' && holdExpiresStr && new Date(holdExpiresStr).getTime() > Date.now() && (
           <TouchableOpacity
             style={[styles.footerBtn, { backgroundColor: '#F97316', marginBottom: 10 }, completing && { opacity: 0.7 }]}
             onPress={handleCompletePayment}
@@ -1258,7 +1258,7 @@ export default function ETicketScreen() {
 
         {/* PDF Download */}
         <TouchableOpacity
-          style={[styles.footerBtn, { backgroundColor: GOLD }, exporting && { opacity: 0.7 }]}
+          style={[styles.footerBtn, { backgroundColor: GOLD, marginBottom: isTemp ? 10 : 0 }, exporting && { opacity: 0.7 }]}
           onPress={handleExportPDF}
           disabled={exporting}
           activeOpacity={0.85}
@@ -1270,6 +1270,18 @@ export default function ETicketScreen() {
             {exporting ? 'جاري التصدير...' : 'تحميل التذكرة PDF'}
           </Text>
         </TouchableOpacity>
+
+        {/* Return to Home — only for temporary/held bookings */}
+        {isTemp && (
+          <TouchableOpacity
+            style={[styles.footerBtn, { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.border }]}
+            onPress={() => router.replace('/(tabs)/')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="home-outline" size={20} color={colors.foreground} />
+            <Text style={[styles.footerBtnText, { color: colors.foreground }]}>العودة للصفحة الرئيسية</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
