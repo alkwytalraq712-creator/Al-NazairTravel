@@ -30,15 +30,6 @@ export default function HomeScreen() {
   const { data: home, isLoading } = useGetHomeSummary({ query: { queryKey: getGetHomeSummaryQueryKey() } });
   const { flightsEnabled, packagesEnabled, visasEnabled } = useServiceSettings();
 
-  // Filter service shortcuts based on admin toggles
-  const ALL_SERVICES = [
-    { icon: 'document-text-outline', label: 'التأشيرات', route: '/(tabs)/visas',     enabled: visasEnabled    },
-    { icon: 'airplane-outline',      label: 'الطيران',   route: '/(tabs)/flights',   enabled: flightsEnabled  },
-    { icon: 'map-outline',           label: 'الباقات',   route: '/(tabs)/packages',  enabled: packagesEnabled },
-    { icon: 'headset-outline',       label: 'تواصل معنا', route: null,               enabled: true            },
-  ] as const;
-  const SERVICES = ALL_SERVICES.filter(s => s.enabled);
-
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -116,25 +107,6 @@ export default function HomeScreen() {
               />
             </View>
           )}
-        </View>
-
-        {/* Services */}
-        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.servicesGrid}>
-            {SERVICES.map((svc) => (
-              <TouchableOpacity
-                key={svc.label}
-                style={styles.serviceItem}
-                activeOpacity={0.7}
-                onPress={() => svc.route && router.push(svc.route as any)}
-              >
-                <View style={[styles.serviceIcon, { backgroundColor: colors.accent }]}>
-                  <Ionicons name={svc.icon as any} size={24} color={colors.primary} />
-                </View>
-                <Text style={[styles.serviceLabel, { color: colors.foreground }]}>{svc.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
         </View>
 
         {/* Featured Offers */}
