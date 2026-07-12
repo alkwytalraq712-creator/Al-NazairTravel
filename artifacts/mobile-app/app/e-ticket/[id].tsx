@@ -355,11 +355,17 @@ function buildTicketHtml(booking: any, segments: any[], offer: any, departStr: s
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Electronic_Ticket_${pnr}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 @page{size:A4;margin:15mm 12mm}
-body{font-family:'Cairo',Arial,sans-serif;background:#E8EAF0;color:#1A2035;font-size:12px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+body{
+  font-family:'Cairo','Segoe UI Arabic',Tahoma,Arial,sans-serif;
+  background:#E8EAF0;color:#1A2035;font-size:12px;
+  print-color-adjust:exact;-webkit-print-color-adjust:exact
+}
 .page{max-width:780px;margin:0 auto;padding:12px}
 
 /* Watermark */
@@ -381,16 +387,42 @@ body{font-family:'Cairo',Arial,sans-serif;background:#E8EAF0;color:#1A2035;font-
 }
 
 /* Header */
-.doc-header{background:linear-gradient(135deg,#0B1628 0%,#132039 60%,#0F1E36 100%);padding:20px 24px 16px}
-.header-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
-.company-block{text-align:right}
-.company-logo-img{
-  display:block;height:56px;width:auto;max-width:140px;
-  object-fit:contain;margin-bottom:6px;
+.doc-header{background:linear-gradient(135deg,#0B1628 0%,#132039 60%,#0F1E36 100%);padding:22px 26px 18px}
+.header-top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px}
+
+/* Company block — pure text, no images */
+.company-block{text-align:right;flex:1}
+.company-divider-line{
+  display:block;width:36px;height:3px;
+  background:linear-gradient(90deg,#C9A060,#E8C07A);
+  border-radius:2px;margin:0 0 10px auto;
 }
-.company-ar{font-size:18px;font-weight:900;color:#C9A060;line-height:1.2}
-.company-en{font-size:9px;color:rgba(255,255,255,0.40);letter-spacing:0.6px;margin-top:2px}
-.company-contact{font-size:9px;color:rgba(255,255,255,0.30);margin-top:3px;direction:ltr;text-align:right}
+.company-ar{
+  font-family:'Cairo','Segoe UI Arabic',Tahoma,Arial,sans-serif;
+  font-size:20px;font-weight:900;color:#C9A060;
+  line-height:1.3;letter-spacing:0.3px;
+}
+.company-en{
+  font-family:'Inter','Cairo',Arial,sans-serif;
+  font-size:9.5px;font-weight:600;color:rgba(255,255,255,0.55);
+  letter-spacing:1.2px;margin-top:4px;text-transform:uppercase;
+}
+.company-separator{
+  border:none;border-top:1px solid rgba(255,255,255,0.10);
+  margin:10px 0;
+}
+.company-contact{
+  font-family:'Inter','Cairo',Arial,sans-serif;
+  font-size:10px;font-weight:500;color:rgba(255,255,255,0.70);
+  margin-top:5px;direction:ltr;text-align:right;
+  display:flex;align-items:center;gap:6px;justify-content:flex-end;
+}
+.company-contact-icon{font-size:10px;opacity:0.8}
+.company-address{
+  font-family:'Cairo','Segoe UI Arabic',Tahoma,Arial,sans-serif;
+  font-size:9px;font-weight:400;color:rgba(255,255,255,0.50);
+  margin-top:4px;direction:rtl;text-align:right;line-height:1.5;
+}
 .doc-meta{text-align:left;min-width:200px}
 .doc-type-label{font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
 .doc-type-val{
@@ -534,16 +566,21 @@ body{font-family:'Cairo',Arial,sans-serif;background:#E8EAF0;color:#1A2035;font-
   <!-- Header -->
   <div class="doc-header">
     <div class="header-top">
+      <!-- Company block — 100% real text, no images -->
       <div class="company-block">
-        ${logoDataUrl
-          ? `<img src="${logoDataUrl}" class="company-logo-img" alt="${COMPANY_AR}" />`
-          : `<div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#C9A060,#E8C07A);font-size:22px;font-weight:900;color:#0B1628;margin-bottom:6px">Q</div>`
-        }
+        <span class="company-divider-line"></span>
         <div class="company-ar">${COMPANY_AR}</div>
         <div class="company-en">${COMPANY_EN}</div>
-        <div class="company-contact">${COMPANY_PHONE} &nbsp;|&nbsp; ${COMPANY_PHONE2}</div>
-        <div class="company-contact">${COMPANY_EMAIL}</div>
-        <div class="company-contact">${COMPANY_CITY}</div>
+        <hr class="company-separator"/>
+        <div class="company-contact">
+          <span class="company-contact-icon">📞</span>
+          <span>${COMPANY_PHONE}&nbsp;&nbsp;|&nbsp;&nbsp;${COMPANY_PHONE2}</span>
+        </div>
+        <div class="company-contact">
+          <span class="company-contact-icon">✉</span>
+          <span>${COMPANY_EMAIL}</span>
+        </div>
+        <div class="company-address">📍 ${COMPANY_CITY}</div>
       </div>
       <div class="doc-meta">
         <div class="doc-type-label">Document Type</div>
@@ -861,19 +898,15 @@ export default function ETicketScreen() {
               <Text style={[styles.docTypeText, { color: ticketColor }]}>{ticketDocLabel}</Text>
             </View>
 
-            {/* Company header */}
+            {/* Company header — pure real text, no images */}
             <View style={styles.companyHeader}>
-              {/* Official company logo */}
-              <Image
-                source={require('@/assets/images/logo_transparent.png')}
-                style={styles.logoImage}
-                contentFit="contain"
-              />
-              <View style={{ flex: 1, marginRight: 10 }}>
+              {/* Gold accent bar */}
+              <View style={styles.companyAccentBar} />
+              <View style={{ flex: 1 }}>
                 <Text style={styles.companyAr}>{COMPANY_AR}</Text>
                 <Text style={styles.companyEn}>{COMPANY_EN}</Text>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
+              <View style={{ alignItems: 'flex-end', flexShrink: 0 }}>
                 <Text style={styles.pnrLabel}>PNR / رقم الحجز</Text>
                 <Text style={styles.pnrValue}>{pnr}</Text>
               </View>
@@ -1222,15 +1255,24 @@ const styles = StyleSheet.create({
   docTypeText: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 11, letterSpacing: 0.5 },
 
   companyHeader: {
-    flexDirection: 'row-reverse', alignItems: 'center',
-    padding: 16, borderBottomWidth: 1, borderBottomColor: '#EEF0F6',
+    flexDirection: 'row-reverse', alignItems: 'center', gap: 12,
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: '#EEF0F6',
+    backgroundColor: '#FAFBFD',
   },
-  logoImage: {
-    width: 70, height: 44,
-    marginLeft: 12,
+  companyAccentBar: {
+    width: 4, height: 36, borderRadius: 2,
+    backgroundColor: GOLD, flexShrink: 0,
   },
-  companyAr: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 13, color: '#1A2035' },
-  companyEn: { fontFamily: 'Tajawal_400Regular', fontSize: 9, color: '#99AABB', marginTop: 2, letterSpacing: 0.3 },
+  companyAr: {
+    fontFamily: 'Tajawal_800ExtraBold', fontSize: 14,
+    color: '#0B1628', letterSpacing: 0.2,
+  },
+  companyEn: {
+    fontFamily: 'Tajawal_500Medium', fontSize: 9,
+    color: '#6B7A99', marginTop: 2, letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
   pnrLabel: { fontFamily: 'Tajawal_400Regular', fontSize: 9, color: '#99AABB', textAlign: 'left' },
   pnrValue: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 16, color: GOLD, letterSpacing: 2, textAlign: 'left', fontVariant: ['tabular-nums'] },
 
