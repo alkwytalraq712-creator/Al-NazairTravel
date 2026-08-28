@@ -1,11 +1,12 @@
 {
   "cli": {
-    "version": ">= 14.0.0"
+    "version": ">= 14.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "preview": {
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "qmh-ln-zyr-llsfryt-wlsy-h--alkwytalraq712.replit.app"
+        "EXPO_PUBLIC_DOMAIN": "qema-api.onrender.com"
       },
       "android": {
         "buildType": "apk"
@@ -13,7 +14,7 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "qmh-ln-zyr-llsfryt-wlsy-h--alkwytalraq712.replit.app"
+        "EXPO_PUBLIC_DOMAIN": "qema-api.onrender.com"
       },
       "android": {
         "buildType": "app-bundle"
