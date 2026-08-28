@@ -42,8 +42,9 @@ services:
         sync: false
 
   # ── Expo Web frontend ─────────────────────────────────────────────────────
-  - type: static
+  - type: web
     name: qema-mobile-web
+    runtime: static
     plan: free
     buildCommand: >-
       corepack enable && pnpm install --no-frozen-lockfile &&
