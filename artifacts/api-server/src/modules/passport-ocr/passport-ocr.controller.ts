@@ -16,12 +16,9 @@ import { getAvailableProviders } from './ocr.provider.js';
 import { detectImageQuality } from './image.service.js';
 import { PassportOcrService } from './passport-ocr.service.js';
 import { validateImageBuffer, MAX_FILE_SIZE_BYTES } from './image.service.js';
-import { ObjectStorageService } from '../../lib/objectStorage.js';
-import { setObjectAclPolicy } from '../../lib/objectAcl.js';
+import { uploadImageBuffer } from '../../lib/cloudinary.js';
 
 const router: IRouter = Router();
-const objectStorage = new ObjectStorageService();
-
 // ─── Multer: memory storage, 10 MB limit ──────────────────────────────────────
 
 const upload = multer({
@@ -53,31 +50,13 @@ const ocrRateLimit = rateLimit({
   },
 });
 
-// ─── Helper: store passport image in object storage ───────────────────────────
+// ─── Helper: store passport image in Cloudinary ───────────────────────────────
 
-async function storePassportImage(
-  buffer: Buffer,
-  userId: number,
-  mimetype: string,
-): Promise<string> {
-  const uploadUrl = await objectStorage.getObjectEntityUploadURL();
-  const objectPath = objectStorage.normalizeObjectEntityPath(uploadUrl);
-
-  // Upload directly to GCS via presigned URL
-  await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': mimetype },
-    body: buffer,
+async function storePassportImage(buffer: Buffer): Promise<string> {
+  const result = await uploadImageBuffer(buffer, {
+    folder: 'qema/passports',
   });
-
-  // Finalize: set ACL so owner can read it
-  const objectFile = await objectStorage.getObjectEntityFile(objectPath);
-  await setObjectAclPolicy(objectFile, {
-    owner: String(userId),
-    visibility: 'private',
-  });
-
-  return objectPath;
+  return result.secureUrl;
 }
 
 // ─── Route ────────────────────────────────────────────────────────────────────
@@ -196,7 +175,7 @@ router.post(
     // Store passport image asynchronously (don't block response)
     let passportImagePath: string | null = null;
     try {
-      passportImagePath = await storePassportImage(file.buffer, userId, file.mimetype);
+      passportImagePath = await storePassportImage(file.buffer);
     } catch (storageErr) {
       req.log?.warn({ err: storageErr }, 'Passport image storage failed (non-fatal)');
     }

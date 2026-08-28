@@ -6,6 +6,8 @@ import {
   FinalizeUploadResponse,
 } from '@workspace/api-zod';
 import { Router, type IRouter, type Request, type Response } from 'express';
+import multer from 'multer';
+import { uploadImageBuffer, isCloudinaryConfigured } from '../lib/cloudinary';
 import { db } from '@workspace/db';
 import { usersTable } from '@workspace/db';
 import { eq } from 'drizzle-orm';
@@ -19,6 +21,45 @@ import {
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
+const cloudinaryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    callback(null, /^image\/(jpeg|png|webp|gif)$/i.test(file.mimetype));
+  },
+});
+
+/**
+ * POST /storage/uploads/cloudinary
+ *
+ * Upload an authenticated admin image directly through the API to Cloudinary.
+ * This endpoint intentionally keeps the Cloudinary secret server-side.
+ */
+router.post(
+  '/storage/uploads/cloudinary',
+  requireAuth,
+  cloudinaryUpload.single('file'),
+  async (req: Request, res: Response) => {
+    if (!isCloudinaryConfigured()) {
+      res.status(503).json({ error: 'Cloudinary storage is not configured' });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ error: 'An image file is required' });
+      return;
+    }
+
+    try {
+      const result = await uploadImageBuffer(req.file.buffer, {
+        folder: 'qema/visa-covers',
+      });
+      res.json({ publicUrl: result.secureUrl, objectPath: result.publicId });
+    } catch (error) {
+      req.log.error({ err: error }, 'Cloudinary image upload failed');
+      res.status(502).json({ error: 'Failed to upload image' });
+    }
+  },
+);
 
 /**
  * POST /storage/uploads/request-url

@@ -86,39 +86,22 @@ async function blobFromUri(uri: string): Promise<Blob> {
   return r.blob();
 }
 
-// ─── Object-storage upload ──────────────────────────────────────────────────────
+// ─── Cloudinary upload ─────────────────────────────────────────────────────────
 
 async function uploadToStorage(blob: Blob, fileName: string): Promise<string> {
-  const contentType = blob.type || 'image/jpeg';
+  const formData = new FormData();
+  formData.append('file', blob, fileName);
 
-  // 1. Request pre-signed upload URL — send name, size, contentType as required
-  const req = await customFetch<{ uploadURL: string; objectPath: string }>(
-    '/api/storage/uploads/request-url',
+  const result = await customFetch<{ publicUrl: string }>(
+    '/api/storage/uploads/cloudinary',
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: fileName, size: blob.size, contentType }),
+      body: formData,
     } as any,
   );
-  const { uploadURL, objectPath } = req as any;
 
-  // 2. PUT directly to GCS presigned URL
-  await fetch(uploadURL, {
-    method: 'PUT',
-    headers: { 'Content-Type': contentType },
-    body: blob,
-  });
-
-  // 3. Finalize → get public URL
-  const fin = await customFetch<{ publicUrl: string }>(
-    '/api/storage/uploads/finalize',
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ objectPath, isPublic: true }),
-    } as any,
-  );
-  return (fin as any).publicUrl as string;
+  if (!result?.publicUrl) throw new Error('Image upload returned no URL');
+  return result.publicUrl;
 }
 
 // ─── StepHeader component ───────────────────────────────────────────────────────

@@ -8,8 +8,6 @@ import {
   useCreateVisaEligibilityRule,
   useUpdateVisaEligibilityRule,
   useDeleteVisaEligibilityRule,
-  useRequestUploadUrl,
-  useFinalizeUpload,
   getListVisaEligibilityRulesQueryKey,
   Visa,
   VisaType,
@@ -107,8 +105,6 @@ function CountryPicker({ value, onChange }: { value: string; onChange: (c: Count
 
 function CoverImageUpload({ value, onChange }: { value: string; onChange: (url: string) => void }) {
   const { toast } = useToast();
-  const requestUrl = useRequestUploadUrl();
-  const finalize = useFinalizeUpload();
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -120,24 +116,25 @@ function CoverImageUpload({ value, onChange }: { value: string; onChange: (url: 
     }
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop() ?? 'jpg';
-      const name = `visa_cover_${Date.now()}.${ext}`;
-      const { uploadURL, objectPath } = await new Promise<any>((res, rej) =>
-        requestUrl.mutate({ data: { name, size: file.size, contentType: file.type } }, { onSuccess: res, onError: rej })
-      );
-      const put = await fetch(uploadURL, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!put.ok) throw new Error('Upload failed');
-      const { publicUrl } = await new Promise<any>((res, rej) =>
-        finalize.mutate({ data: { objectPath, isPublic: true } }, { onSuccess: res, onError: rej })
-      );
-      onChange(publicUrl as string);
+      const formData = new FormData();
+      formData.append('file', file, file.name);
+      const response = await fetch('/api/storage/uploads/cloudinary', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.publicUrl) {
+        throw new Error(payload.error || 'Upload failed');
+      }
+      onChange(payload.publicUrl as string);
       toast({ title: 'تم رفع الصورة بنجاح' });
     } catch {
       toast({ title: 'فشل رفع الصورة', variant: 'destructive' });
     } finally {
       setUploading(false);
     }
-  }, [requestUrl, finalize, toast, onChange]);
+  }, [toast, onChange]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
