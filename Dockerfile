@@ -26,4 +26,4 @@ RUN mkdir -p artifacts/api-server/dist/public && \
 
 EXPOSE 10000
 
-CMD ["sh", "-c", "pnpm --filter @workspace/db run push && exec node --enable-source-maps ./artifacts/api-server/dist/index.mjs"]
+CMD ["sh", "-c", "pnpm --filter @workspace/db run push-force && exec node --enable-source-maps ./artifacts/api-server/dist/index.mjs"]
