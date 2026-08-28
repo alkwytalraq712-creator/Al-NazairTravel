@@ -275,10 +275,11 @@ router.post("/auth/reset-password", async (_req, res): Promise<void> => {
  * One-time admin recovery endpoint.
  *
  * Disabled unless ADMIN_BOOTSTRAP_TOKEN is set in the environment. When enabled,
- * a caller who presents the exact token may reset the password of a single fixed
- * admin account (admin@qema.iq). Guarded by a constant-time token comparison so
- * it is safe to leave in place; remove the ADMIN_BOOTSTRAP_TOKEN env var to
- * disable it entirely once recovery is complete.
+ * a caller who presents the exact token may reset the password of the
+ * configured admin account (ADMIN_EMAIL, or admin@qema.iq as a fallback).
+ * Guarded by a constant-time token comparison so it is safe to leave in place;
+ * remove the ADMIN_BOOTSTRAP_TOKEN env var to disable it entirely once recovery
+ * is complete.
  */
 router.post("/auth/admin-recovery", async (req, res): Promise<void> => {
   const expected = process.env.ADMIN_BOOTSTRAP_TOKEN;
@@ -305,10 +306,11 @@ router.post("/auth/admin-recovery", async (req, res): Promise<void> => {
   }
 
   const passwordHash = await hashPassword(newPassword);
+  const recoveryEmail = process.env.ADMIN_EMAIL ?? "admin@qema.iq";
   const [updated] = await db
     .update(usersTable)
     .set({ passwordHash, role: "admin" })
-    .where(eq(usersTable.email, "admin@qema.iq"))
+    .where(eq(usersTable.email, recoveryEmail))
     .returning({ id: usersTable.id, email: usersTable.email });
 
   if (!updated) {
