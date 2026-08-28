@@ -131,7 +131,7 @@ const publicDir = join(__dirname, "public");
 if (existsSync(publicDir)) {
   app.use(express.static(publicDir));
   // SPA fallback — any route that didn't match /api/* serves index.html
-  app.get("*", (_req, res) => {
+  app.get("/{*splat}", (_req, res) => {
     res.sendFile(join(publicDir, "index.html"));
   });
 }
