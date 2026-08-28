@@ -74,6 +74,12 @@ function buildTrustedOrigins(): Set<string> {
     if (trimmed) origins.add(`https://${trimmed}`);
   }
 
+  // Render exposes the service's canonical public URL automatically. The
+  // dashboard is served from this same origin, so include it for credentialed
+  // browser requests in production (e.g. /api/auth/login).
+  const renderUrl = process.env.RENDER_EXTERNAL_URL?.trim().replace(/\/$/, "");
+  if (renderUrl) origins.add(renderUrl);
+
   // Extra origins for production custom domains, e.g.:
   //   CORS_ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
   for (const o of (process.env.CORS_ALLOWED_ORIGINS ?? "").split(",")) {
