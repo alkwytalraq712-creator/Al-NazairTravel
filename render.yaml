@@ -3,10 +3,11 @@ services:
     name: qema-api
     runtime: docker
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
     # Render free tier — upgrade to "standard" for always-on
     plan: free
     # The free Render plan does not support pre-deploy commands.
-    # Database schema sync is handled by the service start command in Dockerfile.
+    # Database schema changes should be applied through migrations separately.
     envVars:
       - key: PORT
         value: 10000
@@ -36,7 +37,7 @@ services:
       # ── CORS: add your Render domain once deployed ──────────────────────────
       # e.g. CORS_ALLOWED_ORIGINS=https://qema-api.onrender.com
       - key: CORS_ALLOWED_ORIGINS
-        sync: false
+        value: https://alnazairtrvl-lzhsxr8v.manus.space
       # ── Duffel (flights) ────────────────────────────────────────────────────
       - key: DUFFEL_API_KEY
         sync: false

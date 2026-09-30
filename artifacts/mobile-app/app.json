@@ -2,7 +2,7 @@
   "expo": {
     "name": "قمة النظائر للسفريات",
     "slug": "mobile-app",
-    "owner": "qema-build",
+    "owner": "absher11",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
@@ -23,7 +23,10 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/images/app-icon.png"
@@ -54,7 +57,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "e9ccf80b-c15b-42b7-8fae-7e3b8f1eb31c"
+        "projectId": "9ab6441f-f2ef-4bef-940b-3c1557693e3d"
       }
     }
   }

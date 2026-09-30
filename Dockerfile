@@ -26,4 +26,7 @@ RUN mkdir -p artifacts/api-server/dist/public && \
 
 EXPOSE 10000
 
-CMD ["sh", "-c", "pnpm --filter @workspace/db run push-force && exec node --enable-source-maps ./artifacts/api-server/dist/index.mjs"]
+# Never block the HTTP server on a best-effort schema sync. Render health checks
+# and the mobile app must be able to reach /healthz even when the database is
+# temporarily unavailable; schema changes should be applied as migrations.
+CMD ["sh", "-c", "exec node --enable-source-maps ./artifacts/api-server/dist/index.mjs"]

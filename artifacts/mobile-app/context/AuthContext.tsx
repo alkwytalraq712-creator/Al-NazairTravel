@@ -70,10 +70,20 @@ function getApiBase(): string {
   return '';
 }
 
+async function fetchWithTimeout(input: RequestInfo, init: RequestInit, timeoutMs = 15_000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 // ─── Raw API calls that return the token ───────────────────────────────────
 
 async function apiLogin(data: LoginInput): Promise<{ token: string }> {
-  const res = await fetch(`${getApiBase()}/api/auth/login`, {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -87,7 +97,7 @@ async function apiLogin(data: LoginInput): Promise<{ token: string }> {
 }
 
 async function apiSignup(data: SignupInput): Promise<{ token: string }> {
-  const res = await fetch(`${getApiBase()}/api/auth/signup`, {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/auth/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',

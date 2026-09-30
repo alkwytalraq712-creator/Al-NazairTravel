@@ -32,6 +32,16 @@ const FADE_DURATION = 900;   // ms for crossfade
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated, isLoading } = useAuth();
+  const [authWaitExceeded, setAuthWaitExceeded] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setAuthWaitExceeded(false);
+      return;
+    }
+    const timer = setTimeout(() => setAuthWaitExceeded(true), 6_000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   // ── Banners from API ────────────────────────────────────────────
   const { data: banners } = useListActiveBanners();
@@ -95,7 +105,7 @@ export default function WelcomeScreen() {
   // branded dark background with the logo. A plain `return null` here caused a
   // permanent white screen whenever the /api/auth/me request was slow or
   // unreachable from the device.
-  if (isLoading || isAuthenticated) {
+  if ((isLoading && !authWaitExceeded) || isAuthenticated) {
     return (
       <View style={styles.splash}>
         <Image
