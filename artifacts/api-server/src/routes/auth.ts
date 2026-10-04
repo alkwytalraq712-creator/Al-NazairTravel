@@ -17,8 +17,17 @@ import {
 import { hashPassword, verifyPassword, serializeUser, generateToken, getProfileCompletion } from "../lib/auth";
 import { requireAuth } from "../lib/auth";
 import { visaConsentTable } from "@workspace/db";
+import { sendEmailVerificationCode } from "../lib/email";
 
 const router: IRouter = Router();
+
+function hashVerificationCode(code: string): string {
+  return crypto.createHash("sha256").update(code).digest("hex");
+}
+
+function createVerificationCode(): string {
+  return String(crypto.randomInt(100000, 1000000));
+}
 
 // ── Rate limiters ────────────────────────────────────────────────────────────
 // Key by IP address. xForwardedForHeader validation disabled because Replit's
@@ -69,6 +78,12 @@ router.post("/auth/signup", loginLimiter, async (req, res): Promise<void> => {
     return;
   }
 
+  const email = parsed.data.email?.trim().toLowerCase();
+  if (!email || !email.includes("@")) {
+    res.status(400).json({ error: "البريد الإلكتروني مطلوب لإرسال رمز التحقق" });
+    return;
+  }
+
   const [existing] = await db
     .select()
     .from(usersTable)
@@ -79,6 +94,7 @@ router.post("/auth/signup", loginLimiter, async (req, res): Promise<void> => {
   }
 
   const passwordHash = await hashPassword(parsed.data.password);
+  const verificationCode = createVerificationCode();
   // nationality is accepted from the request body even if not in the zod schema
   const nationality = typeof req.body?.nationality === 'string' && req.body.nationality.trim()
     ? req.body.nationality.trim()
@@ -88,15 +104,41 @@ router.post("/auth/signup", loginLimiter, async (req, res): Promise<void> => {
     .values({
       fullName: parsed.data.fullName,
       phone: parsed.data.phone,
-      email: parsed.data.email,
+      email,
       passwordHash,
+      emailVerificationCodeHash: hashVerificationCode(verificationCode),
+      emailVerificationExpiresAt: new Date(Date.now() + 3 * 60 * 1000),
       ...(nationality ? { nationality } : {}),
     })
     .returning();
 
-  req.session.userId = user.id;
-  const token = generateToken(user.id);
-  res.status(201).json({ ...SignupResponse.parse(serializeUser(user)), token });
+  await sendEmailVerificationCode({ to: email, fullName: user.fullName, code: verificationCode });
+  res.status(201).json({ verificationRequired: true, email });
+});
+
+router.post("/auth/verify-email", loginLimiter, async (req, res): Promise<void> => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+  if (!email || !/^\d{6}$/.test(code)) {
+    res.status(400).json({ error: "البريد الإلكتروني والرمز المؤلف من 6 أرقام مطلوبان" });
+    return;
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  const valid = user && user.emailVerificationCodeHash && user.emailVerificationExpiresAt
+    && user.emailVerificationExpiresAt.getTime() >= Date.now()
+    && hashVerificationCode(code) === user.emailVerificationCodeHash;
+  if (!valid) {
+    res.status(400).json({ error: "رمز التحقق غير صحيح أو منتهي الصلاحية" });
+    return;
+  }
+  const [verified] = await db.update(usersTable).set({
+    emailVerifiedAt: new Date(),
+    emailVerificationCodeHash: null,
+    emailVerificationExpiresAt: null,
+  }).where(eq(usersTable.id, user.id)).returning();
+  req.session.userId = verified.id;
+  const token = generateToken(verified.id);
+  res.json({ ...SignupResponse.parse(serializeUser(verified)), token });
 });
 
 /** Normalize phone to canonical +964XXXXXXXXXX form for flexible matching */

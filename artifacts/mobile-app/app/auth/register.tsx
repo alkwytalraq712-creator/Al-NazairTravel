@@ -98,7 +98,7 @@ function NationalityPickerModal({
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
-  const { register } = useAuth();
+  const { register, verifyEmail } = useAuth();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   const [fullName,     setFullName]     = useState('');
@@ -116,6 +116,10 @@ export default function RegisterScreen() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [errors,       setErrors]       = useState<Record<string, string>>({});
   const [agreedTerms,  setAgreedTerms]  = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [showVerification, setShowVerification] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -134,6 +138,7 @@ export default function RegisterScreen() {
     const e: Record<string, string> = {};
     if (!fullName.trim())      e.fullName = 'الاسم مطلوب';
     if (!phone.trim())         e.phone    = 'رقم الهاتف مطلوب';
+    if (!email.trim() || !email.includes('@')) e.email = 'البريد الإلكتروني مطلوب لإرسال رمز التحقق';
     if (!nationality.trim())   e.nationality = 'الجنسية مطلوبة';
     if (!password)             e.password = 'كلمة المرور مطلوبة';
     if (password.length < 6)   e.password = 'يجب أن تكون 6 أحرف على الأقل';
@@ -148,18 +153,40 @@ export default function RegisterScreen() {
     const fullPhone = country.dial + phone.replace(/^0+/, '').trim();
     setLoading(true);
     try {
-      await register({
+      const result = await register({
         fullName: fullName.trim(),
         phone: fullPhone,
         email: email.trim() || undefined,
         password,
         nationality: nationality || undefined,
       } as any);
-      router.replace('/(tabs)');
+      if (result.verificationRequired) {
+        setVerificationEmail(result.email ?? email.trim().toLowerCase());
+        setShowVerification(true);
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (e: any) {
       Alert.alert('خطأ في التسجيل', e?.message ?? 'حدث خطأ، يرجى المحاولة مجدداً');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleVerifyEmail() {
+    if (!/^\d{6}$/.test(verificationCode.trim())) {
+      Alert.alert('رمز غير مكتمل', 'أدخل الرمز المؤلف من 6 أرقام');
+      return;
+    }
+    setVerifying(true);
+    try {
+      await verifyEmail(verificationEmail, verificationCode.trim());
+      setShowVerification(false);
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      Alert.alert('تعذر التحقق', e?.message ?? 'الرمز غير صحيح أو منتهي الصلاحية');
+    } finally {
+      setVerifying(false);
     }
   }
 
@@ -240,7 +267,7 @@ export default function RegisterScreen() {
 
             {/* Email */}
             <View style={styles.fieldWrap}>
-              <Text style={[styles.label, { color: colors.mutedForeground }]}>البريد الإلكتروني <Text style={{ fontSize: 12, color: colors.mutedForeground }}>(اختياري)</Text></Text>
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>البريد الإلكتروني <Text style={{ color: colors.destructive }}>*</Text></Text>
               <View style={[styles.inputWrap, { backgroundColor: colors.input, borderColor: inputBorder('email') }]}>
                 <Ionicons name="mail-outline" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
                 <TextInput
@@ -248,7 +275,7 @@ export default function RegisterScreen() {
                   placeholder="example@email.com"
                   placeholderTextColor={colors.mutedForeground}
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={v => { setEmail(v); clearError('email'); }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   textAlign="right"
@@ -256,6 +283,7 @@ export default function RegisterScreen() {
                   onBlur={() => setFocusedField(null)}
                 />
               </View>
+              {errors.email && <Text style={[styles.errorText, { color: colors.destructive }]}>{errors.email}</Text>}
             </View>
 
             {/* Nationality */}
@@ -457,6 +485,35 @@ export default function RegisterScreen() {
         onSelect={setNationality}
         onClose={() => setShowNatPicker(false)}
       />
+      <Modal visible={showVerification} transparent animationType="fade" onRequestClose={() => {}}>
+        <View style={styles.verifyBackdrop}>
+          <View style={[styles.verifyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Ionicons name="mail-open-outline" size={42} color={colors.primary} />
+            <Text style={[styles.verifyTitle, { color: colors.foreground }]}>تحقق من بريدك الإلكتروني</Text>
+            <Text style={[styles.verifyHint, { color: colors.mutedForeground }]}>أرسلنا رمزًا من 6 أرقام إلى</Text>
+            <Text style={[styles.verifyEmail, { color: colors.primary }]}>{verificationEmail}</Text>
+            <TextInput
+              style={[styles.verifyInput, { color: colors.foreground, backgroundColor: colors.input, borderColor: colors.border }]}
+              value={verificationCode}
+              onChangeText={v => setVerificationCode(v.replace(/\D/g, '').slice(0, 6))}
+              keyboardType="number-pad"
+              maxLength={6}
+              placeholder="000000"
+              placeholderTextColor={colors.mutedForeground}
+              textAlign="center"
+              autoFocus
+            />
+            <TouchableOpacity style={styles.verifyBtn} onPress={handleVerifyEmail} disabled={verifying}>
+              <LinearGradient colors={[GOLD, GOLD2]} style={styles.verifyBtnGradient}>
+                {verifying ? <ActivityIndicator color="#0B1628" /> : <Text style={styles.verifyBtnText}>تفعيل الحساب</Text>}
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowVerification(false)} disabled={verifying}>
+              <Text style={[styles.verifyCancel, { color: colors.mutedForeground }]}>إلغاء</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -517,4 +574,14 @@ const styles = StyleSheet.create({
   loginRow: { flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', gap: 8 },
   loginHint: { fontFamily: 'Tajawal_500Medium', fontSize: 15 },
   loginLink: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 15 },
+  verifyBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  verifyCard: { width: '100%', maxWidth: 420, borderRadius: 24, borderWidth: 1, padding: 24, alignItems: 'center' },
+  verifyTitle: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 20, marginTop: 14, textAlign: 'center' },
+  verifyHint: { fontFamily: 'Tajawal_500Medium', fontSize: 14, marginTop: 12, textAlign: 'center' },
+  verifyEmail: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 14, marginTop: 4, textAlign: 'center' },
+  verifyInput: { width: '100%', borderWidth: 1, borderRadius: 14, paddingVertical: 14, marginTop: 20, fontSize: 26, letterSpacing: 8, fontFamily: 'Tajawal_800ExtraBold' },
+  verifyBtn: { width: '100%', borderRadius: 14, overflow: 'hidden', marginTop: 16 },
+  verifyBtnGradient: { alignItems: 'center', justifyContent: 'center', paddingVertical: 15 },
+  verifyBtnText: { color: '#0B1628', fontFamily: 'Tajawal_800ExtraBold', fontSize: 16 },
+  verifyCancel: { fontFamily: 'Tajawal_500Medium', fontSize: 14, marginTop: 16 },
 });

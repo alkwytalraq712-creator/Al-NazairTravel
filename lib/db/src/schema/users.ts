@@ -26,6 +26,9 @@ export const usersTable = pgTable("users", {
   fullName: text("full_name").notNull(),
   phone: text("phone").notNull().unique(),
   email: text("email"),
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  emailVerificationCodeHash: text("email_verification_code_hash"),
+  emailVerificationExpiresAt: timestamp("email_verification_expires_at", { withTimezone: true }),
   passwordHash: text("password_hash").notNull(),
   avatarUrl: text("avatar_url"),
   role: text("role").notNull().default("customer"), // customer | admin

@@ -29,7 +29,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (data: LoginInput) => Promise<void>;
   logout: () => Promise<void>;
-  register: (data: SignupInput) => Promise<void>;
+  register: (data: SignupInput) => Promise<{ verificationRequired: boolean; email?: string }>;
+  verifyEmail: (email: string, code: string) => Promise<void>;
   tryRestoreFromBiometric: () => Promise<boolean>;
 }
 
@@ -96,7 +97,7 @@ async function apiLogin(data: LoginInput): Promise<{ token: string }> {
   return res.json() as Promise<{ token: string }>;
 }
 
-async function apiSignup(data: SignupInput): Promise<{ token: string }> {
+async function apiSignup(data: SignupInput): Promise<{ token?: string; verificationRequired?: boolean; email?: string }> {
   const res = await fetchWithTimeout(`${getApiBase()}/api/auth/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -106,6 +107,20 @@ async function apiSignup(data: SignupInput): Promise<{ token: string }> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'خطأ في الاتصال' })) as { error?: string };
     throw new Error(err.error ?? 'خطأ في التسجيل');
+  }
+  return res.json() as Promise<{ token?: string; verificationRequired?: boolean; email?: string }>;
+}
+
+async function apiVerifyEmail(email: string, code: string): Promise<{ token: string }> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/auth/verify-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ email, code }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'رمز التحقق غير صحيح' })) as { error?: string };
+    throw new Error(err.error ?? 'رمز التحقق غير صحيح');
   }
   return res.json() as Promise<{ token: string }>;
 }
@@ -156,14 +171,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(
     async (data: SignupInput) => {
       const result = await apiSignup(data);
-      if (result.token) {
-        await saveToken(result.token);
-        setAuthTokenGetter(() => result.token);
+      const token = result.token;
+      if (token) {
+        await saveToken(token);
+        setAuthTokenGetter(() => token);
       }
       await queryClient.invalidateQueries();
+      return { verificationRequired: !!result.verificationRequired, email: result.email };
     },
     [queryClient],
   );
+
+  const verifyEmail = useCallback(async (email: string, code: string) => {
+    const result = await apiVerifyEmail(email, code);
+    if (!result.token) throw new Error('لم يتم استلام رمز الجلسة');
+    await saveToken(result.token);
+    setAuthTokenGetter(() => result.token);
+    await queryClient.invalidateQueries();
+  }, [queryClient]);
 
   /**
    * After a successful biometric challenge, reload the stored token and try
@@ -191,6 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         register,
+        verifyEmail,
         tryRestoreFromBiometric,
       }}
     >

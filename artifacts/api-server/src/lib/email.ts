@@ -1,6 +1,6 @@
 /**
  * Email service for Qema Travel.
- * Uses nodemailer when SMTP_HOST is configured, otherwise logs to console.
+ * Uses Resend when RESEND_API_KEY is configured, then SMTP as a fallback.
  */
 import { logger } from "./logger";
 
@@ -11,6 +11,37 @@ interface EmailPayload {
 }
 
 async function sendEmail(payload: EmailPayload): Promise<void> {
+  const resendApiKey = process.env.RESEND_API_KEY?.trim();
+  const resendFrom = process.env.RESEND_FROM?.trim() || "Qema Travel <onboarding@resend.dev>";
+
+  if (resendApiKey) {
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: resendFrom,
+          to: [payload.to],
+          subject: payload.subject,
+          html: payload.html,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        throw new Error(`Resend ${response.status}: ${errorText.slice(0, 500)}`);
+      }
+
+      logger.info({ to: payload.to, subject: payload.subject }, "[Email] Sent via Resend");
+      return;
+    } catch (err: any) {
+      logger.error({ err: err?.message }, "[Email] Resend failed; trying SMTP fallback");
+    }
+  }
+
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
 
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
@@ -56,10 +87,12 @@ const CARD_STYLE = `
 `;
 const GOLD = "#C9A060";
 const DARK = "#0B1628";
+const EMAIL_LOGO_URL = process.env.EMAIL_LOGO_URL || "https://raw.githubusercontent.com/alkwytalraq712-creator/Al-NazairTravel/main/artifacts/mobile-app/assets/images/company-logo.png";
 
 function headerHtml(title: string): string {
   return `
   <div style="background:${DARK};padding:20px 32px;border-radius:12px 12px 0 0;margin:-32px -32px 24px;text-align:center">
+    <img src="${EMAIL_LOGO_URL}" alt="قمة النظائر" width="150" style="display:block;max-width:150px;height:auto;margin:0 auto 12px;border:0" />
     <h1 style="color:${GOLD};font-size:20px;margin:0">قمة النظائر للسفريات والسياحة</h1>
     <p style="color:rgba(255,255,255,0.5);font-size:12px;margin:4px 0 0">QEMA AL-NAZAER FOR TRAVEL &amp; TOURISM</p>
     <h2 style="color:#fff;font-size:16px;margin:16px 0 0">${title}</h2>
@@ -74,6 +107,21 @@ function footerHtml(): string {
       هذا البريد أُرسل تلقائياً من نظام قمة النظائر — الرجاء عدم الرد عليه.
     </p>
   </div>`;
+}
+
+export async function sendEmailVerificationCode(opts: { to: string; fullName: string; code: string }): Promise<void> {
+  const html = `
+<div style="${BASE_STYLE}"><div style="${CARD_STYLE}">
+${headerHtml("رمز تفعيل الحساب")}
+<p style="font-size:15px;color:#333">مرحباً <strong>${opts.fullName}</strong>،</p>
+<p style="color:#555;line-height:1.8">استخدم الرمز التالي لتفعيل حسابك في تطبيق قمة النظائر:</p>
+<div style="background:#f8f4ec;border:1px solid #e8d8b0;border-radius:10px;padding:18px;text-align:center;margin:20px 0">
+  <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:${GOLD};font-family:monospace">${opts.code}</span>
+</div>
+<p style="color:#777;font-size:13px">صلاحية الرمز 3 دقائق فقط. إذا لم تطلب إنشاء الحساب، تجاهل هذه الرسالة.</p>
+${footerHtml()}
+</div></div>`;
+  await sendEmail({ to: opts.to, subject: "رمز تفعيل حسابك — قمة النظائر", html });
 }
 
 export async function sendHoldConfirmationEmail(opts: {

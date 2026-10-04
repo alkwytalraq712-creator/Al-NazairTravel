@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Animated,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -385,6 +386,7 @@ export default function FlightsScreen() {
   const { flightsEnabled } = useServiceSettings();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const bookingComingSoon = true;
 
   const [tripType, setTripType] = useState<TripType>('round_trip');
   const [from, setFrom] = useState('BGW');
@@ -401,9 +403,12 @@ export default function FlightsScreen() {
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+    if (bookingComingSoon) {
+      Alert.alert('الخدمة ستتوفر قريبًا', 'حجوزات الطيران قيد التجهيز وسيتم إطلاقها قريبًا.');
+    }
   }, []);
 
-  if (!flightsEnabled) return <ServiceUnavailable serviceName="حجوزات الطيران" icon="paper-plane-outline" />;
+  if (!flightsEnabled || bookingComingSoon) return <ServiceUnavailable serviceName="حجوزات الطيران" icon="paper-plane-outline" />;
 
   function swapAirports() { const t = from; setFrom(to); setTo(t); }
 

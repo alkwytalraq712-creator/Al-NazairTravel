@@ -41,6 +41,13 @@ services:
       # ── Duffel (flights) ────────────────────────────────────────────────────
       - key: DUFFEL_API_KEY
         sync: false
+      # ── Transactional email (Resend) ───────────────────────────────────────
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      - key: EMAIL_LOGO_URL
+        sync: false
 
   # ── Expo Web frontend ─────────────────────────────────────────────────────
   - type: web
