@@ -141,6 +141,26 @@ router.post("/auth/verify-email", loginLimiter, async (req, res): Promise<void> 
   res.json({ ...SignupResponse.parse(serializeUser(verified)), token });
 });
 
+router.post("/auth/resend-verification", loginLimiter, async (req, res): Promise<void> => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  if (!email || !email.includes("@")) {
+    res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
+    return;
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  if (!user || user.emailVerifiedAt) {
+    res.json({ message: "إذا كان الحساب يحتاج تحققًا، فسيتم إرسال رمز جديد" });
+    return;
+  }
+  const code = createVerificationCode();
+  await db.update(usersTable).set({
+    emailVerificationCodeHash: hashVerificationCode(code),
+    emailVerificationExpiresAt: new Date(Date.now() + 3 * 60 * 1000),
+  }).where(eq(usersTable.id, user.id));
+  await sendEmailVerificationCode({ to: email, fullName: user.fullName, code });
+  res.json({ message: "تم إرسال رمز تحقق جديد" });
+});
+
 /** Normalize phone to canonical +964XXXXXXXXXX form for flexible matching */
 function normalizePhone(raw: string): string[] {
   const digits = raw.replace(/\D/g, "");

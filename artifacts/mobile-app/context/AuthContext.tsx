@@ -31,6 +31,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   register: (data: SignupInput) => Promise<{ verificationRequired: boolean; email?: string }>;
   verifyEmail: (email: string, code: string) => Promise<void>;
+  resendVerificationEmail: (email: string) => Promise<void>;
   tryRestoreFromBiometric: () => Promise<boolean>;
 }
 
@@ -125,6 +126,19 @@ async function apiVerifyEmail(email: string, code: string): Promise<{ token: str
   return res.json() as Promise<{ token: string }>;
 }
 
+async function apiResendVerificationEmail(email: string): Promise<void> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/auth/resend-verification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'تعذر إرسال الرمز' })) as { error?: string };
+    throw new Error(err.error ?? 'تعذر إرسال الرمز');
+  }
+}
+
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -190,6 +204,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await queryClient.invalidateQueries();
   }, [queryClient]);
 
+  const resendVerificationEmail = useCallback(async (email: string) => {
+    await apiResendVerificationEmail(email);
+  }, []);
+
   /**
    * After a successful biometric challenge, reload the stored token and try
    * to re-hydrate the session without asking for the password again.
@@ -217,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         register,
         verifyEmail,
+        resendVerificationEmail,
         tryRestoreFromBiometric,
       }}
     >

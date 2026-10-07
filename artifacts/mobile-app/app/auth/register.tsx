@@ -161,8 +161,7 @@ export default function RegisterScreen() {
         nationality: nationality || undefined,
       } as any);
       if (result.verificationRequired) {
-        setVerificationEmail(result.email ?? email.trim().toLowerCase());
-        setShowVerification(true);
+        router.replace({ pathname: '/auth/verify-email', params: { email: result.email ?? email.trim().toLowerCase() } });
       } else {
         router.replace('/(tabs)');
       }
