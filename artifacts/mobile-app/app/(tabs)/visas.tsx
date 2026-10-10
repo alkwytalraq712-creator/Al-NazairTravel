@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -68,8 +69,13 @@ export default function VisasScreen() {
         colors={['#0B1628', '#132039']}
         style={[s.header, { paddingTop: paddingTop + 10 }]}
       >
-        <Text style={s.headerTitle}>التأشيرات</Text>
-        <Text style={s.headerSub}>اختر وجهتك واستكشف تأشيراتها</Text>
+        <View style={s.topRow}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/account')}><Ionicons name="menu-outline" size={28} color="#E4B35B" /></TouchableOpacity>
+          <Image source={require('@/assets/images/logo_transparent.png')} style={s.logo} resizeMode="contain" />
+          <TouchableOpacity onPress={() => router.push('/notifications')}><Ionicons name="notifications-outline" size={24} color="#E4B35B" /></TouchableOpacity>
+        </View>
+        <Text style={s.headerTitle}>التأشيرات المتاحة</Text>
+        <Text style={s.headerSub}>اختر وجهتك واحصل على تأشيرتك بسهولة وأمان</Text>
 
         {/* Search bar */}
         <Pressable
@@ -185,6 +191,7 @@ export default function VisasScreen() {
           keyExtractor={(v) => String(v.id)}
           contentContainerStyle={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 24 : insets.bottom + 100 }}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={<View style={s.documentsNotice}><Ionicons name="information-circle" size={28} color="#E4B35B" /><View style={{ flex: 1 }}><Text style={s.noticeTitle}>المستندات المطلوبة لجواز السفر</Text><Text style={s.noticeText}>يرجى التأكد من أن جواز السفر ساري المفعول لمدة لا تقل عن 6 أشهر من تاريخ السفر.</Text></View></View>}
           renderItem={({ item }) => (
             <VisaCard
               visa={item}
@@ -205,6 +212,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 18,
   },
+  topRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  logo: { width: 112, height: 70 },
   headerTitle: {
     fontFamily: 'Tajawal_800ExtraBold',
     fontSize: 26,
@@ -285,4 +294,7 @@ const s = StyleSheet.create({
   emptyText: { fontFamily: 'Tajawal_400Regular', fontSize: 13, textAlign: 'center', lineHeight: 20 },
   clearAllBtn: { marginTop: 6, paddingHorizontal: 20, paddingVertical: 9, borderRadius: 20, borderWidth: 1 },
   clearAllText: { fontFamily: 'Tajawal_700Bold', fontSize: 13 },
+  documentsNotice: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12, backgroundColor: '#252A25', borderColor: '#937632', borderWidth: 1, borderRadius: 16, padding: 14, marginBottom: 14 },
+  noticeTitle: { color: '#E4B35B', fontFamily: 'Tajawal_800ExtraBold', fontSize: 14, textAlign: 'right', marginBottom: 4 },
+  noticeText: { color: '#CBD5E1', fontFamily: 'Tajawal_500Medium', fontSize: 12, lineHeight: 20, textAlign: 'right' },
 });
