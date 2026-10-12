@@ -161,7 +161,13 @@ export default function RegisterScreen() {
         nationality: nationality || undefined,
       } as any);
       if (result.verificationRequired) {
-        router.replace({ pathname: '/auth/verify-email', params: { email: result.email ?? email.trim().toLowerCase() } });
+        router.replace({
+          pathname: '/auth/verify-email',
+          params: {
+            email: result.email ?? email.trim().toLowerCase(),
+            ...(result.verificationCode ? { demoCode: result.verificationCode } : {}),
+          },
+        });
       } else {
         router.replace('/(tabs)');
       }

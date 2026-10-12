@@ -14,12 +14,17 @@ export default function VerifyEmailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { verifyEmail, resendVerificationEmail } = useAuth();
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<{ email?: string; demoCode?: string }>();
   const email = typeof params.email === 'string' ? params.email : '';
+  const demoCode = typeof params.demoCode === 'string' && /^\d{6}$/.test(params.demoCode) ? params.demoCode : '';
   const [code, setCode] = useState('');
   const [seconds, setSeconds] = useState(180);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    if (demoCode) setCode(demoCode);
+  }, [demoCode]);
 
   useEffect(() => {
     if (seconds <= 0) return;
@@ -76,6 +81,13 @@ export default function VerifyEmailScreen() {
             <Text style={[styles.title, { color: colors.foreground }]}>تحقق من بريدك الإلكتروني</Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>أرسلنا رمز التحقق إلى</Text>
             <Text style={[styles.email, { color: colors.primary }]} numberOfLines={1}>{email || 'بريدك الإلكتروني'}</Text>
+            {demoCode && (
+              <View style={[styles.demoCodeBox, { backgroundColor: colors.accent, borderColor: colors.primary }]}>
+                <Text style={[styles.demoCodeLabel, { color: colors.mutedForeground }]}>رمز التحقق للمعاينة</Text>
+                <Text style={[styles.demoCode, { color: colors.primary }]}>{demoCode}</Text>
+                <Text style={[styles.demoCodeHint, { color: colors.mutedForeground }]}>تمت إضافته تلقائيًا للتجربة</Text>
+              </View>
+            )}
             <TextInput
               value={code}
               onChangeText={value => setCode(value.replace(/\D/g, '').slice(0, 6))}
@@ -134,4 +146,8 @@ const styles = StyleSheet.create({
   editEmail: { fontFamily: 'Tajawal_500Medium', fontSize: 13, marginTop: 8 },
   securityRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginTop: 20 },
   security: { fontFamily: 'Tajawal_500Medium', fontSize: 12 },
+  demoCodeBox: { width: '100%', borderRadius: 14, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center', marginTop: 16 },
+  demoCodeLabel: { fontFamily: 'Tajawal_700Bold', fontSize: 12 },
+  demoCode: { fontFamily: 'Tajawal_800ExtraBold', fontSize: 25, letterSpacing: 6, marginTop: 2 },
+  demoCodeHint: { fontFamily: 'Tajawal_500Medium', fontSize: 11, marginTop: 2 },
 });

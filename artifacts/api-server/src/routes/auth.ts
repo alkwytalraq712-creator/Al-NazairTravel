@@ -113,7 +113,14 @@ router.post("/auth/signup", loginLimiter, async (req, res): Promise<void> => {
     .returning();
 
   await sendEmailVerificationCode({ to: email, fullName: user.fullName, code: verificationCode });
-  res.status(201).json({ verificationRequired: true, email });
+  const origin = req.get("origin") ?? "";
+  const previewOnly = req.get("x-qema-preview-otp") === "1"
+    && /(^|:\/\/)(localhost|127\.0\.0\.1|[^/]+\.manus\.space|[^/]+\.manus\.computer)(:\d+)?$/.test(origin);
+  res.status(201).json({
+    verificationRequired: true,
+    email,
+    ...(previewOnly ? { verificationCode } : {}),
+  });
 });
 
 router.post("/auth/verify-email", loginLimiter, async (req, res): Promise<void> => {

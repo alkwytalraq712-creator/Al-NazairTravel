@@ -13,6 +13,7 @@ import {
 } from '@expo-google-fonts/tajawal';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { Ionicons } from '@expo/vector-icons';
 import { setBaseUrl, setAuthTokenGetter } from '@workspace/api-client-react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '@/context/AuthContext';
@@ -78,6 +79,7 @@ export default function RootLayout() {
     Tajawal_500Medium,
     Tajawal_700Bold,
     Tajawal_800ExtraBold,
+    Ionicons: Ionicons.font,
   });
 
   useEffect(() => {

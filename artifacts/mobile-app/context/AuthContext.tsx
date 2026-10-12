@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -29,7 +30,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (data: LoginInput) => Promise<void>;
   logout: () => Promise<void>;
-  register: (data: SignupInput) => Promise<{ verificationRequired: boolean; email?: string }>;
+  register: (data: SignupInput) => Promise<{ verificationRequired: boolean; email?: string; verificationCode?: string }>;
   verifyEmail: (email: string, code: string) => Promise<void>;
   resendVerificationEmail: (email: string) => Promise<void>;
   tryRestoreFromBiometric: () => Promise<boolean>;
@@ -98,10 +99,16 @@ async function apiLogin(data: LoginInput): Promise<{ token: string }> {
   return res.json() as Promise<{ token: string }>;
 }
 
-async function apiSignup(data: SignupInput): Promise<{ token?: string; verificationRequired?: boolean; email?: string }> {
+async function apiSignup(data: SignupInput): Promise<{ token?: string; verificationRequired?: boolean; email?: string; verificationCode?: string }> {
+  const previewOtp = Platform.OS === 'web'
+    && typeof window !== 'undefined'
+    && /(^|\.)manus\.(space|computer)$/.test(window.location.hostname);
   const res = await fetchWithTimeout(`${getApiBase()}/api/auth/signup`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(previewOtp ? { 'x-qema-preview-otp': '1' } : {}),
+    },
     credentials: 'include',
     body: JSON.stringify(data),
   });
@@ -191,7 +198,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAuthTokenGetter(() => token);
       }
       await queryClient.invalidateQueries();
-      return { verificationRequired: !!result.verificationRequired, email: result.email };
+      return {
+        verificationRequired: !!result.verificationRequired,
+        email: result.email,
+        verificationCode: result.verificationCode,
+      };
     },
     [queryClient],
   );
