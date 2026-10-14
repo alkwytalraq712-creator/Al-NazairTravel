@@ -34,7 +34,6 @@ import {
   getGetCurrentUserQueryKey,
   getGetProfileCompletionQueryKey,
 } from '@workspace/api-client-react';
-import { scanNativePassportMrz } from '@/lib/mrzScanner';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -285,7 +284,6 @@ export default function ProfileEditScreen() {
   );
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrError, setOcrError] = useState('');
-  const [mrzScanning, setMrzScanning] = useState(false);
 
   // ── Step 2: Residence ──
   const [residenceType, setResidenceType] = useState<ResidenceType>(
@@ -451,61 +449,6 @@ export default function ProfileEditScreen() {
       }
     } finally {
       setOcrLoading(false);
-    }
-  }
-
-  // Native-first path: Dynamsoft performs live on-device MRZ recognition and
-  // validates ICAO check digits. Web and builds without a license continue to
-  // use the existing gallery + server OCR path above.
-  async function handleNativeMrzScan() {
-    const license = process.env.EXPO_PUBLIC_DYNAMSOFT_MRZ_LICENSE;
-    if (Platform.OS === 'web' || !license) {
-      Alert.alert(
-        'المسح المباشر غير مفعّل',
-        Platform.OS === 'web'
-          ? 'استخدم زر رفع صورة الجواز في نسخة الويب.'
-          : 'أضف مفتاح ترخيص Dynamsoft إلى إعدادات بناء التطبيق لتفعيل الكاميرا، أو استخدم رفع الصورة.',
-      );
-      return;
-    }
-
-    setMrzScanning(true);
-    setOcrError('');
-    try {
-      const scanned = await scanNativePassportMrz(license);
-      if (!scanned) return;
-
-      setPassportData(scanned);
-      setEditedPassport({
-        fullName: scanned.fullName,
-        nationality: scanned.nationality,
-        passportNumber: scanned.passportNumber,
-        dob: scanned.dob,
-        passportIssueDate: scanned.passportIssueDate,
-        passportExpiry: scanned.passportExpiry,
-        issuingCountry: scanned.issuingCountry,
-        gender: scanned.gender,
-        placeOfBirth: scanned.placeOfBirth,
-      });
-
-      // Persist the deskewed document image when the native SDK returns one.
-      // Failure is non-fatal: the structured MRZ fields remain usable.
-      if (scanned.documentImageUri?.startsWith('data:image/')) {
-        try {
-          const imageBlob = await blobFromUri(scanned.documentImageUri);
-          const imageUrl = await uploadToStorage(imageBlob, 'passport-mrz.jpg');
-          setPassportImageUrl(imageUrl);
-        } catch {
-          // Keep the extracted fields; the upload-image fallback remains available.
-        }
-      }
-    } catch (err: any) {
-      const message = String(err?.message ?? '').toLowerCase();
-      if (!message.includes('cancel')) {
-        setOcrError('تعذّرت قراءة MRZ. ثبّت الجواز داخل الإطار، حسّن الإضاءة، ثم أعد المحاولة أو ارفع صورة أوضح.');
-      }
-    } finally {
-      setMrzScanning(false);
     }
   }
 
@@ -824,7 +767,7 @@ export default function ProfileEditScreen() {
                 </Text>
               </View>
             ) : null}
-            {(ocrLoading || mrzScanning) && <ProcessingOverlay message={mrzScanning ? 'افتح الكاميرا وثبّت الجواز داخل الإطار...' : 'جاري قراءة بيانات الجواز...\nقد تستغرق بضع ثوانٍ'} />}
+            {ocrLoading && <ProcessingOverlay message={'جاري قراءة بيانات الجواز...\nقد تستغرق بضع ثوانٍ'} />}
           </View>
         </View>
 
@@ -845,22 +788,8 @@ export default function ProfileEditScreen() {
           </View>
         ) : null}
 
-        {/* Native live scanner button */}
-        {Platform.OS !== 'web' && process.env.EXPO_PUBLIC_DYNAMSOFT_MRZ_LICENSE ? (
-          <TouchableOpacity onPress={handleNativeMrzScan} disabled={ocrLoading || mrzScanning} activeOpacity={0.8}>
-            <LinearGradient
-              colors={mrzScanning ? ['#374151', '#374151'] : ['#059669', '#047857']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={{ borderRadius: 14, paddingVertical: 14, paddingHorizontal: 24, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 10 }}
-            >
-              <Ionicons name="camera-outline" size={20} color="#fff" />
-              <Text style={{ color: '#fff', fontFamily: 'Tajawal_700Bold', fontSize: 15 }}>مسح مباشر بالكاميرا</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        ) : null}
-
-        {/* Upload/OCR fallback button */}
-        <TouchableOpacity onPress={handlePassportScan} disabled={ocrLoading || mrzScanning} activeOpacity={0.8}>
+        {/* Scan button */}
+        <TouchableOpacity onPress={handlePassportScan} disabled={ocrLoading} activeOpacity={0.8}>
           <LinearGradient
             colors={ocrLoading ? ['#374151', '#374151'] : ['#1d4ed8', '#1a56db']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
