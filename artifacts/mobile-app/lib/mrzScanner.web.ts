@@ -1,4 +1,4 @@
-import type { NativeMrzResult } from './mrzScanner.native';
+import type { NativeMrzResult } from './mrzScanner.validation';
 
 /** Web keeps the existing image-upload OCR flow; Dynamsoft mobile SDK is native-only. */
 export async function scanNativePassportMrz(_license?: string): Promise<NativeMrzResult | null> {

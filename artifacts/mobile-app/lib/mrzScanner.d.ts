@@ -1,15 +1,5 @@
-export interface NativeMrzResult {
-  fullName: string;
-  nationality: string;
-  passportNumber: string;
-  dob: string;
-  passportIssueDate: string;
-  passportExpiry: string;
-  issuingCountry: string;
-  gender: string;
-  placeOfBirth: string;
-  confidence: number;
-  documentImageUri?: string;
-}
+export type { NativeMrzResult } from './mrzScanner.validation';
 
-export function scanNativePassportMrz(license?: string): Promise<NativeMrzResult | null>;
+export function scanNativePassportMrz(
+  license?: string,
+): Promise<import('./mrzScanner.validation').NativeMrzResult | null>;

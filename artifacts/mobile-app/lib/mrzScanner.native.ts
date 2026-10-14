@@ -3,20 +3,7 @@ import {
   EnumResultStatus,
   MRZScanner,
 } from 'dynamsoft-mrz-scanner-bundle-react-native';
-
-export interface NativeMrzResult {
-  fullName: string;
-  nationality: string;
-  passportNumber: string;
-  dob: string;
-  passportIssueDate: string;
-  passportExpiry: string;
-  issuingCountry: string;
-  gender: string;
-  placeOfBirth: string;
-  confidence: number;
-  documentImageUri?: string;
-}
+import { normalizeNativeMrzData, type NativeMrzResult } from './mrzScanner.validation';
 
 /**
  * Uses Dynamsoft's on-device MRZ scanner when a license is supplied.
@@ -44,34 +31,12 @@ export async function scanNativePassportMrz(license?: string): Promise<NativeMrz
   const data = result.data;
   if (!data) throw new Error('لم يتم العثور على بيانات MRZ قابلة للقراءة');
 
-  const passportNumber = String(data.documentNumber ?? '').replace(/</g, '').trim().toUpperCase();
-  const dob = String(data.dateOfBirth ?? '').trim();
-  const expiry = String(data.dateOfExpire ?? '').trim();
-  const nationality = String(data.nationalityRaw ?? data.nationality ?? '').trim();
-  const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ').trim();
-
-  // Dynamsoft validates the MRZ check digits before returning a finished scan.
-  // Still reject incomplete payloads so no partial result reaches profile save.
-  if (!passportNumber || !dob || !expiry || !nationality || !fullName || !data.mrzText) {
-    throw new Error('بيانات MRZ غير مكتملة. يرجى إعادة تصوير صفحة الجواز بوضوح.');
-  }
-
   const image = result.mrzSideDocumentImage;
   const documentImageUri = image && typeof image === 'object' && 'uri' in image
     ? String((image as { uri?: string }).uri ?? '')
     : undefined;
 
-  return {
-    fullName,
-    nationality,
-    passportNumber,
-    dob,
-    passportIssueDate: '',
-    passportExpiry: expiry,
-    issuingCountry: String(data.issuingStateRaw ?? data.issuingState ?? '').trim(),
-    gender: String(data.sex ?? '').trim().toUpperCase(),
-    placeOfBirth: '',
-    confidence: 100,
-    documentImageUri,
-  };
+  // Dynamsoft validates the MRZ check digits before returning a finished scan.
+  // The shared normalizer rejects partial payloads before profile save.
+  return normalizeNativeMrzData(data, documentImageUri);
 }
