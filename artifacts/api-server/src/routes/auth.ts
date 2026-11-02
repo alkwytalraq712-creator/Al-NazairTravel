@@ -18,16 +18,15 @@ import { hashPassword, verifyPassword, serializeUser, generateToken, getProfileC
 import { requireAuth } from "../lib/auth";
 import { visaConsentTable } from "@workspace/db";
 import { sendEmailVerificationCode } from "../lib/email";
+import {
+  createVerificationCode,
+  hashVerificationCode,
+  isVerificationCodeValid,
+  normalizeEmail,
+  OTP_TTL_MS,
+} from "../lib/otp";
 
 const router: IRouter = Router();
-
-function hashVerificationCode(code: string): string {
-  return crypto.createHash("sha256").update(code).digest("hex");
-}
-
-function createVerificationCode(): string {
-  return String(crypto.randomInt(100000, 1000000));
-}
 
 // ── Rate limiters ────────────────────────────────────────────────────────────
 // Key by IP address. xForwardedForHeader validation disabled because Replit's
@@ -78,7 +77,7 @@ router.post("/auth/signup", loginLimiter, async (req, res): Promise<void> => {
     return;
   }
 
-  const email = parsed.data.email?.trim().toLowerCase();
+  const email = normalizeEmail(parsed.data.email);
   if (!email || !email.includes("@")) {
     res.status(400).json({ error: "البريد الإلكتروني مطلوب لإرسال رمز التحقق" });
     return;
@@ -87,9 +86,11 @@ router.post("/auth/signup", loginLimiter, async (req, res): Promise<void> => {
   const [existing] = await db
     .select()
     .from(usersTable)
-    .where(eq(usersTable.phone, parsed.data.phone));
+    .where(or(eq(usersTable.phone, parsed.data.phone), eq(usersTable.email, email)));
   if (existing) {
-    res.status(400).json({ error: "Phone number already registered" });
+    res.status(400).json({
+      error: existing.email === email ? "هذا البريد الإلكتروني مسجل مسبقًا" : "رقم الهاتف مسجل مسبقًا",
+    });
     return;
   }
 
@@ -107,7 +108,7 @@ router.post("/auth/signup", loginLimiter, async (req, res): Promise<void> => {
       email,
       passwordHash,
       emailVerificationCodeHash: hashVerificationCode(verificationCode),
-      emailVerificationExpiresAt: new Date(Date.now() + 3 * 60 * 1000),
+      emailVerificationExpiresAt: new Date(Date.now() + OTP_TTL_MS),
       ...(nationality ? { nationality } : {}),
     })
     .returning();
@@ -124,16 +125,18 @@ router.post("/auth/signup", loginLimiter, async (req, res): Promise<void> => {
 });
 
 router.post("/auth/verify-email", loginLimiter, async (req, res): Promise<void> => {
-  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const email = normalizeEmail(req.body?.email);
   const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
   if (!email || !/^\d{6}$/.test(code)) {
     res.status(400).json({ error: "البريد الإلكتروني والرمز المؤلف من 6 أرقام مطلوبان" });
     return;
   }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
-  const valid = user && user.emailVerificationCodeHash && user.emailVerificationExpiresAt
-    && user.emailVerificationExpiresAt.getTime() >= Date.now()
-    && hashVerificationCode(code) === user.emailVerificationCodeHash;
+  const valid = Boolean(user && isVerificationCodeValid(
+    code,
+    user.emailVerificationCodeHash,
+    user.emailVerificationExpiresAt,
+  ));
   if (!valid) {
     res.status(400).json({ error: "رمز التحقق غير صحيح أو منتهي الصلاحية" });
     return;
@@ -149,7 +152,7 @@ router.post("/auth/verify-email", loginLimiter, async (req, res): Promise<void> 
 });
 
 router.post("/auth/resend-verification", loginLimiter, async (req, res): Promise<void> => {
-  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const email = normalizeEmail(req.body?.email);
   if (!email || !email.includes("@")) {
     res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
     return;
@@ -162,7 +165,7 @@ router.post("/auth/resend-verification", loginLimiter, async (req, res): Promise
   const code = createVerificationCode();
   await db.update(usersTable).set({
     emailVerificationCodeHash: hashVerificationCode(code),
-    emailVerificationExpiresAt: new Date(Date.now() + 3 * 60 * 1000),
+    emailVerificationExpiresAt: new Date(Date.now() + OTP_TTL_MS),
   }).where(eq(usersTable.id, user.id));
   await sendEmailVerificationCode({ to: email, fullName: user.fullName, code });
   res.json({ message: "تم إرسال رمز تحقق جديد" });
@@ -186,7 +189,8 @@ router.post("/auth/login", loginLimiter, async (req, res): Promise<void> => {
     return;
   }
 
-  const identifier = parsed.data.identifier;
+  const identifier = parsed.data.identifier.trim();
+  const emailIdentifier = normalizeEmail(identifier);
   const phoneVariants = normalizePhone(identifier);
 
   const [user] = await db
@@ -195,12 +199,21 @@ router.post("/auth/login", loginLimiter, async (req, res): Promise<void> => {
     .where(
       or(
         ...phoneVariants.map((v) => eq(usersTable.phone, v)),
-        eq(usersTable.email, identifier),
+        eq(usersTable.email, emailIdentifier),
       ),
     );
 
   if (!user || !(await verifyPassword(parsed.data.password, user.passwordHash))) {
     res.status(401).json({ error: "Invalid credentials" });
+    return;
+  }
+
+  if (user.email && !user.emailVerifiedAt) {
+    res.status(403).json({
+      error: "يرجى تأكيد بريدك الإلكتروني أولًا باستخدام رمز التحقق المرسل إليك",
+      verificationRequired: true,
+      email: user.email,
+    });
     return;
   }
 

@@ -81,16 +81,29 @@ function formatDate(iso: string): string {
   }
 }
 
-async function blobFromUri(uri: string): Promise<Blob> {
-  const r = await fetch(uri);
-  return r.blob();
+type NativeUploadPart = { uri: string; name: string; type: string };
+type UploadPart = Blob | NativeUploadPart;
+
+async function createUploadPart(asset: ImagePicker.ImagePickerAsset, fileName: string): Promise<UploadPart> {
+  const mimeType = asset.mimeType?.toLowerCase() || 'image/jpeg';
+  // React Native's multipart implementation expects a URI descriptor. Passing a
+  // browser Blob here makes Android send an empty part or omit the filename.
+  if (Platform.OS !== 'web') {
+    return { uri: asset.uri, name: fileName, type: mimeType };
+  }
+  const response = await fetch(asset.uri);
+  return response.blob();
 }
 
 // ─── Cloudinary upload ─────────────────────────────────────────────────────────
 
-async function uploadToStorage(blob: Blob, fileName: string): Promise<string> {
+async function uploadToStorage(part: UploadPart, fileName: string): Promise<string> {
   const formData = new FormData();
-  formData.append('file', blob, fileName);
+  if (Platform.OS !== 'web') {
+    (formData as any).append('file', part as NativeUploadPart);
+  } else {
+    formData.append('file', part as Blob, fileName);
+  }
 
   const result = await customFetch<{ publicUrl: string }>(
     '/api/storage/uploads/cloudinary',
@@ -342,11 +355,15 @@ export default function ProfileEditScreen() {
     setFaceValid(false);
 
     try {
-      const blob = await blobFromUri(asset.uri);
+      const part = await createUploadPart(asset, 'face.jpg');
 
       // 1. Validate face with AI
       const formData = new FormData();
-      formData.append('faceImage', blob, 'face.jpg');
+      if (Platform.OS !== 'web') {
+        (formData as any).append('faceImage', part as NativeUploadPart);
+      } else {
+        formData.append('faceImage', part as Blob, 'face.jpg');
+      }
       const validation = await customFetch<{ valid: boolean; reason: string }>(
         '/api/validate/face',
         { method: 'POST', body: formData } as any,
@@ -359,7 +376,7 @@ export default function ProfileEditScreen() {
       }
 
       // 2. Upload to object storage
-      const url = await uploadToStorage(blob, 'avatar.jpg');
+      const url = await uploadToStorage(part, 'avatar.jpg');
       setAvatarUrl(url);
       setFaceValid(true);
     } catch (err: any) {
@@ -380,13 +397,17 @@ export default function ProfileEditScreen() {
     setPassportData(null);
 
     try {
-      const blob = await blobFromUri(asset.uri);
-      const blobAsFile = new File([blob], 'passport.jpg', { type: blob.type || 'image/jpeg' });
+      const part = await createUploadPart(asset, 'passport.jpg');
+      // Call OCR — the hook sends multipart/form-data automatically. Native
+      // builds receive the URI descriptor expected by React Native FormData.
+      const blobAsFile = Platform.OS === 'web'
+        ? new File([part as Blob], 'passport.jpg', { type: (part as Blob).type || 'image/jpeg' })
+        : part;
 
       // Call OCR — the hook sends multipart/form-data automatically.
       // mutateAsync throws on failure, so success + error are both handled here
       // (a separate onError callback would be overwritten by this try/catch).
-      const res: any = await ocrMutation.mutateAsync({ data: { passportImage: blobAsFile } });
+      const res: any = await ocrMutation.mutateAsync({ data: { passportImage: blobAsFile as any } });
 
       const p = res?.passport ?? res?.data?.passport;
       if (!p || p.confidence < 30) {
@@ -411,7 +432,7 @@ export default function ProfileEditScreen() {
 
       // Upload passport image to object storage for display (non-fatal)
       try {
-        const imgUrl = await uploadToStorage(blob, 'passport.jpg');
+        const imgUrl = await uploadToStorage(part, 'passport.jpg');
         setPassportImageUrl(imgUrl);
       } catch {
         // Non-fatal — passport data is still valid
@@ -459,8 +480,8 @@ export default function ProfileEditScreen() {
     if (!asset) return;
     setResidenceUploading(side);
     try {
-      const blob = await blobFromUri(asset.uri);
-      const url = await uploadToStorage(blob, `residence_${side}.jpg`);
+      const part = await createUploadPart(asset, `residence_${side}.jpg`);
+      const url = await uploadToStorage(part, `residence_${side}.jpg`);
       if (side === 'front') setResidenceFrontUrl(url);
       else setResidenceBackUrl(url);
     } catch {

@@ -113,10 +113,15 @@ export default function LoginScreen() {
       await login({ identifier, password });
       router.replace('/(tabs)');
     } catch (e: any) {
-      Alert.alert(
-        'خطأ في تسجيل الدخول',
-        e?.message ?? 'البيانات غير صحيحة، يرجى المحاولة مجدداً',
-      );
+      const verificationEmail = e?.data?.email;
+      if (e?.status === 403 && e?.data?.verificationRequired && verificationEmail) {
+        router.push({ pathname: '/auth/verify-email', params: { email: verificationEmail } });
+      } else {
+        Alert.alert(
+          'خطأ في تسجيل الدخول',
+          e?.message ?? 'البيانات غير صحيحة، يرجى المحاولة مجدداً',
+        );
+      }
     } finally {
       setLoading(false);
     }

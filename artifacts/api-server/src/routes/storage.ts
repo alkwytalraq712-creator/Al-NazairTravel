@@ -25,9 +25,23 @@ const cloudinaryUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, callback) => {
-    callback(null, /^image\/(jpeg|png|webp|gif)$/i.test(file.mimetype));
+    callback(null, /^image\/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(file.mimetype));
   },
 });
+
+function uploadSingleImage(req: Request, res: Response, next: () => void): void {
+  cloudinaryUpload.single('file')(req, res, (error) => {
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      res.status(413).json({ error: 'حجم الصورة كبير. الحد الأقصى 10 ميغابايت.' });
+      return;
+    }
+    if (error) {
+      res.status(400).json({ error: 'نوع الصورة غير مدعوم. استخدم JPG أو PNG أو WEBP.' });
+      return;
+    }
+    next();
+  });
+}
 
 /**
  * POST /storage/uploads/cloudinary
@@ -38,7 +52,7 @@ const cloudinaryUpload = multer({
 router.post(
   '/storage/uploads/cloudinary',
   requireAuth,
-  cloudinaryUpload.single('file'),
+  uploadSingleImage,
   async (req: Request, res: Response) => {
     if (!isCloudinaryConfigured()) {
       res.status(503).json({ error: 'Cloudinary storage is not configured' });

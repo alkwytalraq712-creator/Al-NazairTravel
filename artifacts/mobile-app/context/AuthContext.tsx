@@ -94,7 +94,7 @@ async function apiLogin(data: LoginInput): Promise<{ token: string }> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'خطأ في الاتصال' })) as { error?: string };
-    throw new Error(err.error ?? 'بيانات خاطئة');
+    throw Object.assign(new Error(err.error ?? 'بيانات خاطئة'), { status: res.status, data: err });
   }
   return res.json() as Promise<{ token: string }>;
 }
