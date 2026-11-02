@@ -208,7 +208,7 @@ router.post("/auth/login", loginLimiter, async (req, res): Promise<void> => {
     return;
   }
 
-  if (user.email && !user.emailVerifiedAt) {
+  if (user.email && !user.emailVerifiedAt && user.emailVerificationCodeHash) {
     res.status(403).json({
       error: "يرجى تأكيد بريدك الإلكتروني أولًا باستخدام رمز التحقق المرسل إليك",
       verificationRequired: true,
