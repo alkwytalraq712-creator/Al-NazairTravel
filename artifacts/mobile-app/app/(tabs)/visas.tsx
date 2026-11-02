@@ -44,11 +44,14 @@ export default function VisasScreen() {
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
 
-  if (!visasEnabled) return <ServiceUnavailable serviceName="التأشيرات" icon="document-text-outline" />;
-
-  const { data: visas, isLoading } = useListVisas(
+  // Keep the hook order stable while service settings load. Changing hook
+  // order here caused intermittent crashes when the service was disabled.
+  const { data: visas, isLoading, isError, refetch } = useListVisas(
     filter === 'all' ? undefined : { visaType: filter },
+    { query: { staleTime: 60_000, retry: 1 } } as any,
   );
+
+  if (!visasEnabled) return <ServiceUnavailable serviceName="التأشيرات" icon="document-text-outline" />;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -160,6 +163,20 @@ export default function VisasScreen() {
         <View style={s.center}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[s.emptyText, { color: colors.mutedForeground }]}>جاري التحميل...</Text>
+        </View>
+      ) : isError ? (
+        <View style={s.center}>
+          <View style={[s.emptyIcon, { backgroundColor: colors.muted }]}>
+            <Ionicons name="cloud-offline-outline" size={36} color={colors.destructive} />
+          </View>
+          <Text style={[s.emptyTitle, { color: colors.foreground }]}>تعذر تحميل التأشيرات</Text>
+          <Text style={[s.emptyText, { color: colors.mutedForeground }]}>تحقق من الاتصال ثم حاول مرة أخرى</Text>
+          <TouchableOpacity
+            style={[s.clearAllBtn, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40' }]}
+            onPress={() => refetch()}
+          >
+            <Text style={[s.clearAllText, { color: colors.primary }]}>إعادة المحاولة</Text>
+          </TouchableOpacity>
         </View>
       ) : filtered.length === 0 ? (
         <View style={s.center}>

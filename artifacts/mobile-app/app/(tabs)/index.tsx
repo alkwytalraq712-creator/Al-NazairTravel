@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -6,6 +6,7 @@ import {
   Image,
   Pressable,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,25 +25,36 @@ import { VisaCard } from '@/components/VisaCard';
 import { PackageCard } from '@/components/PackageCard';
 import { OfferCard } from '@/components/OfferCard';
 
+const DESTINATIONS = [
+  { name: 'السعودية', image: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=500&q=80' },
+  { name: 'فرنسا', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500&q=80' },
+  { name: 'الإمارات', image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=500&q=80' },
+  { name: 'تركيا', image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=500&q=80' },
+];
+
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
-  const { data: home, isLoading } = useGetHomeSummary({ query: { queryKey: getGetHomeSummaryQueryKey() } });
-  const { data: completion } = useGetProfileCompletion();
+  const { data: home, isLoading, refetch: refetchHome } = useGetHomeSummary({ query: { queryKey: getGetHomeSummaryQueryKey(), staleTime: 60_000, retry: 1 } } as any);
+  const { data: completion, refetch: refetchCompletion } = useGetProfileCompletion({ query: { staleTime: 30_000, retry: 1 } } as any);
   const { user } = useAuth();
   const { flightsEnabled, packagesEnabled, visasEnabled } = useServiceSettings();
+  const [refreshing, setRefreshing] = useState(false);
 
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
-  const destinations = [
-    { name: 'السعودية', image: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=500&q=80' },
-    { name: 'فرنسا', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500&q=80' },
-    { name: 'الإمارات', image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=500&q=80' },
-    { name: 'تركيا', image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=500&q=80' },
-  ];
+  async function refreshHome() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchHome(), refetchCompletion()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   useEffect(() => {
     Animated.parallel([
@@ -91,6 +103,9 @@ export default function HomeScreen() {
         style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 34 : 120 }}
+        refreshControl={Platform.OS === 'web' ? undefined : (
+          <RefreshControl refreshing={refreshing} onRefresh={refreshHome} tintColor={colors.primary} colors={[colors.primary]} />
+        )}
       >
         {/* Banner */}
         <View style={{ backgroundColor: colors.background, paddingBottom: 40 }}>
@@ -135,7 +150,7 @@ export default function HomeScreen() {
             </View>
           </View>
           <FlatList
-            data={destinations}
+            data={DESTINATIONS}
             horizontal
             inverted
             showsHorizontalScrollIndicator={false}

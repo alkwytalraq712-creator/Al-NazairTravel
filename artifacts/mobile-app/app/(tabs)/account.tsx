@@ -6,7 +6,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Animated, Dimensions, Platform,
-  ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -153,6 +153,7 @@ export default function AccountScreen() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
   const [loggingOut, setLoggingOut] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const heroFade  = useRef(new Animated.Value(0)).current;
 
@@ -162,10 +163,11 @@ export default function AccountScreen() {
     }
   }, [isLoading]);
 
-  const { data: flightsData  } = useListMyFlightBookings({ query: { enabled: isAuthenticated } } as any);
-  const { data: visasData    } = useListMyVisaApplications({ query: { enabled: isAuthenticated } } as any);
-  const { data: packagesData } = useListMyPackageBookings({ query: { enabled: isAuthenticated } } as any);
-  const { data: completion   } = useGetProfileCompletion();
+  const queryOptions = { query: { enabled: isAuthenticated, staleTime: 30_000, retry: 1 } } as any;
+  const { data: flightsData, refetch: refetchFlights } = useListMyFlightBookings(queryOptions);
+  const { data: visasData, refetch: refetchVisas } = useListMyVisaApplications(queryOptions);
+  const { data: packagesData, refetch: refetchPackages } = useListMyPackageBookings(queryOptions);
+  const { data: completion, refetch: refetchCompletion } = useGetProfileCompletion(queryOptions);
 
   const flights  = Array.isArray(flightsData)  ? flightsData  : [];
   const visas    = Array.isArray(visasData)    ? visasData    : [];
@@ -174,6 +176,16 @@ export default function AccountScreen() {
   const totalOrders = flights.length + visas.length + packages.length;
   const pct        = completion?.percentage ?? 0;
   const isComplete = completion?.isComplete ?? false;
+
+  async function refreshAccount() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchFlights(), refetchVisas(), refetchPackages(), refetchCompletion()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   async function handleLogout() {
     if (loggingOut) return;
@@ -200,6 +212,9 @@ export default function AccountScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 40 : insets.bottom + 120 }}
+        refreshControl={Platform.OS === 'web' ? undefined : (
+          <RefreshControl refreshing={refreshing} onRefresh={refreshAccount} tintColor={GOLD} colors={[GOLD]} />
+        )}
       >
 
         {/* ══════════ CINEMATIC HERO ══════════ */}
