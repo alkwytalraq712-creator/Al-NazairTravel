@@ -131,17 +131,26 @@ router.delete(
       return;
     }
 
-    const [pkg] = await db
-      .delete(packagesTable)
-      .where(eq(packagesTable.id, params.data.id))
-      .returning();
+    try {
+      const [pkg] = await db
+        .delete(packagesTable)
+        .where(eq(packagesTable.id, params.data.id))
+        .returning();
 
-    if (!pkg) {
-      res.status(404).json({ error: "Package not found" });
-      return;
+      if (!pkg) {
+        res.status(404).json({ error: "Package not found" });
+        return;
+      }
+
+      res.sendStatus(204);
+    } catch (error: any) {
+      // Keep existing customer bookings intact when a package is still referenced.
+      if (error?.code === "23503") {
+        res.status(409).json({ error: "لا يمكن حذف هذه الباقة لأنها مرتبطة بطلبات أو حجوزات قائمة. يمكنك تعديلها بدلاً من حذفها." });
+        return;
+      }
+      throw error;
     }
-
-    res.sendStatus(204);
   },
 );
 

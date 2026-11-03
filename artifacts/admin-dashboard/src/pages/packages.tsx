@@ -7,7 +7,7 @@ import {
   Package
 } from '@workspace/api-client-react';
 import { getListPackagesQueryKey } from '@workspace/api-client-react';
-import { Loader2, Plus, Edit, Trash2, MapPin, Calendar, Star, DollarSign } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, MapPin, Calendar, Star, DollarSign, RefreshCw, CloudOff } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,7 +51,7 @@ const packageSchema = z.object({
 });
 
 export function Packages() {
-  const { data: packages, isLoading } = useListPackages();
+  const { data: packages, isLoading, isError, refetch, isFetching } = useListPackages(undefined, { query: { staleTime: 30_000, retry: 1 } });
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
 
@@ -66,12 +66,24 @@ export function Packages() {
           <Plus className="w-4 h-4" />
           إضافة باقة
         </Button>
+        <Button variant="outline" onClick={() => refetch()} disabled={isFetching} className="gap-2">
+          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} /> تحديث
+        </Button>
       </div>
 
       {isLoading ? (
         <div className="flex justify-center p-12">
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
+      ) : isError ? (
+        <Card className="border-destructive/30">
+          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+            <CloudOff className="w-12 h-12 text-destructive/60 mb-4" />
+            <h3 className="text-lg font-semibold">تعذر تحميل الباقات</h3>
+            <p className="text-muted-foreground text-sm max-w-sm mt-1 mb-4">تحقق من اتصال الخادم ثم أعد المحاولة.</p>
+            <Button variant="outline" onClick={() => refetch()}>إعادة المحاولة</Button>
+          </CardContent>
+        </Card>
       ) : packages?.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
@@ -179,7 +191,12 @@ function DeletePackageButton({ pkg }: { pkg: Package }) {
         toast({ title: "تم حذف الباقة بنجاح" });
         queryClient.invalidateQueries({ queryKey: getListPackagesQueryKey() });
         setOpen(false);
-      }
+      },
+      onError: (e) => toast({
+        title: "تعذر حذف الباقة",
+        description: (e.data as { error?: string })?.error ?? e.message,
+        variant: "destructive",
+      })
     });
   };
 

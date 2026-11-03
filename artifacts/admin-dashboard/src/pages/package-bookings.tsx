@@ -5,8 +5,7 @@ import {
   PackageBooking,
   PackageBookingStatus
 } from '@workspace/api-client-react';
-import { getListAllPackageBookingsQueryKey } from '@workspace/api-client-react';
-import { Loader2, Search, Filter, Map, Clock, ExternalLink, Users, CalendarDays } from 'lucide-react';
+import { Loader2, Search, Filter, Map, Clock, ExternalLink, Users, CalendarDays, RefreshCw, CloudOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,9 +31,9 @@ export function PackageBookings() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   
-  const { data: bookings, isLoading } = useListAllPackageBookings({
+  const { data: bookings, isLoading, isError, refetch, isFetching } = useListAllPackageBookings({
     status: statusFilter !== 'all' ? (statusFilter as PackageBookingStatus) : undefined
-  });
+  }, { query: { staleTime: 15_000, retry: 1 } });
 
   const filteredBookings = bookings?.filter(b => 
     b.referenceNumber.toLowerCase().includes(search.toLowerCase()) ||
@@ -49,6 +48,10 @@ export function PackageBookings() {
           <h1 className="text-3xl font-bold tracking-tight">حجوزات الباقات</h1>
           <p className="text-muted-foreground mt-1">مراجعة وإدارة حجوزات الباقات السياحية.</p>
         </div>
+        <Button variant="outline" onClick={() => refetch()} disabled={isFetching} className="gap-2">
+          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+          تحديث
+        </Button>
       </div>
 
       <Card className="border-border/50">
@@ -84,6 +87,13 @@ export function PackageBookings() {
           {isLoading ? (
             <div className="p-12 flex justify-center">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            </div>
+          ) : isError ? (
+            <div className="p-12 flex flex-col items-center justify-center text-center">
+              <CloudOff className="w-12 h-12 text-destructive/60 mb-4" />
+              <h3 className="text-lg font-semibold">تعذر تحميل الحجوزات</h3>
+              <p className="text-muted-foreground text-sm max-w-sm mt-1 mb-4">تحقق من اتصال الخادم ثم أعد المحاولة.</p>
+              <Button variant="outline" onClick={() => refetch()}>إعادة المحاولة</Button>
             </div>
           ) : filteredBookings?.length === 0 ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -256,13 +266,8 @@ function StatusUpdater({ booking }: { booking: PackageBooking }) {
       {
         onSuccess: () => {
           toast({ title: "تم تحديث الحالة", description: `حالة الحجز الآن: ${STATUS_ARABIC[newStatus] || newStatus}` });
-          queryClient.setQueryData(
-            getListAllPackageBookingsQueryKey(),
-            (old: PackageBooking[] | undefined) => {
-              if (!old) return old;
-              return old.map(b => b.id === booking.id ? { ...b, status: newStatus as PackageBookingStatus } : b);
-            }
-          );
+          // Invalidate the prefix so both the "all" list and any active status-filtered list refresh.
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/package-bookings'] });
         },
         onError: (e) => toast({ title: "فشل التحديث", description: (e.data as { error?: string })?.error ?? e.message, variant: "destructive" })
       }
