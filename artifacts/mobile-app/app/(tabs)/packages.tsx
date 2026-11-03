@@ -34,11 +34,12 @@ export default function PackagesScreen() {
   const [search, setSearch] = useState('');
   const [region, setRegion] = useState('');
 
-  if (!packagesEnabled) return <ServiceUnavailable serviceName="الباقات السياحية" icon="map-outline" />;
-
-  const { data: packages, isLoading, refetch } = useListPackages(
+  const { data: packages, isLoading, isError, refetch } = useListPackages(
     region ? { country: region } : undefined,
+    { query: { staleTime: 60_000, retry: 1 } } as any,
   );
+
+  if (!packagesEnabled) return <ServiceUnavailable serviceName="الباقات السياحية" icon="map-outline" />;
 
   const filtered = (packages ?? []).filter(p =>
     !search ||
@@ -106,6 +107,14 @@ export default function PackagesScreen() {
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : isError ? (
+        <View style={styles.center}>
+          <Ionicons name="cloud-offline-outline" size={48} color={colors.destructive} />
+          <Text style={[styles.emptyText, { color: colors.foreground }]}>تعذر تحميل الباقات</Text>
+          <TouchableOpacity onPress={() => refetch()} style={[styles.retryBtn, { borderColor: colors.primary }]}>
+            <Text style={[styles.retryText, { color: colors.primary }]}>إعادة المحاولة</Text>
+          </TouchableOpacity>
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.center}>

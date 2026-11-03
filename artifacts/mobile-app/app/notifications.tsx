@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-  ActivityIndicator, Animated, Platform, ScrollView,
+  ActivityIndicator, Animated, Platform, RefreshControl, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, View,
   Alert,
 } from 'react-native';
@@ -153,8 +153,8 @@ export default function NotificationsScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const { data: notifs, isLoading } = useListMyNotifications({
-    query: { queryKey: getListMyNotificationsQueryKey(), enabled: isAuthenticated } as any,
+  const { data: notifs, isLoading, isError, refetch } = useListMyNotifications({
+    query: { queryKey: getListMyNotificationsQueryKey(), enabled: isAuthenticated, staleTime: 15_000, retry: 1 } as any,
   });
 
   const markRead      = useMarkNotificationRead();
@@ -204,6 +204,7 @@ export default function NotificationsScreen() {
   async function handleMarkAllRead() {
     try {
       await markAllRead.mutateAsync();
+      queryClient.invalidateQueries({ queryKey: getListMyNotificationsQueryKey() });
       if (Platform.OS !== 'web') {
         Notifications.setBadgeCountAsync(0).catch(() => {});
       }
@@ -211,7 +212,7 @@ export default function NotificationsScreen() {
   }
 
   function handleDeleteOne(id: number) {
-    deleteOne.mutate(id);
+    deleteOne.mutate(id, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMyNotificationsQueryKey() }) });
   }
 
   function handleDeleteAll() {
@@ -224,7 +225,7 @@ export default function NotificationsScreen() {
           text: 'حذف الكل',
           style: 'destructive',
           onPress: () => {
-            deleteAll.mutate();
+            deleteAll.mutate(undefined, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMyNotificationsQueryKey() }) });
             if (Platform.OS !== 'web') {
               Notifications.setBadgeCountAsync(0).catch(() => {});
             }
@@ -389,6 +390,16 @@ export default function NotificationsScreen() {
           <ActivityIndicator size="large" color={GOLD} />
           <Text style={[s.loadingText, { color: colors.mutedForeground }]}>جاري تحميل الإشعارات...</Text>
         </View>
+      ) : isError ? (
+        <View style={s.center}>
+          <View style={[s.emptyIcon, { backgroundColor: colors.muted }]}>
+            <Ionicons name="cloud-offline-outline" size={40} color={colors.destructive} />
+          </View>
+          <Text style={[s.emptyMsg, { color: colors.foreground }]}>تعذر تحميل الإشعارات</Text>
+          <TouchableOpacity style={[s.loginBtn, { backgroundColor: GOLD + '1A', borderColor: GOLD + '40' }]} onPress={() => refetch()}>
+            <Text style={[s.loginBtnText, { color: GOLD }]}>إعادة المحاولة</Text>
+          </TouchableOpacity>
+        </View>
       ) : filtered.length === 0 ? (
         <View style={s.center}>
           <View style={[s.emptyIcon, { backgroundColor: colors.muted }]}>
@@ -406,6 +417,7 @@ export default function NotificationsScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 40 : insets.bottom + 100 }}
+          refreshControl={Platform.OS === 'web' ? undefined : <RefreshControl refreshing={false} onRefresh={() => refetch()} tintColor={GOLD} colors={[GOLD]} />}
         >
           {unreadCount > 0 && activeTab === 'all' && (
             <TouchableOpacity

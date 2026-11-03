@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  ActivityIndicator, Animated, Platform, ScrollView,
+  ActivityIndicator, Animated, Platform, RefreshControl, ScrollView,
   StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -211,15 +211,16 @@ export default function BookingsScreen() {
   const [tab, setTab] = useState<Tab>('all');
   const paddingTop = Platform.OS === 'web' ? 67 : insets.top;
 
-  const visaOpts   = { query: { queryKey: getListMyVisaApplicationsQueryKey(),  enabled: isAuthenticated } as any };
-  const pkgOpts    = { query: { queryKey: getListMyPackageBookingsQueryKey(),    enabled: isAuthenticated } as any };
-  const flightOpts = { query: { queryKey: getListMyFlightBookingsQueryKey(),     enabled: isAuthenticated } as any };
+  const visaOpts   = { query: { queryKey: getListMyVisaApplicationsQueryKey(),  enabled: isAuthenticated, staleTime: 20_000, retry: 1 } as any };
+  const pkgOpts    = { query: { queryKey: getListMyPackageBookingsQueryKey(),    enabled: isAuthenticated, staleTime: 20_000, retry: 1 } as any };
+  const flightOpts = { query: { queryKey: getListMyFlightBookingsQueryKey(),     enabled: isAuthenticated, staleTime: 20_000, retry: 1 } as any };
 
-  const { data: visaApps,    isLoading: vl } = useListMyVisaApplications(visaOpts);
-  const { data: pkgBooks,    isLoading: pl } = useListMyPackageBookings(pkgOpts);
-  const { data: flightBooks, isLoading: fl } = useListMyFlightBookings(flightOpts);
+  const { data: visaApps,    isLoading: vl, isError: ve, refetch: refetchVisas } = useListMyVisaApplications(visaOpts);
+  const { data: pkgBooks,    isLoading: pl, isError: pe, refetch: refetchPackages } = useListMyPackageBookings(pkgOpts);
+  const { data: flightBooks, isLoading: fl, isError: fe, refetch: refetchFlights } = useListMyFlightBookings(flightOpts);
 
   const isLoading = vl || pl || fl;
+  const isError = ve || pe || fe;
 
   const allFlights: UnifiedOrder[] = (flightBooks ?? []).map((f: any) => ({
     id:        f.id,
@@ -364,6 +365,17 @@ export default function BookingsScreen() {
           <ActivityIndicator size="large" color={GOLD} />
           <Text style={[s.loadingText, { color: colors.mutedForeground }]}>جاري تحميل طلباتك...</Text>
         </View>
+      ) : isError ? (
+        <View style={s.loadingWrap}>
+          <Ionicons name="cloud-offline-outline" size={44} color={colors.destructive} />
+          <Text style={[s.loadingText, { color: colors.foreground }]}>تعذر تحميل الطلبات</Text>
+          <TouchableOpacity
+            style={[s.emptyBtn, { backgroundColor: GOLD + '1A', borderColor: GOLD + '40' }]}
+            onPress={() => Promise.all([refetchVisas(), refetchPackages(), refetchFlights()])}
+          >
+            <Text style={[s.emptyBtnText, { color: GOLD }]}>إعادة المحاولة</Text>
+          </TouchableOpacity>
+        </View>
       ) : displayList.length === 0 ? (
         <EmptyState
           icon={
@@ -390,6 +402,7 @@ export default function BookingsScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 40 : insets.bottom + 100 }}
+          refreshControl={Platform.OS === 'web' ? undefined : <RefreshControl refreshing={false} onRefresh={() => Promise.all([refetchVisas(), refetchPackages(), refetchFlights()])} tintColor={GOLD} colors={[GOLD]} />}
         >
           {tab === 'all' && (
             <View style={[s.comingSoonBar, { backgroundColor: colors.muted, borderColor: colors.border }]}>
