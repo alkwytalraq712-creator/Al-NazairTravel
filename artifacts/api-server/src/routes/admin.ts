@@ -5,6 +5,7 @@ import {
   usersTable,
   visaApplicationsTable,
   packageBookingsTable,
+  packagesTable,
   flightBookingsTable,
   paymentsTable,
   invoicesTable,
@@ -125,6 +126,85 @@ router.get(
       .orderBy(desc(flightBookingsTable.createdAt))
       .limit(5);
 
+    // Sales report: package bookings do not store a final invoice amount yet,
+    // so revenue is explicitly estimated from priceFrom × travelersCount.
+    const packageSalesRows = await db
+      .select({
+        packageId: packageBookingsTable.packageId,
+        packageName: packagesTable.name,
+        priceFrom: packagesTable.priceFrom,
+        currency: packagesTable.currency,
+        travelersCount: packageBookingsTable.travelersCount,
+        status: packageBookingsTable.status,
+        createdAt: packageBookingsTable.createdAt,
+      })
+      .from(packageBookingsTable)
+      .leftJoin(packagesTable, eq(packageBookingsTable.packageId, packagesTable.id));
+
+    const confirmedStatuses = new Set(["confirmed", "paid", "vouchers_issued", "completed"]);
+    const statusCounts = new Map<string, number>();
+    const revenueByCurrency = new Map<string, number>();
+    const packageTotals = new Map<number, {
+      packageName: string;
+      bookings: number;
+      travelers: number;
+      estimatedRevenue: number;
+      currency: string;
+    }>();
+    const monthKey = (date: Date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+    const monthlyTotals = new Map<string, { bookings: number; travelers: number; estimatedRevenue: number }>();
+    const now = new Date();
+    for (let offset = 5; offset >= 0; offset -= 1) {
+      const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1));
+      monthlyTotals.set(monthKey(date), { bookings: 0, travelers: 0, estimatedRevenue: 0 });
+    }
+
+    let totalTravelers = 0;
+    let confirmedBookings = 0;
+    for (const row of packageSalesRows) {
+      const travelers = Number(row.travelersCount) || 0;
+      const amount = (Number(row.priceFrom) || 0) * travelers;
+      const currency = row.currency || "—";
+      statusCounts.set(row.status, (statusCounts.get(row.status) ?? 0) + 1);
+      totalTravelers += travelers;
+      if (confirmedStatuses.has(row.status)) confirmedBookings += 1;
+      if (row.status !== "cancelled") {
+        revenueByCurrency.set(currency, (revenueByCurrency.get(currency) ?? 0) + amount);
+      }
+
+      const currentPackage = packageTotals.get(row.packageId) ?? {
+        packageName: row.packageName ?? "باقة غير معروفة",
+        bookings: 0,
+        travelers: 0,
+        estimatedRevenue: 0,
+        currency,
+      };
+      currentPackage.bookings += 1;
+      currentPackage.travelers += travelers;
+      if (row.status !== "cancelled") currentPackage.estimatedRevenue += amount;
+      packageTotals.set(row.packageId, currentPackage);
+
+      const key = monthKey(row.createdAt);
+      const month = monthlyTotals.get(key);
+      if (month) {
+        month.bookings += 1;
+        month.travelers += travelers;
+        if (row.status !== "cancelled") month.estimatedRevenue += amount;
+      }
+    }
+
+    const packageSales = {
+      totalBookings: packageSalesRows.length,
+      totalTravelers,
+      confirmedBookings,
+      estimatedRevenueByCurrency: Array.from(revenueByCurrency, ([currency, amount]) => ({ currency, amount: Math.round(amount * 100) / 100 })),
+      statusBreakdown: Array.from(statusCounts, ([status, count]) => ({ status, count })).sort((a, b) => b.count - a.count),
+      monthlyTrend: Array.from(monthlyTotals, ([month, values]) => ({ month, ...values, estimatedRevenue: Math.round(values.estimatedRevenue * 100) / 100 })),
+      topPackages: Array.from(packageTotals, ([packageId, values]) => ({ packageId, ...values, estimatedRevenue: Math.round(values.estimatedRevenue * 100) / 100 }))
+        .sort((a, b) => b.bookings - a.bookings || b.estimatedRevenue - a.estimatedRevenue)
+        .slice(0, 5),
+    };
+
     const recentActivity = [
       ...recentVisaApps.map((a) => ({
         type: "visa_application",
@@ -155,6 +235,7 @@ router.get(
         totalFlightBookings,
         pendingFlightBookings,
         recentActivity,
+        packageSales,
       }),
     );
   },

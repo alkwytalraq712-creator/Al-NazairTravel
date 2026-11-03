@@ -12,11 +12,27 @@ import {
   Briefcase,
   Ticket
 } from 'lucide-react';
+import { CircleDollarSign, TrendingUp, UserRound, RefreshCw } from 'lucide-react';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
 import { formatDateTimeAr } from '@/lib/translations';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const PACKAGE_STATUS_AR: Record<string, string> = {
+  received: 'تم الاستلام',
+  reviewing: 'قيد المراجعة',
+  confirmed: 'مؤكد',
+  awaiting_payment: 'بانتظار الدفع',
+  paid: 'مدفوع',
+  vouchers_issued: 'القسائم صادرة',
+  completed: 'مكتمل',
+  cancelled: 'ملغي',
+};
+
+const formatNumber = (value: number) => value.toLocaleString('ar-IQ');
+const formatMonth = (value: string) => value.slice(5);
 
 export function Dashboard() {
   const { data: summary, isLoading } = useGetAdminDashboardSummary();
@@ -127,6 +143,89 @@ export function Dashboard() {
           </Card>
         ))}
       </div>
+
+      <section className="space-y-6" aria-labelledby="package-sales-report">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-primary" />
+            <h2 id="package-sales-report" className="text-xl font-bold">تقارير مبيعات الباقات السياحية</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            قراءة سريعة لأداء الحجوزات خلال آخر ستة أشهر. الإيرادات تقديرية حسب سعر الباقة وعدد المسافرين.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="border-border/50">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center"><Ticket className="w-5 h-5" /></div>
+              <div><p className="text-xs text-muted-foreground">إجمالي حجوزات الباقات</p><p className="text-2xl font-bold mt-1">{formatNumber(summary.packageSales.totalBookings)}</p></div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/50">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center"><UserRound className="w-5 h-5" /></div>
+              <div><p className="text-xs text-muted-foreground">إجمالي المسافرين</p><p className="text-2xl font-bold mt-1">{formatNumber(summary.packageSales.totalTravelers)}</p></div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/50">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center"><RefreshCw className="w-5 h-5" /></div>
+              <div><p className="text-xs text-muted-foreground">حجوزات مؤكدة أو مدفوعة</p><p className="text-2xl font-bold mt-1">{formatNumber(summary.packageSales.confirmedBookings)}</p></div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/50">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center"><CircleDollarSign className="w-5 h-5" /></div>
+              <div><p className="text-xs text-muted-foreground">الإيرادات التقديرية</p><div className="flex flex-wrap gap-1 mt-1">{summary.packageSales.estimatedRevenueByCurrency.length === 0 ? <span className="text-2xl font-bold">—</span> : summary.packageSales.estimatedRevenueByCurrency.map(item => <span key={item.currency} className="text-lg font-bold">{formatNumber(item.amount)} {item.currency}</span>)}</div></div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2 border-border/50">
+            <CardHeader>
+              <CardTitle>اتجاه الحجوزات الشهري</CardTitle>
+              <CardDescription>عدد الحجوزات والمسافرين خلال آخر ستة أشهر</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[280px] ps-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={summary.packageSales.monthlyTrend} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" vertical={false} />
+                  <XAxis dataKey="month" tickFormatter={formatMonth} tickLine={false} axisLine={false} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={34} />
+                  <Tooltip labelFormatter={(label) => `شهر ${String(label)}`} formatter={(value, name) => [formatNumber(Number(value)), name === 'bookings' ? 'الحجوزات' : 'المسافرون']} />
+                  <Bar dataKey="bookings" name="bookings" fill="#0f766e" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="travelers" name="travelers" fill="#d4a72c" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle>توزيع حالات الحجوزات</CardTitle>
+              <CardDescription>الحالة الحالية لكل طلب باقة</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {summary.packageSales.statusBreakdown.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">لا توجد بيانات بعد.</p> : summary.packageSales.statusBreakdown.map(item => {
+                const percentage = summary.packageSales.totalBookings ? Math.round((item.count / summary.packageSales.totalBookings) * 100) : 0;
+                return <div key={item.status} className="space-y-1.5"><div className="flex justify-between text-sm"><span>{PACKAGE_STATUS_AR[item.status] || item.status}</span><span className="font-semibold">{formatNumber(item.count)} ({percentage}٪)</span></div><div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${percentage}%` }} /></div></div>;
+              })}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle>أفضل الباقات مبيعاً</CardTitle>
+            <CardDescription>مرتبة حسب عدد الحجوزات، مع استبعاد الحجوزات الملغاة من التقدير المالي</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {summary.packageSales.topPackages.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">لا توجد حجوزات باقات حتى الآن.</p> : <div className="divide-y divide-border/50">{summary.packageSales.topPackages.map((item, index) => <div key={item.packageId} className="py-3 flex items-center gap-3"><span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">{index + 1}</span><div className="flex-1 min-w-0"><p className="font-medium truncate">{item.packageName}</p><p className="text-xs text-muted-foreground mt-1">{formatNumber(item.bookings)} حجوزات · {formatNumber(item.travelers)} مسافرين</p></div><div className="text-end"><p className="font-semibold">{formatNumber(item.estimatedRevenue)} {item.currency}</p><p className="text-xs text-muted-foreground">تقديري</p></div></div>)}</div>}
+          </CardContent>
+        </Card>
+      </section>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="col-span-2 border-border/50 shadow-sm">

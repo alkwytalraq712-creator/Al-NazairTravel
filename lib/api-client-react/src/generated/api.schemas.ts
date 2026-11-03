@@ -1206,6 +1206,22 @@ export interface AdminDashboardSummary {
   totalFlightBookings: number;
   pendingFlightBookings: number;
   recentActivity: RecentActivity[];
+  packageSales: {
+    totalBookings: number;
+    totalTravelers: number;
+    confirmedBookings: number;
+    estimatedRevenueByCurrency: { currency: string; amount: number }[];
+    statusBreakdown: { status: string; count: number }[];
+    monthlyTrend: { month: string; bookings: number; travelers: number; estimatedRevenue: number }[];
+    topPackages: {
+      packageId: number;
+      packageName: string;
+      bookings: number;
+      travelers: number;
+      estimatedRevenue: number;
+      currency: string;
+    }[];
+  };
 }
 
 export type ScanPassportOcrBody = {
@@ -1251,4 +1267,3 @@ cabinClass?: CabinClass;
 export type ListAllFlightBookingsParams = {
 status?: FlightBookingStatus;
 };
-

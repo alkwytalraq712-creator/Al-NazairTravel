@@ -3128,7 +3128,34 @@ export const GetAdminDashboardSummaryResponse = zod.object({
   "type": zod.string(),
   "description": zod.string(),
   "createdAt": zod.coerce.date()
-}))
+})),
+  "packageSales": zod.object({
+    "totalBookings": zod.number(),
+    "totalTravelers": zod.number(),
+    "confirmedBookings": zod.number(),
+    "estimatedRevenueByCurrency": zod.array(zod.object({
+      "currency": zod.string(),
+      "amount": zod.number()
+    })),
+    "statusBreakdown": zod.array(zod.object({
+      "status": zod.string(),
+      "count": zod.number()
+    })),
+    "monthlyTrend": zod.array(zod.object({
+      "month": zod.string(),
+      "bookings": zod.number(),
+      "travelers": zod.number(),
+      "estimatedRevenue": zod.number()
+    })),
+    "topPackages": zod.array(zod.object({
+      "packageId": zod.number(),
+      "packageName": zod.string(),
+      "bookings": zod.number(),
+      "travelers": zod.number(),
+      "estimatedRevenue": zod.number(),
+      "currency": zod.string()
+    }))
+  })
 })
 
 
@@ -3396,5 +3423,4 @@ export const DeleteInvoiceParams = zod.object({
 })
 
 export const DeleteInvoiceResponse = zod.void()
-
 
