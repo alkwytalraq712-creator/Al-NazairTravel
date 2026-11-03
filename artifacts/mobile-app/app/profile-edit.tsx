@@ -272,6 +272,7 @@ export default function ProfileEditScreen() {
   const [faceValid, setFaceValid] = useState(!!u?.avatarUrl);
   const [faceValidating, setFaceValidating] = useState(false);
   const [faceError, setFaceError] = useState('');
+  const [dropTarget, setDropTarget] = useState<'face' | 'passport' | null>(null);
 
   // ── Step 1: Passport ──
   const [passportImageUrl, setPassportImageUrl] = useState(u?.passportImageUrl ?? '');
@@ -314,6 +315,39 @@ export default function ProfileEditScreen() {
   const ocrMutation = useScanPassportOcr();
 
   // ─── Image picker ─────────────────────────────────────────────────────────────
+  function assetFromWebFile(file: any): ImagePicker.ImagePickerAsset | null {
+    if (Platform.OS !== 'web' || !file || !String(file.type || '').startsWith('image/')) return null;
+    return {
+      uri: URL.createObjectURL(file),
+      fileName: file.name || 'upload.jpg',
+      fileSize: file.size,
+      mimeType: file.type || 'image/jpeg',
+      width: 0,
+      height: 0,
+      type: 'image',
+    } as ImagePicker.ImagePickerAsset;
+  }
+
+  function handleWebDrop(kind: 'face' | 'passport', event: any) {
+    if (Platform.OS !== 'web') return;
+    event?.preventDefault?.();
+    setDropTarget(null);
+    const file = event?.nativeEvent?.dataTransfer?.files?.[0] ?? event?.dataTransfer?.files?.[0];
+    const asset = assetFromWebFile(file);
+    if (!asset) {
+      Alert.alert('نوع ملف غير مدعوم', 'يرجى سحب صورة JPG أو PNG أو WEBP.');
+      return;
+    }
+    if (kind === 'face') handleFaceUpload(asset);
+    else handlePassportScan(asset);
+  }
+
+  const dropHandlers = (kind: 'face' | 'passport') => Platform.OS === 'web' ? ({
+    onDragEnter: (event: any) => { event.preventDefault?.(); setDropTarget(kind); },
+    onDragOver: (event: any) => event.preventDefault?.(),
+    onDragLeave: (event: any) => { event.preventDefault?.(); setDropTarget(null); },
+    onDrop: (event: any) => handleWebDrop(kind, event),
+  } as any) : {};
 
   async function pickImage(): Promise<ImagePicker.ImagePickerAsset | null> {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -346,8 +380,8 @@ export default function ProfileEditScreen() {
 
   // ─── Step 0: Face photo upload + validation ────────────────────────────────────
 
-  async function handleFaceUpload() {
-    const asset = await pickImage();
+  async function handleFaceUpload(providedAsset?: ImagePicker.ImagePickerAsset) {
+    const asset = providedAsset ?? await pickImage();
     if (!asset) return;
 
     setFaceValidating(true);
@@ -388,8 +422,8 @@ export default function ProfileEditScreen() {
 
   // ─── Step 1: Passport scan + OCR ──────────────────────────────────────────────
 
-  async function handlePassportScan() {
-    const asset = await pickPassportImage();
+  async function handlePassportScan(providedAsset?: ImagePicker.ImagePickerAsset) {
+    const asset = providedAsset ?? await pickPassportImage();
     if (!asset) return;
 
     setOcrLoading(true);
@@ -589,6 +623,7 @@ export default function ProfileEditScreen() {
         {/* Avatar preview */}
         <View style={{ position: 'relative' }}>
           <View
+            {...dropHandlers('face')}
             style={{
               width: 160,
               height: 160,
@@ -596,7 +631,7 @@ export default function ProfileEditScreen() {
               borderWidth: 3,
               borderColor: faceValid ? '#22c55e' : 'rgba(255,255,255,0.2)',
               overflow: 'hidden',
-              backgroundColor: 'rgba(255,255,255,0.06)',
+              backgroundColor: dropTarget === 'face' ? 'rgba(59,130,246,0.20)' : 'rgba(255,255,255,0.06)',
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -681,7 +716,7 @@ export default function ProfileEditScreen() {
 
         {/* Upload button */}
         <TouchableOpacity
-          onPress={handleFaceUpload}
+          onPress={() => handleFaceUpload()}
           disabled={faceValidating}
           activeOpacity={0.8}
         >
@@ -750,8 +785,9 @@ export default function ProfileEditScreen() {
         {/* Passport preview / scanner */}
         <View style={{ position: 'relative' }}>
           <View
+            {...dropHandlers('passport')}
             style={{
-              backgroundColor: 'rgba(255,255,255,0.04)',
+              backgroundColor: dropTarget === 'passport' ? 'rgba(59,130,246,0.16)' : 'rgba(255,255,255,0.04)',
               borderRadius: 16,
               borderWidth: 2,
               borderColor: passportData ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.12)',
@@ -784,7 +820,7 @@ export default function ProfileEditScreen() {
                   <Ionicons name="scan-outline" size={36} color="#60a5fa" />
                 </View>
                 <Text style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Tajawal_400Regular', fontSize: 13, textAlign: 'center' }}>
-                  اضغط "مسح الجواز" لرفع صورة جواز السفر
+                  اضغط "مسح الجواز" أو اسحب صورة الجواز هنا
                 </Text>
               </View>
             ) : null}
@@ -810,7 +846,7 @@ export default function ProfileEditScreen() {
         ) : null}
 
         {/* Scan button */}
-        <TouchableOpacity onPress={handlePassportScan} disabled={ocrLoading} activeOpacity={0.8}>
+        <TouchableOpacity onPress={() => handlePassportScan()} disabled={ocrLoading} activeOpacity={0.8}>
           <LinearGradient
             colors={ocrLoading ? ['#374151', '#374151'] : ['#1d4ed8', '#1a56db']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}

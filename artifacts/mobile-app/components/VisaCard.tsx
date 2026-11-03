@@ -28,6 +28,11 @@ export function VisaCard({ visa, onPress, compact }: Props) {
       <View style={styles.detailRow}>
         <View style={styles.detailItem}><Ionicons name="airplane-outline" size={18} color="#D5DFEA" /><Text style={styles.detailLabel}>{typeLabel}</Text></View>
         <View style={styles.detailItem}><Ionicons name="time-outline" size={18} color="#9BAEC3" /><Text style={styles.detailLabel}>مدة المعالجة المتوقعة</Text><Text style={styles.detailValue}>{visa.processingTime}</Text></View>
+        <View style={styles.detailItem}><Ionicons name="cash-outline" size={18} color="#E4B35B" /><Text style={styles.detailLabel}>السعر</Text><Text style={styles.detailValue}>{visa.currency} {visa.price}</Text></View>
+      </View>
+      <View style={styles.metaRow}>
+        <Text style={styles.metaText}>الصلاحية: {visa.validity || 'حسب نوع التأشيرة'}</Text>
+        <Text style={styles.metaText}>المستندات المطلوبة: {visa.requiredDocuments?.length ?? 0}</Text>
       </View>
       <TouchableOpacity style={styles.detailsButton} onPress={onPress} activeOpacity={0.8}><Text style={styles.detailsText}>عرض التفاصيل</Text><Ionicons name="arrow-back" size={18} color="#162033" /></TouchableOpacity>
     </TouchableOpacity>
@@ -48,6 +53,8 @@ const styles = StyleSheet.create({
   detailItem: { alignItems: 'center', gap: 4, flex: 1 },
   detailLabel: { color: '#D5DFEA', fontFamily: 'Tajawal_700Bold', fontSize: 12, textAlign: 'center' },
   detailValue: { color: '#FFFFFF', fontFamily: 'Tajawal_800ExtraBold', fontSize: 13 },
+  metaRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', gap: 8, marginBottom: 14 },
+  metaText: { flex: 1, color: '#9BAEC3', fontFamily: 'Tajawal_400Regular', fontSize: 11, textAlign: 'right' },
   detailsButton: { backgroundColor: '#E4B35B', borderRadius: 24, minHeight: 46, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 8 },
   detailsText: { color: '#162033', fontFamily: 'Tajawal_800ExtraBold', fontSize: 16 },
   compactCard: { width: 148, borderRadius: 14, borderWidth: 1, overflow: 'hidden', marginLeft: 12 },
