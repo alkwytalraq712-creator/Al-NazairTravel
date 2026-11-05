@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { 
   useListAllPackageBookings, 
   useUpdatePackageBookingStatus,
+  getListAllPackageBookingsQueryKey,
   PackageBooking,
   PackageBookingStatus
 } from '@workspace/api-client-react';
@@ -33,7 +34,7 @@ export function PackageBookings() {
   
   const { data: bookings, isLoading, isError, refetch, isFetching } = useListAllPackageBookings({
     status: statusFilter !== 'all' ? (statusFilter as PackageBookingStatus) : undefined
-  }, { query: { staleTime: 15_000, retry: 1 } });
+  }, { query: { queryKey: getListAllPackageBookingsQueryKey({ status: statusFilter !== 'all' ? (statusFilter as PackageBookingStatus) : undefined }), staleTime: 15_000, retry: 1 } });
 
   const filteredBookings = bookings?.filter(b => 
     b.referenceNumber.toLowerCase().includes(search.toLowerCase()) ||

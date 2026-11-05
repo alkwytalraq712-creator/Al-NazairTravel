@@ -51,7 +51,7 @@ const packageSchema = z.object({
 });
 
 export function Packages() {
-  const { data: packages, isLoading, isError, refetch, isFetching } = useListPackages(undefined, { query: { staleTime: 30_000, retry: 1 } });
+  const { data: packages, isLoading, isError, refetch, isFetching } = useListPackages(undefined, { query: { queryKey: getListPackagesQueryKey(undefined), staleTime: 30_000, retry: 1 } });
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
 

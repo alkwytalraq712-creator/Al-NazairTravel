@@ -15,7 +15,7 @@ import { z } from "zod";
 const router: IRouter = Router();
 
 // ─── Send Expo push notifications ────────────────────────────────────────────
-async function sendExpoPush(
+export async function sendExpoPush(
   tokens: string[],
   title: string,
   body: string,

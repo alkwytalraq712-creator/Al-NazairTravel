@@ -19,4 +19,23 @@ if (!process.env.DATABASE_URL) {
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle(pool, { schema });
 
+/** Ensures the release-tracking table exists on deployments without pre-deploy migrations. */
+export async function ensureAppReleasesTable(): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_releases (
+      id SERIAL PRIMARY KEY,
+      platform TEXT NOT NULL DEFAULT 'android',
+      version TEXT NOT NULL,
+      version_code INTEGER NOT NULL,
+      download_url TEXT NOT NULL,
+      release_notes TEXT NOT NULL DEFAULT '',
+      is_mandatory BOOLEAN NOT NULL DEFAULT FALSE,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT app_releases_platform_version_unique UNIQUE (platform, version)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS app_releases_active_platform_idx ON app_releases (platform, is_active, version_code DESC)`);
+}
+
 export * from "./schema";

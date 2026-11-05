@@ -16,6 +16,7 @@ import storageRouter from "./storage";
 import passportOcrRouter from "../modules/passport-ocr/passport-ocr.controller";
 import validateFaceRouter from "./validateFace";
 import settingsRouter from "./settings";
+import appReleasesRouter from "./appReleases";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(storageRouter);
 router.use(passportOcrRouter);
 router.use(validateFaceRouter);
 router.use(settingsRouter);
+router.use(appReleasesRouter);
 
 export default router;

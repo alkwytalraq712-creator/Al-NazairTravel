@@ -7,10 +7,14 @@ import router from "./routes";
 import storageRouter from "./routes/storage";
 import { logger } from "./lib/logger";
 import { loadCurrentUser } from "./lib/loadUser";
-import { pool } from "@workspace/db";
+import { ensureAppReleasesTable, pool } from "@workspace/db";
 import { startHoldExpiryJob } from "./lib/holdExpiry";
 
 const app: Express = express();
+
+// Render does not run pre-deploy migrations on the free service. Ensure the
+// small release metadata table exists before routes can query it.
+await ensureAppReleasesTable();
 
 // Replit's proxy terminates TLS and forwards requests over plain HTTP
 // internally. Without this, Express doesn't consider the connection secure,

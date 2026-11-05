@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Alert, Linking, Platform } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -21,6 +22,8 @@ import { FlightBookingProvider } from '@/context/FlightBookingContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { PushNotificationProvider } from '@/context/PushNotificationProvider';
 import { ServiceSettingsProvider } from '@/context/ServiceSettingsContext';
+import Constants from 'expo-constants';
+import { customFetch } from '@workspace/api-client-react';
 
 // Set base URL at module level so all hooks reach the correct server
 if (process.env.EXPO_PUBLIC_DOMAIN) {
@@ -87,6 +90,27 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const currentVersion = Constants.expoConfig?.version ?? '1.0.0';
+    const seenKey = '@qema_seen_app_update';
+    void customFetch<{ updateAvailable: boolean; release?: { version: string; downloadUrl: string; releaseNotes: string; isMandatory: boolean } }>(
+      `/api/app-updates/latest?platform=android&version=${encodeURIComponent(currentVersion)}`,
+    ).then(async (result) => {
+      if (!result.updateAvailable || !result.release) return;
+      const seenVersion = await AsyncStorage.getItem(seenKey);
+      if (!result.release.isMandatory && seenVersion === result.release.version) return;
+      const openDownload = () => { void Linking.openURL(result.release!.downloadUrl); };
+      const buttons = result.release.isMandatory
+        ? [{ text: 'تحديث الآن', onPress: openDownload }]
+        : [{ text: 'لاحقاً', style: 'cancel' as const }, { text: 'تحميل التحديث', onPress: openDownload }];
+      Alert.alert(`تحديث جديد ${result.release.version}`, result.release.releaseNotes || 'يتوفر إصدار جديد من التطبيق.', buttons);
+      await AsyncStorage.setItem(seenKey, result.release.version);
+    }).catch(() => {
+      // Update checks are best-effort and must never block app startup.
+    });
+  }, []);
 
   if (!fontsLoaded && !fontError) return null;
 
